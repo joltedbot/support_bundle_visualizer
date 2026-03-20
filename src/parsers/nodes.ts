@@ -6,6 +6,7 @@ interface NodesJsonNode {
   ip?: string
   roles?: string[]
   attributes?: Record<string, string>
+  os?: { available_processors?: number }
 }
 
 interface NodesJson {
@@ -203,6 +204,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       diskTotal: stats?.diskTotal,
       diskAvail: stats?.diskAvail,
       ramTotal: stats?.ramTotal,
+      availableProcessors: node.os?.available_processors,
     })
   }
 

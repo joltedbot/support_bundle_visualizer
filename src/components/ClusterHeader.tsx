@@ -11,11 +11,11 @@ import type { BundleModel } from '../parsers/types'
 interface Props {
   model: BundleModel
   customerName: string
+  clusterName: string | null
   generatedAt: string  // ISO string
 }
 
-export default function ClusterHeader({ model, customerName, generatedAt }: Props) {
-  const clusterName = model.identity?.clusterName || null
+export default function ClusterHeader({ model, customerName, clusterName, generatedAt }: Props) {
 
   const regionParts: string[] = []
   if (model.identity?.cloudProvider) regionParts.push(model.identity.cloudProvider.toUpperCase())
@@ -62,9 +62,7 @@ export default function ClusterHeader({ model, customerName, generatedAt }: Prop
                       <EuiText size="s" color="subdued">·</EuiText>
                     </EuiFlexItem>
                     <EuiFlexItem grow={false}>
-                      <EuiText size="s" color="subdued">
-                        <span style={{ fontFamily: 'monospace' }}>{clusterName}</span>
-                      </EuiText>
+                      <EuiText size="s" color="subdued">{clusterName}</EuiText>
                     </EuiFlexItem>
                   </>
                 )}

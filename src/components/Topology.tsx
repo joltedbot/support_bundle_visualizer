@@ -75,47 +75,43 @@ function NodeCard({ node }: { node: NodeInfo }) {
   const cpuColor = node.cpuPercent !== undefined
     ? resourceColor(node.cpuPercent, 50, 80) : undefined
 
+  const vcpuStr = node.availableProcessors !== undefined ? `${node.availableProcessors} vCPU` : null
   const ramStr = node.ramTotal !== undefined ? formatBytes(node.ramTotal) : null
   const diskStr = node.diskTotal !== undefined ? formatBytes(node.diskTotal) : null
-  const capacityStr = [ramStr && `${ramStr} RAM`, diskStr && `${diskStr} disk`]
+  const capacityStr = [vcpuStr, ramStr && `${ramStr} RAM`, diskStr && `${diskStr} disk`]
     .filter(Boolean).join(' · ')
 
   return (
     <EuiPanel paddingSize="s" style={{ minWidth: 220, maxWidth: 280 }}>
-      {/* Name row */}
-      <EuiFlexGroup justifyContent="spaceBetween" alignItems="center" gutterSize="xs" responsive={false}>
-        <EuiFlexItem>
-          <EuiText size="s">
-            <strong
-              title={node.name}
-              style={{
-                display: 'block',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: 160,
-              }}
-            >
-              {node.name}
-            </strong>
-          </EuiText>
-        </EuiFlexItem>
+      {/* Name */}
+      <EuiText size="s">
+        <strong
+          title={node.name}
+          style={{
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {node.name}
+        </strong>
+      </EuiText>
+
+      {/* Role badges */}
+      <EuiFlexGroup gutterSize="xs" responsive={false} alignItems="center" wrap style={{ marginTop: 4 }}>
         <EuiFlexItem grow={false}>
-          <EuiFlexGroup gutterSize="xs" responsive={false} alignItems="center">
-            <EuiFlexItem grow={false}>
-              <EuiBadge color={primaryColor}>
-                {ROLE_LABELS[primaryRole] ?? primaryTier}
-              </EuiBadge>
-            </EuiFlexItem>
-            {secondaryRoles.map(r => (
-              <EuiFlexItem grow={false} key={r}>
-                <EuiBadge color={TIER_COLORS[DATA_ROLE_TO_TIER[r as NodeRole] ?? r] ?? '#555'}>
-                  {ROLE_LABELS[r] ?? r}
-                </EuiBadge>
-              </EuiFlexItem>
-            ))}
-          </EuiFlexGroup>
+          <EuiBadge color={primaryColor} style={{ fontSize: 10 }}>
+            {ROLE_LABELS[primaryRole] ?? primaryTier}
+          </EuiBadge>
         </EuiFlexItem>
+        {secondaryRoles.map(r => (
+          <EuiFlexItem grow={false} key={r}>
+            <EuiBadge color={TIER_COLORS[DATA_ROLE_TO_TIER[r as NodeRole] ?? r] ?? '#555'} style={{ fontSize: 10 }}>
+              {ROLE_LABELS[r] ?? r}
+            </EuiBadge>
+          </EuiFlexItem>
+        ))}
       </EuiFlexGroup>
 
       {/* Capacity line */}

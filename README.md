@@ -53,7 +53,7 @@ Open this file directly in any browser — no server needed. It's a self-contain
 
 ```bash
 # Generate bundle data
-npm run generate -- --customer acme-corp --name "ACME Corp" --notes "Pre-renewal call"
+npm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
 
 # Build the report
 npm run build
@@ -65,17 +65,18 @@ open output/acme-corp/index.html
 npx vitest run
 ```
 
+The `--cluster` flag is optional and sets the cluster name displayed in the report header and browser title. Omit it if the cluster name is unknown.
+
 ---
 
 ## What's in the report
 
 | Section | Contents |
 |---|---|
-| Cluster Header | Customer name, cluster name (if available) |
+| Cluster Header | Customer name, cluster name (if provided via `--cluster` flag) |
 | Overview | Solution type (Search/Observability/Security), ES version, cluster health, node/index counts |
-| Topology | Nodes grouped by availability zone (if available) or tier; AZ summary bar showing tier distribution |
+| Topology | Nodes grouped by availability zone (if available) or tier; AZ summary bar showing tier distribution; each node shows vCPU count, RAM, and disk capacity |
 | Index Landscape | Index counts, shard distribution, size breakdown |
-| Resource Health | Heap, disk, CPU per node (when available) |
 | Features & Integrations | ILM, ML, CCR, snapshots, installed plugins |
 | Data Profile | Index size distribution, ILM policy coverage |
 | Best Practices | Automated observations and recommendations |

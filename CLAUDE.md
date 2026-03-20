@@ -22,9 +22,10 @@ npm install --legacy-peer-deps
 ## Commands
 
 ```bash
-npm run generate -- --customer <dirname> --name "Name" [--notes "text"]
+npm run generate -- --customer <dirname> --name "Name" [--cluster "Cluster"] [--notes "text"]
                          # Read bundle from diagnostics/<dirname>/, write src/generated/bundleData.ts
                          # Also writes src/generated/buildConfig.json used by vite.config.ts
+                         # --cluster is optional; sets the cluster name in header and browser title
 npm run build            # TypeScript check + Vite build → output/<dirname>/index.html (single inlined file)
 npm run dev              # Dev server (requires bundleData.ts to exist — run generate first)
 npx vitest run           # Run tests
@@ -46,7 +47,7 @@ src/
     stats.ts, ilm.ts, ml.ts, features.ts, replication.ts, snapshots.ts
   components/       # UI sections (one file per section)
     ClusterHeader, Overview, Topology, IndexLandscape,
-    ResourceHealth, FeaturesIntegrations, DataProfile, BestPractices
+    FeaturesIntegrations, DataProfile, BestPractices
   utils/
     bundleReader.ts  # BundleData interface + parseJsonFile / getTextFile helpers
     format.ts        # formatBytes, formatCount, healthColor, resourceColor
@@ -77,11 +78,11 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 ## Component Notes
 
-**ClusterHeader**: Shows customer name and cluster name (from `model.identity?.clusterName` in monospace; omitted if null/empty).
+**ClusterHeader**: Shows customer name and optional cluster name (passed via `--cluster` flag in generate command). Cluster name is displayed in normal font (not monospace). Omitted if null/empty.
 
 **Overview**: Includes "Solution · Version" card showing solution type badges (Search/Observability/Security) + ES version; omitted if `features` is null or `solutionTypes` is empty.
 
-**Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard shows RAM + disk capacity; node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen.
+**Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard displays vCPU count (from `available_processors`), RAM, and disk capacity in the format `"32 vCPU · 61.0 GiB RAM · 1.4 TiB disk"`. Role badges are displayed on their own line below the node name (10px font, wrapping enabled) to prevent overflow on multi-role nodes. Node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen.
 
 ## Utilities
 
@@ -99,4 +100,4 @@ See `src/utils/nodeRoles.test.ts` for test coverage.
 `diagnostics/Hinge/api-diagnostics-20260319-211919/` — gitignored, available locally.
 Hinge (dating app): 21 nodes (3 master + 18 hot), 117 indices, ES 9.3.1, AWS us-east-1. Kibana bundle also present.
 
-Run: `npm run generate -- --customer Hinge --name "Hinge"`
+Run: `npm run generate -- --customer Hinge --name "Hinge" --cluster "Hinge Prod"`

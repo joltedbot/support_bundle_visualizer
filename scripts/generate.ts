@@ -22,10 +22,11 @@ function getArg(flag: string): string | undefined {
 
 const customerDir = getArg('--customer')
 const customerName = getArg('--name')
+const clusterName = getArg('--cluster') ?? null
 const notes = getArg('--notes') ?? null
 
 if (!customerDir || !customerName) {
-  console.error('Usage: npm run generate -- --customer <dirname> --name "Customer Name" [--notes "text"]')
+  console.error('Usage: npm run generate -- --customer <dirname> --name "Customer Name" [--cluster "Cluster Name"] [--notes "text"]')
   process.exit(1)
 }
 
@@ -84,6 +85,7 @@ const model = await parseBundle(bundleData)
 const output = {
   model,
   customerName,
+  clusterName,
   notes,
   generatedAt: new Date().toISOString(),
   hasKibanaBundle: Boolean(kibanaBundleName),
@@ -93,9 +95,12 @@ const outDir = join(root, 'src', 'generated')
 mkdirSync(outDir, { recursive: true })
 
 // Write build config so vite.config.ts can set the correct output directory
+const pageTitle = clusterName
+  ? `${customerName} — ${clusterName}`
+  : customerName
 writeFileSync(
   join(outDir, 'buildConfig.json'),
-  JSON.stringify({ customerDir: customerDir }, null, 2),
+  JSON.stringify({ customerDir, pageTitle }, null, 2),
   'utf-8'
 )
 

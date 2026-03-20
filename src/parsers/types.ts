@@ -47,6 +47,7 @@ export interface NodeInfo {
   diskTotal?: number        // bytes
   diskAvail?: number        // bytes
   ramTotal?: number         // bytes
+  availableProcessors?: number
 }
 
 export interface IndexInfo {
@@ -144,6 +145,7 @@ export interface BundleModel {
 export interface GeneratedBundle {
   model: BundleModel | null
   customerName: string
+  clusterName: string | null
   notes: string | null
   generatedAt: string | null
   hasKibanaBundle: boolean

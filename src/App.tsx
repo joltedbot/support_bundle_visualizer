@@ -13,7 +13,6 @@ import ClusterHeader from './components/ClusterHeader'
 import Overview from './components/Overview'
 import Topology from './components/Topology'
 import IndexLandscape from './components/IndexLandscape'
-import ResourceHealth from './components/ResourceHealth'
 import FeaturesIntegrations from './components/FeaturesIntegrations'
 import DataProfile from './components/DataProfile'
 import BestPractices from './components/BestPractices'
@@ -43,14 +42,13 @@ function App() {
     )
   }
 
-  const { model, customerName, generatedAt, notes } = data
-  const hasResourceStats = model.nodes.some((n) => n.heapPercent !== undefined)
-
+  const { model, customerName, clusterName, generatedAt, notes } = data
   return (
     <>
       <ClusterHeader
         model={model}
         customerName={customerName}
+        clusterName={clusterName ?? null}
         generatedAt={generatedAt!}
       />
       <EuiPage paddingSize="l">
@@ -70,16 +68,6 @@ function App() {
           <EuiSpacer size="s" />
           <IndexLandscape indices={model.indices} shards={model.shards} />
           <EuiSpacer size="l" />
-          {hasResourceStats && (
-            <>
-              <EuiTitle size="s">
-                <h3>Resource Health</h3>
-              </EuiTitle>
-              <EuiSpacer size="s" />
-              <ResourceHealth nodes={model.nodes} />
-              <EuiSpacer size="l" />
-            </>
-          )}
           {model.features && (
             <>
               <EuiTitle size="s">

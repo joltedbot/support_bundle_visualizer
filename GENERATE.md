@@ -26,6 +26,14 @@ Ask the user to confirm or correct it:
 
 Use the confirmed name exactly — it may include spaces, capitalisation, or punctuation (e.g., "Hinge (Dating App)", "ACME Corp").
 
+## Step 2b — Ask for the cluster/deployment name
+
+The cluster name stored in the diagnostic bundle is an internal UUID, not the human-readable deployment name. Ask the user:
+
+> "What's the name of this cluster or deployment? (e.g., 'Hinge Prod', 'Logging Cluster'). Press enter to skip."
+
+If provided, this name appears in the report header alongside the customer name and is used as the browser tab title. If skipped, only the customer name is used.
+
 ## Step 3 — Gather optional notes
 
 Ask the user:
@@ -39,13 +47,13 @@ If the user provides notes, include them as the `--notes` argument. Notes appear
 Run the following command, substituting the values confirmed above:
 
 ```bash
-npm run generate -- --customer "<dirname>" --name "<Customer Display Name>" [--notes "<notes text>"]
+npm run generate -- --customer "<dirname>" --name "<Customer Display Name>" [--cluster "<Cluster Name>"] [--notes "<notes text>"]
 ```
 
 Examples:
 ```bash
-npm run generate -- --customer hinge --name "Hinge"
-npm run generate -- --customer acme --name "ACME Corp" --notes "Pre-renewal call. Focus on shard sizing and ILM gaps."
+npm run generate -- --customer hinge --name "Hinge" --cluster "Hinge Prod"
+npm run generate -- --customer acme --name "ACME Corp" --cluster "Logging Cluster" --notes "Pre-renewal call. Focus on shard sizing and ILM gaps."
 ```
 
 The script will:

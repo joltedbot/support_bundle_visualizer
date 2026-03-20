@@ -4,22 +4,32 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-function getCustomerOutDir(): string {
+function getBuildConfig(): { customerDir?: string; pageTitle?: string } {
   try {
-    const cfg = JSON.parse(readFileSync(join(process.cwd(), 'src/generated/buildConfig.json'), 'utf-8'))
-    if (cfg.customerDir) return `output/${cfg.customerDir}`
+    return JSON.parse(readFileSync(join(process.cwd(), 'src/generated/buildConfig.json'), 'utf-8'))
   } catch {
-    // fall back to default if not yet generated
+    return {}
   }
-  return 'output'
 }
+
+const buildConfig = getBuildConfig()
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), viteSingleFile()],
+  plugins: [
+    react(),
+    viteSingleFile(),
+    {
+      name: 'inject-page-title',
+      transformIndexHtml(html) {
+        const title = buildConfig.pageTitle ?? 'Bundle Visualizer'
+        return html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+      },
+    },
+  ],
   base: './',
   build: {
-    outDir: getCustomerOutDir(),
+    outDir: buildConfig.customerDir ? `output/${buildConfig.customerDir}` : 'output',
   },
   test: {
     environment: 'node',
