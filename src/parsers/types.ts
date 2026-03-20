@@ -128,6 +128,27 @@ export interface SnapshotInfo {
   slmPolicyCount: number
 }
 
+export interface KibanaInfo {
+  version: string
+  instanceName: string
+  uuid: string
+  status: 'green' | 'yellow' | 'red' | 'unknown'
+  heapUsed?: number          // bytes
+  heapTotal?: number         // bytes
+  heapSizeLimit?: number     // bytes — V8 heap limit, corresponds to ESS instance size
+  alertingHealth: 'ok' | 'warn' | 'error' | null
+  hasPermanentEncryptionKey: boolean | null
+  taskManagerStatus: 'OK' | 'warn' | 'error' | null
+  fleet: {
+    total: number
+    online: number
+    offline: number
+    error: number
+    updating: number
+    inactive: number
+  } | null
+}
+
 export interface BundleModel {
   identity: ClusterIdentity | null
   health: ClusterHealth | null
@@ -149,4 +170,5 @@ export interface GeneratedBundle {
   notes: string | null
   generatedAt: string | null
   hasKibanaBundle: boolean
+  kibana: KibanaInfo | null
 }

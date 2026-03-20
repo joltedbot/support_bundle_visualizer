@@ -7,7 +7,7 @@ import {
   EuiProgress,
   EuiSpacer,
 } from '@elastic/eui'
-import type { NodeInfo, NodeRole } from '../parsers/types'
+import type { NodeInfo, NodeRole, KibanaInfo } from '../parsers/types'
 import { resourceColor, formatBytes } from '../utils/format'
 import {
   buildSummaryBar,
@@ -17,6 +17,7 @@ import {
 
 interface Props {
   nodes: NodeInfo[]
+  kibana: KibanaInfo | null
 }
 
 // ─── Colours & labels ────────────────────────────────────────────────────────
@@ -243,23 +244,71 @@ function TierFallbackView({ nodes }: { nodes: NodeInfo[] }) {
   )
 }
 
+// ─── KibanaCard ───────────────────────────────────────────────────────────────
+
+function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
+  const statusColor = kibana.status === 'green' ? '#017d73' : kibana.status === 'yellow' ? '#f5a700' : kibana.status === 'red' ? '#bd271e' : '#69707d'
+
+  const specs: string[] = []
+  if (kibana.heapSizeLimit) specs.push(`${formatBytes(kibana.heapSizeLimit)} instance`)
+  if (kibana.heapUsed != null && kibana.heapTotal != null) {
+    specs.push(`${formatBytes(kibana.heapUsed)} / ${formatBytes(kibana.heapTotal)} heap`)
+  }
+
+  return (
+    <EuiPanel paddingSize="s" style={{ minWidth: 200, maxWidth: 280 }}>
+      <EuiFlexGroup gutterSize="xs" alignItems="center" responsive={false}>
+        <EuiFlexItem grow={false}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, marginRight: 4 }} />
+        </EuiFlexItem>
+        <EuiFlexItem>
+          <EuiText size="s" style={{ fontWeight: 600, lineHeight: 1.3 }}>
+            {kibana.instanceName || 'Kibana'}
+          </EuiText>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+      <EuiSpacer size="xs" />
+      <EuiBadge color="#2563eb" style={{ fontSize: 10 }}>Kibana v{kibana.version}</EuiBadge>
+      {specs.length > 0 && (
+        <EuiText size="xs" color="subdued" style={{ marginTop: 6 }}>
+          {specs.join(' · ')}
+        </EuiText>
+      )}
+    </EuiPanel>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function Topology({ nodes }: Props) {
-  if (nodes.length === 0) return null
+export default function Topology({ nodes, kibana }: Props) {
+  if (nodes.length === 0 && !kibana) return null
 
-  const azGroups = groupNodesByAZ(nodes)
+  const azGroups = nodes.length > 0 ? groupNodesByAZ(nodes) : null
 
   return (
     <div>
-      <SummaryBar nodes={nodes} />
+      {nodes.length > 0 && <SummaryBar nodes={nodes} />}
 
-      {azGroups ? (
+      {nodes.length > 0 && (azGroups ? (
         Array.from(azGroups.entries()).map(([az, azNodes]) => (
           <NodeGroup key={az} label={az} nodes={azNodes} />
         ))
       ) : (
         <TierFallbackView nodes={nodes} />
+      ))}
+
+      {kibana && (
+        <>
+          <EuiSpacer size="m" />
+          <EuiText size="xs" color="subdued" style={{ marginBottom: 6 }}>
+            <strong>Kibana</strong>
+          </EuiText>
+          <EuiFlexGroup gutterSize="m" wrap responsive={false}>
+            <EuiFlexItem grow={false}>
+              <KibanaCard kibana={kibana} />
+            </EuiFlexItem>
+          </EuiFlexGroup>
+        </>
       )}
     </div>
   )

@@ -41,8 +41,9 @@ src/
     bundleData.ts   # AUTO-GENERATED — gitignored, contains customer data, never commit
     buildConfig.json  # AUTO-GENERATED — gitignored, tells vite.config.ts the output dir
   parsers/          # Bundle file parsers → typed BundleModel
-    types.ts        # All shared TypeScript interfaces (incl. GeneratedBundle)
-    index.ts        # parseBundle() orchestrator
+    types.ts        # All shared TypeScript interfaces (incl. GeneratedBundle, KibanaInfo)
+    index.ts        # parseBundle() orchestrator (ES bundle)
+    kibana.ts       # parseKibana() — reads Kibana diagnostic bundle
     manifest.ts, health.ts, nodes.ts, indices.ts, shards.ts,
     stats.ts, ilm.ts, ml.ts, features.ts, replication.ts, snapshots.ts
   components/       # UI sections (one file per section)
@@ -80,9 +81,11 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 **ClusterHeader**: Shows customer name and optional cluster name (passed via `--cluster` flag in generate command). Cluster name is displayed in normal font (not monospace). Omitted if null/empty.
 
-**Overview**: Includes "Solution · Version" card showing solution type badges (Search/Observability/Security) + ES version; omitted if `features` is null or `solutionTypes` is empty.
+**Overview**: Includes "Solution · Version" card showing solution type badges (Search/Observability/Security) + ES version + Kibana version (when Kibana bundle present); omitted if `features` is null or `solutionTypes` is empty.
 
-**Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard displays vCPU count (from `available_processors`), RAM, and disk capacity in the format `"32 vCPU · 61.0 GiB RAM · 1.4 TiB disk"`. Role badges are displayed on their own line below the node name (10px font, wrapping enabled) to prevent overflow on multi-role nodes. Node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen.
+**Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard displays vCPU count (from `available_processors`), RAM, and disk capacity in the format `"32 vCPU · 61.0 GiB RAM · 1.4 TiB disk"`. Role badges are displayed on their own line below the node name (10px font, wrapping enabled) to prevent overflow on multi-role nodes. Node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen. Kibana section rendered below ES nodes when Kibana bundle present.
+
+**FeaturesIntegrations**: `features` prop is nullable. Kibana health badges (alerting, task manager) rendered when Kibana data present. Fleet badge rendered only when `fleet.total > 0`.
 
 ## Utilities
 
@@ -95,9 +98,17 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 See `src/utils/nodeRoles.test.ts` for test coverage.
 
-## Reference Bundle
+## Kibana Bundle Support
 
-`diagnostics/Hinge/api-diagnostics-20260319-211919/` — gitignored, available locally.
+`generate.ts` detects `kibana-api-diagnostics-*/` alongside the ES bundle and calls `parseKibana()`. The `KibanaInfo` object is stored as `GeneratedBundle.kibana` (null when absent).
+
+**Important**: use `heap.size_limit` from `kibana_status.json` for the Kibana instance size — not OS RAM, which reflects the shared ESS host machine and is misleading (shows 60GB on a 1GB instance).
+
+## Reference Bundles
+
+`diagnostics/Hinge/` — gitignored, available locally.
 Hinge (dating app): 21 nodes (3 master + 18 hot), 117 indices, ES 9.3.1, AWS us-east-1. Kibana bundle also present.
-
 Run: `npm run generate -- --customer Hinge --name "Hinge" --cluster "Hinge Prod"`
+
+`diagnostics/FI.Span/` — gitignored, available locally. Kibana bundle also present.
+Run: `npm run generate -- --customer "FI.Span" --name "FI.Span"`

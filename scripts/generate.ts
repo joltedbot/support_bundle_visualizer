@@ -13,6 +13,7 @@
 import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { parseBundle } from '../src/parsers/index.ts'
+import { parseKibana } from '../src/parsers/kibana.ts'
 import type { BundleData } from '../src/utils/bundleReader.ts'
 
 function getArg(flag: string): string | undefined {
@@ -82,6 +83,14 @@ console.log(`Reading ${files.size} files from ${esBundleName}...`)
 const bundleData: BundleData = { files, rootName: esBundleName }
 const model = await parseBundle(bundleData)
 
+let kibana = null
+if (kibanaBundleName) {
+  const kibanaPath = join(customerPath, kibanaBundleName)
+  const kibanaFiles = readDirRecursive(kibanaPath)
+  console.log(`Reading ${kibanaFiles.size} files from ${kibanaBundleName}...`)
+  kibana = parseKibana(kibanaFiles)
+}
+
 const output = {
   model,
   customerName,
@@ -89,6 +98,7 @@ const output = {
   notes,
   generatedAt: new Date().toISOString(),
   hasKibanaBundle: Boolean(kibanaBundleName),
+  kibana,
 }
 
 const outDir = join(root, 'src', 'generated')

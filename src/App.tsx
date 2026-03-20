@@ -42,7 +42,7 @@ function App() {
     )
   }
 
-  const { model, customerName, clusterName, generatedAt, notes } = data
+  const { model, customerName, clusterName, generatedAt, notes, kibana } = data
   return (
     <>
       <ClusterHeader
@@ -54,13 +54,13 @@ function App() {
       <EuiPage paddingSize="l">
         <EuiPageBody>
           <EuiSpacer size="l" />
-          <Overview model={model} />
+          <Overview model={model} kibana={kibana ?? null} />
           <EuiSpacer size="l" />
           <EuiTitle size="s">
             <h3>Topology</h3>
           </EuiTitle>
           <EuiSpacer size="s" />
-          <Topology nodes={model.nodes} />
+          <Topology nodes={model.nodes} kibana={kibana ?? null} />
           <EuiSpacer size="l" />
           <EuiTitle size="s">
             <h3>Index Landscape</h3>
@@ -68,7 +68,7 @@ function App() {
           <EuiSpacer size="s" />
           <IndexLandscape indices={model.indices} shards={model.shards} />
           <EuiSpacer size="l" />
-          {model.features && (
+          {(model.features || kibana) && (
             <>
               <EuiTitle size="s">
                 <h3>Features & Integrations</h3>
@@ -80,6 +80,7 @@ function App() {
                 ilm={model.ilm}
                 replication={model.replication}
                 snapshots={model.snapshots}
+                kibana={kibana ?? null}
               />
               <EuiSpacer size="l" />
             </>

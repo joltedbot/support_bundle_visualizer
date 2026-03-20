@@ -6,11 +6,12 @@ import {
   EuiBadge,
   EuiText,
 } from '@elastic/eui'
-import type { BundleModel } from '../parsers/types'
+import type { BundleModel, KibanaInfo } from '../parsers/types'
 import { formatBytes, formatCount, healthColor } from '../utils/format'
 
 interface Props {
   model: BundleModel
+  kibana: KibanaInfo | null
 }
 
 const SOLUTION_COLORS: Record<string, string> = {
@@ -25,7 +26,7 @@ const SOLUTION_LABELS: Record<string, string> = {
   security:      'Security',
 }
 
-export default function Overview({ model }: Props) {
+export default function Overview({ model, kibana }: Props) {
   const health = model.health
   const stats = model.stats
 
@@ -71,11 +72,16 @@ export default function Overview({ model }: Props) {
               {model.identity?.esVersion && (
                 <EuiFlexItem grow={false}>
                   <EuiText size="s">
-                    <strong>v{model.identity.esVersion}</strong>
+                    <strong>ES v{model.identity.esVersion}</strong>
                   </EuiText>
                 </EuiFlexItem>
               )}
             </EuiFlexGroup>
+            {kibana && (
+              <EuiText size="xs" color="subdued" style={{ marginTop: 6 }}>
+                Kibana v{kibana.version}
+              </EuiText>
+            )}
           </EuiPanel>
         </EuiFlexItem>
       )}
