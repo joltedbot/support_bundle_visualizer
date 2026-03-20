@@ -61,7 +61,7 @@ export default function Overview({ model }: Props) {
               Solution · Version
             </EuiText>
             <EuiFlexGroup gutterSize="xs" wrap responsive={false} alignItems="center">
-              {model.features!.solutionTypes.map((s) => (
+              {model.features?.solutionTypes.map((s) => (
                 <EuiFlexItem grow={false} key={s}>
                   <EuiBadge color={SOLUTION_COLORS[s] ?? 'default'}>
                     {SOLUTION_LABELS[s] ?? s}
