@@ -11,6 +11,7 @@ import { parseML } from './ml'
 import { parseFeatures } from './features'
 import { parseReplication } from './replication'
 import { parseSnapshots } from './snapshots'
+import { parseSizing } from './sizing'
 
 export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const { files } = data
@@ -27,6 +28,7 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     features: parseFeatures(files, indices),
     replication: parseReplication(files),
     snapshots: parseSnapshots(files),
+    sizing: parseSizing(files, indices),
   }
 }
 

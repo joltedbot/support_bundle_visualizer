@@ -89,7 +89,7 @@ function App() {
             <h3>Data Profile</h3>
           </EuiTitle>
           <EuiSpacer size="s" />
-          <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} />
+          <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} />
           <EuiSpacer size="l" />
           <BestPractices />
           {notes && (

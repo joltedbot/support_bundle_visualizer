@@ -8,14 +8,15 @@ import type { IndexInfo } from './types'
 function parseSize(sizeStr: string): number {
   if (!sizeStr || sizeStr === '-' || sizeStr === '') return 0
   const lower = sizeStr.toLowerCase().trim()
-  const units: Record<string, number> = {
-    b: 1,
-    kb: 1024,
-    mb: 1024 * 1024,
-    gb: 1024 * 1024 * 1024,
-    tb: 1024 * 1024 * 1024 * 1024,
-  }
-  for (const [suffix, multiplier] of Object.entries(units)) {
+  // Longest suffixes must be checked first so "gb" matches before "b", etc.
+  const units: [string, number][] = [
+    ['tb', 1024 * 1024 * 1024 * 1024],
+    ['gb', 1024 * 1024 * 1024],
+    ['mb', 1024 * 1024],
+    ['kb', 1024],
+    ['b', 1],
+  ]
+  for (const [suffix, multiplier] of units) {
     if (lower.endsWith(suffix)) {
       const num = parseFloat(lower.slice(0, -suffix.length))
       return isNaN(num) ? 0 : Math.round(num * multiplier)

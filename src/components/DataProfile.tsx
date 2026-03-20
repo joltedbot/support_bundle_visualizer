@@ -8,21 +8,27 @@ import {
   EuiSpacer,
   EuiTitle,
 } from '@elastic/eui'
-import type { ClusterStats, ILMInfo, SnapshotInfo } from '../parsers/types'
+import type { ClusterStats, ILMInfo, SnapshotInfo, SizingMetrics } from '../parsers/types'
 import { formatBytes, formatCount } from '../utils/format'
 
 interface Props {
   stats: ClusterStats | null
   ilm: ILMInfo | null
   snapshots: SnapshotInfo | null
+  sizing: SizingMetrics | null
 }
 
-export default function DataProfile({ stats, ilm, snapshots }: Props) {
+export default function DataProfile({ stats, ilm, snapshots, sizing }: Props) {
   const hasStats = stats !== null
   const hasIlm = ilm !== null
   const hasSnapshots = snapshots !== null
+  const hasSizing = sizing !== null && (
+    sizing.avgQueryRateQPS !== null ||
+    sizing.ingestRateGBPerDay !== null ||
+    sizing.retentionDistribution.length > 0
+  )
 
-  if (!hasStats && !hasIlm && !hasSnapshots) return null
+  if (!hasStats && !hasIlm && !hasSnapshots && !hasSizing) return null
 
   return (
     <EuiFlexGroup wrap gutterSize="l" alignItems="flexStart" responsive={false}>
@@ -125,6 +131,44 @@ export default function DataProfile({ stats, ilm, snapshots }: Props) {
                   {snapshots.repositoryNames.map((repo) => (
                     <EuiFlexItem key={repo} grow={false}>
                       <EuiBadge color="hollow">{repo}</EuiBadge>
+                    </EuiFlexItem>
+                  ))}
+                </EuiFlexGroup>
+              </>
+            )}
+          </EuiPanel>
+        </EuiFlexItem>
+      )}
+
+      {hasSizing && sizing && (
+        <EuiFlexItem grow={false} style={{ minWidth: 280 }}>
+          <EuiPanel paddingSize="m">
+            <EuiTitle size="xs"><h4>Sizing Estimates</h4></EuiTitle>
+            <EuiSpacer size="s" />
+            <EuiDescriptionList
+              compressed
+              listItems={[
+                ...(sizing.avgQueryRateQPS !== null ? [{
+                  title: 'Avg query rate',
+                  description: `~${Math.round(sizing.avgQueryRateQPS).toLocaleString()} QPS${sizing.nodeUptimeDays !== null ? ` (avg since last restart, ${sizing.nodeUptimeDays.toFixed(1)}d ago)` : ''}`,
+                }] : []),
+                ...(sizing.ingestRateGBPerDay !== null ? [{
+                  title: 'Est. ingest rate',
+                  description: `~${sizing.ingestRateGBPerDay.toFixed(1)} GB/day ingested (stored, estimate)`,
+                }] : []),
+              ]}
+            />
+            {sizing.retentionDistribution.length > 0 && (
+              <>
+                <EuiSpacer size="xs" />
+                <EuiText size="xs" color="subdued">Data retention</EuiText>
+                <EuiSpacer size="xs" />
+                <EuiFlexGroup wrap gutterSize="xs" responsive={false}>
+                  {sizing.retentionDistribution.map((b) => (
+                    <EuiFlexItem key={b.days} grow={false}>
+                      <EuiBadge color={b.days === sizing.primaryRetentionDays ? 'primary' : 'hollow'}>
+                        {b.days}d × {b.policyCount}
+                      </EuiBadge>
                     </EuiFlexItem>
                   ))}
                 </EuiFlexGroup>

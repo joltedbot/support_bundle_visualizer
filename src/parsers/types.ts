@@ -149,6 +149,19 @@ export interface KibanaInfo {
   } | null
 }
 
+export interface RetentionBucket {
+  days: number
+  policyCount: number
+}
+
+export interface SizingMetrics {
+  avgQueryRateQPS: number | null     // avg QPS since last node restart
+  nodeUptimeDays: number | null      // max uptime across nodes (context for QPS label)
+  ingestRateGBPerDay: number | null  // estimated compressed primary GB/day (retention-based)
+  retentionDistribution: RetentionBucket[]  // sorted ascending by days
+  primaryRetentionDays: number | null       // modal bucket's day value
+}
+
 export interface BundleModel {
   identity: ClusterIdentity | null
   health: ClusterHealth | null
@@ -161,6 +174,7 @@ export interface BundleModel {
   features: FeatureInfo | null
   replication: ReplicationInfo | null
   snapshots: SnapshotInfo | null
+  sizing: SizingMetrics | null
 }
 
 export interface GeneratedBundle {
