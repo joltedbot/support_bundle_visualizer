@@ -11,8 +11,10 @@ A local tool for Elastic SAs to quickly orient on a customer cluster from an Ela
 ## Setup (first time)
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 ```
+
+(React 19 and `@elastic/charts` have peer dependency conflicts; `--legacy-peer-deps` allows installation.)
 
 ## Generating a report
 
@@ -43,7 +45,7 @@ Claude will ask you to confirm the customer name and any notes, then run the gen
 output/<customer>/index.html
 ```
 
-Open this file directly in any browser — no server needed. Each customer has their own output folder so reports are never overwritten.
+Open this file directly in any browser — no server needed. It's a self-contained HTML file (~2MB) with all CSS and JavaScript inlined. Each customer has their own output folder so reports are never overwritten.
 
 ---
 
@@ -58,6 +60,9 @@ npm run build
 
 # Output is at:
 open output/acme-corp/index.html
+
+# Run tests (optional)
+npx vitest run
 ```
 
 ---
@@ -66,9 +71,9 @@ open output/acme-corp/index.html
 
 | Section | Contents |
 |---|---|
-| Cluster Header | Customer name, ES version, cluster health, node/index counts |
-| Overview | Key cluster stats at a glance |
-| Topology | Node roles, zone distribution, versions |
+| Cluster Header | Customer name, cluster name (if available) |
+| Overview | Solution type (Search/Observability/Security), ES version, cluster health, node/index counts |
+| Topology | Nodes grouped by availability zone (if available) or tier; AZ summary bar showing tier distribution |
 | Index Landscape | Index counts, shard distribution, size breakdown |
 | Resource Health | Heap, disk, CPU per node (when available) |
 | Features & Integrations | ILM, ML, CCR, snapshots, installed plugins |

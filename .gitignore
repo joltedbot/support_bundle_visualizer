@@ -8,16 +8,18 @@ pnpm-debug.log*
 lerna-debug.log*
 
 diagnostics/
+docs/
 
 # Generated bundle data — contains customer data, never commit
 src/generated/bundleData.ts
 src/generated/buildConfig.json
 
 node_modules
-dist
 dist-ssr
 output/
 *.local
+
+.superpowers/
 
 # Editor directories and files
 .DS_Store
