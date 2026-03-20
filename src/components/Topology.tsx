@@ -54,29 +54,19 @@ const DATA_ROLE_TO_TIER: Partial<Record<NodeRole, string>> = {
   data_frozen: 'frozen',
 }
 
-function primaryTierFromRoles(roles: NodeRole[]): string {
-  for (const r of roles) {
-    if (DATA_ROLE_TO_TIER[r]) return DATA_ROLE_TO_TIER[r]!
-  }
-  if (roles.includes('master')) return 'master'
-  if (roles.includes('ml')) return 'ml'
-  if (roles.includes('ingest')) return 'ingest'
-  if (roles.includes('transform')) return 'transform'
-  return 'coordinating'
-}
-
 // ─── NodeCard ─────────────────────────────────────────────────────────────────
 
 function NodeCard({ node }: { node: NodeInfo }) {
-  const primaryTier = primaryTierFromRoles(node.roles)
-  const primaryColor = TIER_COLORS[primaryTier] ?? '#7f8c8d'
-
   // Primary badge: data tier role wins; fall back to first non-rcc management role
   const primaryRole: NodeRole =
     node.roles.find(r => DATA_ROLE_TO_TIER[r]) ??
     node.roles.find(r => r !== 'remote_cluster_client') ??
     node.roles[0]
   const secondaryRoles = node.roles.filter(r => r !== primaryRole)
+
+  // Derive color from the primary role's tier name
+  const primaryTier = DATA_ROLE_TO_TIER[primaryRole] ?? primaryRole
+  const primaryColor = TIER_COLORS[primaryTier] ?? '#7f8c8d'
 
   const heapColor = node.heapPercent !== undefined
     ? resourceColor(node.heapPercent, 75, 85) : undefined
