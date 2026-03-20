@@ -1,14 +1,12 @@
 import {
   EuiHeader,
   EuiHeaderSectionItem,
-  EuiBadge,
   EuiText,
   EuiButton,
   EuiFlexGroup,
   EuiFlexItem,
 } from '@elastic/eui'
 import type { BundleModel } from '../parsers/types'
-import { healthColor } from '../utils/format'
 
 interface Props {
   model: BundleModel
@@ -17,11 +15,7 @@ interface Props {
 }
 
 export default function ClusterHeader({ model, customerName, generatedAt }: Props) {
-  const health = model.health?.status ?? 'unknown'
-  const hColor = healthColor(health)
-
-  const nodeCount = model.health?.numberOfNodes ?? model.nodes.length
-  const indexCount = model.indices.filter((i) => !i.isSystem).length
+  const clusterName = model.identity?.clusterName || null
 
   const regionParts: string[] = []
   if (model.identity?.cloudProvider) regionParts.push(model.identity.cloudProvider.toUpperCase())
@@ -62,34 +56,37 @@ export default function ClusterHeader({ model, customerName, generatedAt }: Prop
                     <strong style={{ fontSize: 16 }}>{customerName}</strong>
                   </EuiText>
                 </EuiFlexItem>
-                <EuiFlexItem grow={false}>
-                  <EuiBadge color={hColor}>{health}</EuiBadge>
-                </EuiFlexItem>
-                {model.identity?.esVersion && (
-                  <EuiFlexItem grow={false}>
-                    <EuiText size="s" color="subdued">
-                      v{model.identity.esVersion}
-                    </EuiText>
-                  </EuiFlexItem>
+                {clusterName && (
+                  <>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="subdued">·</EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="subdued">
+                        <span style={{ fontFamily: 'monospace' }}>{clusterName}</span>
+                      </EuiText>
+                    </EuiFlexItem>
+                  </>
                 )}
-                <EuiFlexItem grow={false}>
-                  <EuiText size="s" color="subdued">
-                    {nodeCount} nodes · {indexCount} indices
-                  </EuiText>
-                </EuiFlexItem>
                 {regionStr && (
-                  <EuiFlexItem grow={false}>
-                    <EuiText size="s" color="subdued">
-                      {regionStr}
-                    </EuiText>
-                  </EuiFlexItem>
+                  <>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="subdued">·</EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="subdued">{regionStr}</EuiText>
+                    </EuiFlexItem>
+                  </>
                 )}
                 {collectedAt && (
-                  <EuiFlexItem grow={false}>
-                    <EuiText size="s" color="subdued">
-                      Collected: {collectedAt}
-                    </EuiText>
-                  </EuiFlexItem>
+                  <>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="subdued">·</EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="subdued">Collected: {collectedAt}</EuiText>
+                    </EuiFlexItem>
+                  </>
                 )}
               </EuiFlexGroup>
             </EuiHeaderSectionItem>,
