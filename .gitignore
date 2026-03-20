@@ -11,10 +11,12 @@ diagnostics/
 
 # Generated bundle data — contains customer data, never commit
 src/generated/bundleData.ts
+src/generated/buildConfig.json
 
 node_modules
 dist
 dist-ssr
+output/
 *.local
 
 # Editor directories and files

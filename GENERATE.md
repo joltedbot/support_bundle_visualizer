@@ -60,13 +60,15 @@ The script will:
 npm run build
 ```
 
-This produces `dist/index.html` (and supporting assets in `dist/`). Open `dist/index.html` directly in any browser — no server required.
+This produces `output/<dirname>/index.html` (and supporting assets alongside it). Open `output/<dirname>/index.html` directly in any browser — no server required.
+
+Each customer gets their own folder under `output/`, so reports are never overwritten when switching between customers.
 
 ## Step 6 — Done
 
 Tell the user where the output is:
 
-> "Report generated at `dist/index.html`. Open it in your browser — no server needed."
+> "Report generated at `output/<dirname>/index.html`. Open it in your browser — no server needed."
 
 ---
 

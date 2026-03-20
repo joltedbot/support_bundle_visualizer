@@ -1,73 +1,88 @@
-# React + TypeScript + Vite
+# Support Bundle Visualizer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A local tool for Elastic SAs to quickly orient on a customer cluster from an Elasticsearch diagnostic bundle. Produces a self-contained static HTML report — no server or internet connection required.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 18+
+- An Elasticsearch diagnostic bundle (`api-diagnostics-YYYYMMDD-HHMMSS/`)
+- Optionally a Kibana diagnostic bundle (`kibana-api-diagnostics-YYYYMMDD-HHMMSS/`)
 
-## React Compiler
+## Setup (first time)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Generating a report
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 1. Place your diagnostic bundle
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Create a folder named after the customer inside `diagnostics/` and place the bundle(s) inside it:
+
 ```
+diagnostics/
+  acme-corp/
+    api-diagnostics-20260101-120000/     ← required
+    kibana-api-diagnostics-20260101-120000/  ← optional
+```
+
+Multiple customers can coexist in `diagnostics/` — each gets their own subfolder.
+
+### 2. Tell Claude Code to generate the report
+
+```
+Read and execute the instructions in GENERATE.md
+```
+
+Claude will ask you to confirm the customer name and any notes, then run the generate and build steps automatically.
+
+### 3. Open the report
+
+```
+output/<customer>/index.html
+```
+
+Open this file directly in any browser — no server needed. Each customer has their own output folder so reports are never overwritten.
+
+---
+
+## Running manually (without Claude)
+
+```bash
+# Generate bundle data
+npm run generate -- --customer acme-corp --name "ACME Corp" --notes "Pre-renewal call"
+
+# Build the report
+npm run build
+
+# Output is at:
+open output/acme-corp/index.html
+```
+
+---
+
+## What's in the report
+
+| Section | Contents |
+|---|---|
+| Cluster Header | Customer name, ES version, cluster health, node/index counts |
+| Overview | Key cluster stats at a glance |
+| Topology | Node roles, zone distribution, versions |
+| Index Landscape | Index counts, shard distribution, size breakdown |
+| Resource Health | Heap, disk, CPU per node (when available) |
+| Features & Integrations | ILM, ML, CCR, snapshots, installed plugins |
+| Data Profile | Index size distribution, ILM policy coverage |
+| Best Practices | Automated observations and recommendations |
+| Notes | Any pre-call context you added at generate time |
+
+Sections with no data are omitted automatically — no empty panels.
+
+---
+
+## Privacy
+
+- `diagnostics/` is gitignored — bundle files are never committed
+- `src/generated/` is gitignored — generated customer data is never committed
+- `output/` is gitignored — built reports are never committed
+- Be mindful when sharing `output/<customer>/index.html` — it contains cluster topology and configuration data
