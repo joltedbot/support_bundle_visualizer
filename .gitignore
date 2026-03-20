@@ -9,6 +9,9 @@ lerna-debug.log*
 
 diagnostics/
 
+# Generated bundle data — contains customer data, never commit
+src/generated/bundleData.ts
+
 node_modules
 dist
 dist-ssr

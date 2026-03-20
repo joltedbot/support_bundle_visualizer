@@ -140,3 +140,11 @@ export interface BundleModel {
   replication: ReplicationInfo | null
   snapshots: SnapshotInfo | null
 }
+
+export interface GeneratedBundle {
+  model: BundleModel | null
+  customerName: string
+  notes: string | null
+  generatedAt: string | null
+  hasKibanaBundle: boolean
+}
