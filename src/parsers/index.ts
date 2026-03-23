@@ -6,7 +6,7 @@ import { parseNodes } from './nodes'
 import { parseIndices } from './indices'
 import { parseShards } from './shards'
 import { parseStats } from './stats'
-import { parseILM } from './ilm'
+import { parseILM, buildIndexPolicyMap } from './ilm'
 import { parseML } from './ml'
 import { parseFeatures } from './features'
 import { parseReplication } from './replication'
@@ -15,7 +15,15 @@ import { parseSizing } from './sizing'
 
 export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const { files } = data
-  const indices = parseIndices(files)
+  const rawIndices = parseIndices(files)
+
+  // Join ILM policy names onto each index
+  const indexPolicyMap = buildIndexPolicyMap(files)
+  const indices = rawIndices.map((idx) => {
+    const policy = indexPolicyMap.get(idx.name)
+    return policy ? { ...idx, ilmPolicy: policy } : idx
+  })
+
   return {
     identity: parseManifest(files),
     health: parseHealth(files),

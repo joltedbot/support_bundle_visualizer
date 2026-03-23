@@ -59,6 +59,7 @@ export interface IndexInfo {
   replicaShards: number
   docCount: number
   storeSizeBytes: number
+  ilmPolicy?: string  // policy name from ilm_explain.json, if managed
 }
 
 export interface ShardInfo {
@@ -82,10 +83,23 @@ export interface ClusterStats {
   segmentCount: number
 }
 
+export interface ILMPolicyDetail {
+  name: string
+  deleteDays: number | null       // delete phase min_age in days (retention)
+  hotMaxAge: string | null        // hot rollover max_age raw (e.g. "30d")
+  hotMaxSize: string | null       // hot rollover max_primary_shard_size raw (e.g. "50gb")
+  warmMinAge: string | null       // warm phase min_age raw
+  coldMinAge: string | null       // cold phase min_age raw
+  forceMergeSegments: number | null  // forcemerge max_num_segments
+  shrinkShards: number | null     // shrink number_of_shards
+  indexCount: number              // number of managed indices using this policy
+}
+
 export interface ILMInfo {
   policyCount: number
   managedIndexCount: number
   tiers: { hot: number; warm: number; cold: number; frozen: number }
+  policies: ILMPolicyDetail[]
 }
 
 export interface MLInfo {

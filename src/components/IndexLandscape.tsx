@@ -25,9 +25,14 @@ interface SortState {
   direction: 'asc' | 'desc'
 }
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+const DEFAULT_PAGE_SIZE = 20
+
 export default function IndexLandscape({ indices, shards }: Props) {
   const [showSystem, setShowSystem] = useState(false)
   const [sort, setSort] = useState<SortState>({ field: 'storeSizeBytes', direction: 'desc' })
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   // Build a set of indices with shard issues
   const flaggedIndices = useMemo(() => {
@@ -40,13 +45,18 @@ export default function IndexLandscape({ indices, shards }: Props) {
     return flags
   }, [shards])
 
-  const displayed = useMemo(() => {
+  const sorted = useMemo(() => {
     const filtered = showSystem ? indices : indices.filter((i) => !i.isSystem)
     return [...filtered].sort((a, b) => {
       const mult = sort.direction === 'asc' ? 1 : -1
       return (a[sort.field] - b[sort.field]) * mult
     })
   }, [indices, showSystem, sort])
+
+  const displayed = useMemo(() => {
+    const start = pageIndex * pageSize
+    return sorted.slice(start, start + pageSize)
+  }, [sorted, pageIndex, pageSize])
 
   const columns: EuiBasicTableColumn<IndexInfo>[] = [
     {
@@ -77,6 +87,30 @@ export default function IndexLandscape({ indices, shards }: Props) {
           )}
         </EuiFlexGroup>
       ),
+    },
+    {
+      field: 'ilmPolicy',
+      name: 'ILM Policy',
+      width: '160px',
+      truncateText: true,
+      render: (policy: string | undefined) => {
+        if (!policy) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+        return (
+          <EuiToolTip content={policy}>
+            <span
+              style={{
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                fontSize: '0.85em',
+              }}
+            >
+              {policy}
+            </span>
+          </EuiToolTip>
+        )
+      },
     },
     {
       field: 'health',
@@ -131,12 +165,24 @@ export default function IndexLandscape({ indices, shards }: Props) {
     },
   }
 
-  function onTableChange({ sort: newSort }: Criteria<IndexInfo>) {
+  const pagination = {
+    pageIndex,
+    pageSize,
+    totalItemCount: sorted.length,
+    pageSizeOptions: PAGE_SIZE_OPTIONS,
+  }
+
+  function onTableChange({ sort: newSort, page: newPage }: Criteria<IndexInfo>) {
     if (newSort) {
       const validSortFields: SortField[] = ['storeSizeBytes', 'docCount']
       if (validSortFields.includes(newSort.field as SortField)) {
         setSort({ field: newSort.field as SortField, direction: newSort.direction })
+        setPageIndex(0)
       }
+    }
+    if (newPage) {
+      setPageIndex(newPage.index)
+      setPageSize(newPage.size)
     }
   }
 
@@ -146,7 +192,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
         <EuiFlexItem grow={false}>
           <EuiButtonEmpty
             size="s"
-            onClick={() => setShowSystem((v) => !v)}
+            onClick={() => { setShowSystem((v) => !v); setPageIndex(0) }}
             iconType={showSystem ? 'eye' : 'eyeClosed'}
           >
             {showSystem ? 'Hide system indices' : 'Show system indices'}
@@ -158,6 +204,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
         items={displayed}
         columns={columns}
         sorting={sorting}
+        pagination={pagination}
         onChange={onTableChange}
         rowProps={(item) =>
           flaggedIndices.has(item.name) ? { style: { borderLeft: '3px solid var(--euiColorWarning, #f5a700)' } } : {}
