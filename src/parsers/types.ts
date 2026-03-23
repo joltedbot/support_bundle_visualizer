@@ -42,7 +42,8 @@ export interface NodeInfo {
   az?: string
   instanceConfiguration?: string  // e.g. "aws.es.datahot.c6gd"
   // Resource stats (may be absent if nodes_stats not present)
-  heapPercent?: number      // 0–100
+  heapPercent?: number      // 0–100 (used heap / max heap)
+  heapMaxBytes?: number     // bytes — max (allocated) JVM heap size (-Xmx)
   cpuPercent?: number       // 0–100
   diskUsedPercent?: number  // 0–100
   diskTotal?: number        // bytes

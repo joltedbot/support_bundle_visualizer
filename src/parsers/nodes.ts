@@ -16,7 +16,7 @@ interface NodesJson {
 interface NodesStatsJson {
   nodes?: Record<string, {
     name?: string
-    jvm?: { mem?: { heap_used_percent?: number } }
+    jvm?: { mem?: { heap_used_percent?: number; heap_max_in_bytes?: number } }
     process?: { cpu?: { percent?: number } }
     fs?: { total?: { total_in_bytes?: number; free_in_bytes?: number; available_in_bytes?: number } }
     os?: { mem?: { total_in_bytes?: number } }
@@ -130,6 +130,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
   // Build stats map by node id from nodes_stats
   const statsById = new Map<string, {
     heapPercent?: number
+    heapMaxBytes?: number
     cpuPercent?: number
     diskTotal?: number
     diskAvail?: number
@@ -139,6 +140,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
   if (nodesStatsJson?.nodes) {
     for (const [id, node] of Object.entries(nodesStatsJson.nodes)) {
       const heapPercent = node.jvm?.mem?.heap_used_percent
+      const heapMaxBytes = node.jvm?.mem?.heap_max_in_bytes
       const cpuPercent = node.process?.cpu?.percent
       const fsTotalBytes = node.fs?.total?.total_in_bytes
       const fsFreeBytes = node.fs?.total?.free_in_bytes ?? node.fs?.total?.available_in_bytes
@@ -149,7 +151,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       if (fsTotalBytes !== undefined) diskTotal = fsTotalBytes
       if (fsFreeBytes !== undefined) diskAvail = fsFreeBytes
 
-      statsById.set(id, { heapPercent, cpuPercent, diskTotal, diskAvail, ramTotal })
+      statsById.set(id, { heapPercent, heapMaxBytes, cpuPercent, diskTotal, diskAvail, ramTotal })
     }
   }
 
@@ -188,7 +190,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
     // Calculate diskUsedPercent
     let diskUsedPercent: number | undefined
     if (stats?.diskTotal !== undefined && stats.diskAvail !== undefined && stats.diskTotal > 0) {
-      diskUsedPercent = ((stats.diskTotal - stats.diskAvail) / stats.diskTotal) * 100
+      diskUsedPercent = Math.round(((stats.diskTotal - stats.diskAvail) / stats.diskTotal) * 1000) / 10
     }
 
     const instanceConfiguration = node.attributes?.instance_configuration
@@ -202,6 +204,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       az,
       instanceConfiguration,
       heapPercent: stats?.heapPercent,
+      heapMaxBytes: stats?.heapMaxBytes,
       cpuPercent: stats?.cpuPercent,
       diskUsedPercent,
       diskTotal: stats?.diskTotal,

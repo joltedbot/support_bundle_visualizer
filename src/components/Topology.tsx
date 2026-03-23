@@ -135,10 +135,30 @@ function NodeCard({ node }: { node: NodeInfo }) {
       {node.heapPercent !== undefined && (
         <div style={{ marginBottom: 4 }}>
           <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-            <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap</EuiText></EuiFlexItem>
+            <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap Used</EuiText></EuiFlexItem>
             <EuiFlexItem grow={false}><EuiText size="xs">{node.heapPercent}%</EuiText></EuiFlexItem>
           </EuiFlexGroup>
           <EuiProgress value={node.heapPercent} max={100} size="s" color={heapColor} />
+        </div>
+      )}
+
+      {node.heapMaxBytes !== undefined && node.ramTotal !== undefined && node.ramTotal > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          {(() => {
+            const pct = Math.round((node.heapMaxBytes / node.ramTotal) * 100)
+            return (
+              <>
+                <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
+                  <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap / RAM</EuiText></EuiFlexItem>
+                  <EuiFlexItem grow={false}><EuiText size="xs">{pct}%</EuiText></EuiFlexItem>
+                </EuiFlexGroup>
+                <EuiProgress value={pct} max={100} size="s" color={resourceColor(pct, 51, 56)} />
+                <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
+                  {formatBytes(node.heapMaxBytes)} / {formatBytes(node.ramTotal)}
+                </EuiText>
+              </>
+            )
+          })()}
         </div>
       )}
 
