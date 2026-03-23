@@ -17,12 +17,6 @@ interface Props {
 
 export default function ClusterHeader({ model, customerName, clusterName, generatedAt }: Props) {
 
-  const regionParts: string[] = []
-  if (model.identity?.cloudProvider) regionParts.push(model.identity.cloudProvider.toUpperCase())
-  if (model.identity?.region) regionParts.push(model.identity.region)
-  if (model.identity?.runner) regionParts.push(model.identity.runner)
-  const regionStr = regionParts.join(' · ')
-
   const collectedAt = model.identity?.collectionTimestamp
     ? new Date(model.identity.collectionTimestamp).toLocaleString()
     : null
@@ -63,16 +57,6 @@ export default function ClusterHeader({ model, customerName, clusterName, genera
                     </EuiFlexItem>
                     <EuiFlexItem grow={false}>
                       <EuiText size="s" color="subdued">{clusterName}</EuiText>
-                    </EuiFlexItem>
-                  </>
-                )}
-                {regionStr && (
-                  <>
-                    <EuiFlexItem grow={false}>
-                      <EuiText size="s" color="subdued">·</EuiText>
-                    </EuiFlexItem>
-                    <EuiFlexItem grow={false}>
-                      <EuiText size="s" color="subdued">{regionStr}</EuiText>
                     </EuiFlexItem>
                   </>
                 )}

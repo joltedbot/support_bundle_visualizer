@@ -80,9 +80,9 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 ## Component Notes
 
-**ClusterHeader**: Shows customer name and optional cluster name (passed via `--cluster` flag in generate command). Cluster name is displayed in normal font (not monospace). Omitted if null/empty.
+**ClusterHeader**: Shows customer name, optional cluster name (passed via `--cluster` flag in generate command), collection timestamp, and generated timestamp. Cluster name is displayed in normal font (not monospace). Omitted if null/empty. Deployment type/region info has moved to the Overview card row.
 
-**Overview**: Includes "Solution · Version" card showing solution type badges (Search/Observability/Security) + ES version + Kibana version (when Kibana bundle present); omitted if `features` is null or `solutionTypes` is empty.
+**Overview**: Stats card row. Card order: Cluster health → Deployment → Solution → Total nodes → User indices → Active shards → Total store size → Total documents → Avg doc size. Both Deployment and Solution use a custom layout (not EuiStat) with a plain `size="s"` label at top (no subdued color, to match Cluster health). **Deployment card**: `runner: "cli"` → label "Deployment" + bold "Self-Hosted"; `runner: "ess"` → label "Deployment" + bold "AWS · us-east-1" + bold "ECH" below; omitted when runner absent. **Solution card**: label "Solution" + solution badge(s) (Search/Observability/Security) + bold "ES v{version}" + bold "Kibana v{version}" (when Kibana present); omitted if `features` is null or `solutionTypes` is empty. All bold text is `size="s"` strong.
 
 **Licensing**: Shows license status, type, issue/expiry dates, max nodes/units, issuer, and issued-to organization. Omitted if license data absent.
 
@@ -132,3 +132,6 @@ Run: `npm run generate -- --customer Hinge --name "Hinge" --cluster "Hinge Prod"
 
 `diagnostics/FI.Span/` — gitignored, available locally. Kibana bundle also present.
 Run: `npm run generate -- --customer "FI.Span" --name "FI.Span"`
+
+`diagnostics/Presidents Choice Financial/` — gitignored, available locally. Self-hosted bundle, no Kibana.
+Run: `npm run generate -- --customer "Presidents Choice Financial" --name "Presidents Choice Financial"`

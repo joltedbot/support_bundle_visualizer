@@ -42,6 +42,25 @@ export default function Overview({ model, kibana }: Props) {
     model.features !== null &&
     model.features.solutionTypes.length > 0
 
+  const runner = model.identity?.runner?.toUpperCase()
+  let deploymentLabel: string | null = null
+  let deploymentSub: string | null = null
+  if (runner === 'CLI') {
+    deploymentLabel = 'Self-Hosted'
+  } else if (runner === 'ESS') {
+    deploymentLabel = 'ECH'
+    const parts: string[] = []
+    if (model.identity?.cloudProvider) parts.push(model.identity.cloudProvider.toUpperCase())
+    if (model.identity?.region) parts.push(model.identity.region)
+    if (parts.length) deploymentSub = parts.join(' · ')
+  } else if (runner) {
+    deploymentLabel = runner
+    const parts: string[] = []
+    if (model.identity?.cloudProvider) parts.push(model.identity.cloudProvider.toUpperCase())
+    if (model.identity?.region) parts.push(model.identity.region)
+    if (parts.length) deploymentSub = parts.join(' · ')
+  }
+
   return (
     <EuiFlexGroup gutterSize="m" wrap responsive={false}>
       <EuiFlexItem grow={false}>
@@ -55,13 +74,27 @@ export default function Overview({ model, kibana }: Props) {
         </EuiPanel>
       </EuiFlexItem>
 
+      {deploymentLabel && (
+        <EuiFlexItem grow={false}>
+          <EuiPanel paddingSize="m" style={{ minWidth: 120 }}>
+            <EuiText size="s" style={{ marginBottom: 4 }}>Deployment</EuiText>
+            {deploymentSub ? (
+              <>
+                <EuiText size="s"><strong>{deploymentSub}</strong></EuiText>
+                <EuiText size="s" style={{ marginTop: 2 }}><strong>{deploymentLabel}</strong></EuiText>
+              </>
+            ) : (
+              <EuiText size="s"><strong>{deploymentLabel}</strong></EuiText>
+            )}
+          </EuiPanel>
+        </EuiFlexItem>
+      )}
+
       {showSolutionCard && (
         <EuiFlexItem grow={false}>
           <EuiPanel paddingSize="m" style={{ minWidth: 140 }}>
-            <EuiText size="xs" color="subdued" style={{ marginBottom: 4 }}>
-              Solution · Version
-            </EuiText>
-            <EuiFlexGroup gutterSize="xs" wrap responsive={false} alignItems="center">
+            <EuiText size="s" style={{ marginBottom: 4 }}>Solution</EuiText>
+            <EuiFlexGroup gutterSize="xs" wrap responsive={false}>
               {model.features?.solutionTypes.map((s) => (
                 <EuiFlexItem grow={false} key={s}>
                   <EuiBadge color={SOLUTION_COLORS[s] ?? 'default'}>
@@ -69,17 +102,15 @@ export default function Overview({ model, kibana }: Props) {
                   </EuiBadge>
                 </EuiFlexItem>
               ))}
-              {model.identity?.esVersion && (
-                <EuiFlexItem grow={false}>
-                  <EuiText size="s">
-                    <strong>ES v{model.identity.esVersion}</strong>
-                  </EuiText>
-                </EuiFlexItem>
-              )}
             </EuiFlexGroup>
+            {model.identity?.esVersion && (
+              <EuiText size="s" style={{ marginTop: 4 }}>
+                <strong>ES v{model.identity.esVersion}</strong>
+              </EuiText>
+            )}
             {kibana && (
-              <EuiText size="xs" color="subdued" style={{ marginTop: 6 }}>
-                Kibana v{kibana.version}
+              <EuiText size="s" style={{ marginTop: 2 }}>
+                <strong>Kibana v{kibana.version}</strong>
               </EuiText>
             )}
           </EuiPanel>
