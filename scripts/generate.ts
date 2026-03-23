@@ -46,11 +46,11 @@ const isDir = (name: string) => {
   try { return statSync(join(customerPath, name)).isDirectory() } catch { return false }
 }
 
-const esBundleName = entries.find(e => e.startsWith('api-diagnostics-') && isDir(e))
+const esBundleName = entries.find(e => (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDir(e))
 const kibanaBundleName = entries.find(e => e.startsWith('kibana-api-diagnostics-') && isDir(e))
 
 if (!esBundleName) {
-  console.error(`Error: No api-diagnostics-* folder found in diagnostics/${customerDir}/`)
+  console.error(`Error: No api-diagnostics-* or local-diagnostics-* folder found in diagnostics/${customerDir}/`)
   process.exit(1)
 }
 

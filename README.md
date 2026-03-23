@@ -5,8 +5,10 @@ A local tool for Elastic SAs to quickly orient on a customer cluster from an Ela
 ## Prerequisites
 
 - Node.js 18+
-- An Elasticsearch diagnostic bundle (`api-diagnostics-YYYYMMDD-HHMMSS/`)
-- Optionally a Kibana diagnostic bundle (`kibana-api-diagnostics-YYYYMMDD-HHMMSS/`)
+- An Elasticsearch diagnostic bundle:
+  - Cloud (ESS): `api-diagnostics-YYYYMMDD-HHMMSS/`
+  - Self-hosted: `local-diagnostics-YYYYMMDD-HHMMSS/`
+- Optionally a Kibana diagnostic bundle (`kibana-api-diagnostics-YYYYMMDD-HHMMSS/`; typically only for cloud)
 
 ## Setup (first time)
 
@@ -25,8 +27,11 @@ Create a folder named after the customer inside `diagnostics/` and place the bun
 ```
 diagnostics/
   acme-corp/
-    api-diagnostics-20260101-120000/     ← required
-    kibana-api-diagnostics-20260101-120000/  ← optional
+    api-diagnostics-20260101-120000/           ← ESS cloud bundle
+    kibana-api-diagnostics-20260101-120000/    ← optional, ESS cloud only
+
+  my-self-hosted/
+    local-diagnostics-20260101-120000/         ← self-hosted bundle
 ```
 
 Multiple customers can coexist in `diagnostics/` — each gets their own subfolder.

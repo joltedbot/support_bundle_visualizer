@@ -109,6 +109,15 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 See `src/utils/nodeRoles.test.ts` for test coverage.
 
+## Bundle Types
+
+The tool supports two types of Elasticsearch diagnostic bundles:
+
+- **Cloud (ESS)**: folder named `api-diagnostics-YYYYMMDD-HHMMSS/`. May include a Kibana bundle (`kibana-api-diagnostics-*/`). Manifest has `"runner": "ess"`.
+- **Self-hosted**: folder named `local-diagnostics-YYYYMMDD-HHMMSS/`. Kibana bundles are uncommon for self-hosted deployments. Manifest has `"runner": "cli"`.
+
+Both bundle types have identical internal file structure, so all parsers work with both. `generate.ts` auto-detects the bundle type and folder naming.
+
 ## Kibana Bundle Support
 
 `generate.ts` detects `kibana-api-diagnostics-*/` alongside the ES bundle and calls `parseKibana()`. The `KibanaInfo` object is stored as `GeneratedBundle.kibana` (null when absent).
