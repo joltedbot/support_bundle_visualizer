@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
   EuiBasicTable,
+  EuiButtonEmpty,
   EuiDescriptionList,
   EuiFlexGroup,
   EuiFlexItem,
@@ -23,16 +24,25 @@ interface Props {
 }
 
 const ILM_PAGE_SIZE_OPTIONS = [10, 20, 50]
-const ILM_DEFAULT_PAGE_SIZE = 20
+const ILM_DEFAULT_PAGE_SIZE = 10
 
 function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) {
+  const [showSystem, setShowSystem] = useState(false)
+  const [showEmpty, setShowEmpty] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(ILM_DEFAULT_PAGE_SIZE)
 
+  const filtered = useMemo(() => {
+    let result = policies
+    if (!showSystem) result = result.filter(p => !p.name.startsWith('.'))
+    if (!showEmpty) result = result.filter(p => p.indexCount > 0)
+    return result
+  }, [policies, showSystem, showEmpty])
+
   const displayed = useMemo(() => {
     const start = pageIndex * pageSize
-    return policies.slice(start, start + pageSize)
-  }, [policies, pageIndex, pageSize])
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, pageIndex, pageSize])
 
   const columns: EuiBasicTableColumn<ILMPolicyDetail>[] = [
     {
@@ -121,7 +131,7 @@ function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) {
   const pagination = {
     pageIndex,
     pageSize,
-    totalItemCount: policies.length,
+    totalItemCount: filtered.length,
     pageSizeOptions: ILM_PAGE_SIZE_OPTIONS,
   }
 
@@ -133,12 +143,34 @@ function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) {
   }
 
   return (
-    <EuiBasicTable
-      items={displayed}
-      columns={columns}
-      pagination={pagination}
-      onChange={onTableChange}
-    />
+    <div>
+      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s" responsive={false}>
+        <EuiFlexItem grow={false}>
+          <EuiButtonEmpty
+            size="s"
+            onClick={() => { setShowEmpty(v => !v); setPageIndex(0) }}
+            iconType={showEmpty ? 'eye' : 'eyeClosed'}
+          >
+            {showEmpty ? 'Hide unused policies' : 'Show unused policies'}
+          </EuiButtonEmpty>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false}>
+          <EuiButtonEmpty
+            size="s"
+            onClick={() => { setShowSystem(v => !v); setPageIndex(0) }}
+            iconType={showSystem ? 'eye' : 'eyeClosed'}
+          >
+            {showSystem ? 'Hide system policies' : 'Show system policies'}
+          </EuiButtonEmpty>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+      <EuiBasicTable
+        items={displayed}
+        columns={columns}
+        pagination={pagination}
+        onChange={onTableChange}
+      />
+    </div>
   )
 }
 
@@ -276,8 +308,8 @@ export default function DataProfile({ stats, ilm, snapshots, sizing }: Props) {
                     description: `~${Math.round(sizing.avgQueryRateQPS).toLocaleString()} QPS${sizing.nodeUptimeDays !== null ? ` (avg since last restart, ${sizing.nodeUptimeDays.toFixed(1)}d ago)` : ''}`,
                   }] : []),
                   ...(sizing.ingestRateGBPerDay !== null ? [{
-                    title: 'Est. ingest rate',
-                    description: `~${sizing.ingestRateGBPerDay.toFixed(1)} GB/day ingested (stored, estimate)`,
+                    title: 'Est. avg ingest rate',
+                    description: `~${sizing.ingestRateGBPerDay.toFixed(1)} GB/day (compressed primary, retention-based avg — not peak)`,
                   }] : []),
                 ]}
               />

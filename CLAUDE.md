@@ -44,11 +44,12 @@ src/
     types.ts        # All shared TypeScript interfaces (incl. GeneratedBundle, KibanaInfo)
     index.ts        # parseBundle() orchestrator (ES bundle)
     kibana.ts       # parseKibana() — reads Kibana diagnostic bundle
+    license.ts, plugins.ts, datastreams.ts  # License, plugins, data streams
     manifest.ts, health.ts, nodes.ts, indices.ts, shards.ts,
     stats.ts, ilm.ts, ml.ts, features.ts, replication.ts, snapshots.ts
   components/       # UI sections (one file per section)
-    ClusterHeader, Overview, Topology, IndexLandscape,
-    FeaturesIntegrations, DataProfile, BestPractices
+    ClusterHeader, Overview, Licensing, Topology, FeaturesIntegrations,
+    DataProfile, IndexLandscape, DataStreams, CrossCluster, Plugins, BestPractices
   utils/
     bundleReader.ts  # BundleData interface + parseJsonFile / getTextFile helpers
     format.ts        # formatBytes, formatCount, healthColor, resourceColor
@@ -83,9 +84,19 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 **Overview**: Includes "Solution · Version" card showing solution type badges (Search/Observability/Security) + ES version + Kibana version (when Kibana bundle present); omitted if `features` is null or `solutionTypes` is empty.
 
-**Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard displays vCPU count (from `available_processors`), RAM, and disk capacity in the format `"32 vCPU · 61.0 GiB RAM · 1.4 TiB disk"`. Role badges are displayed on their own line below the node name (10px font, wrapping enabled) to prevent overflow on multi-role nodes. Node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen. Kibana section rendered below ES nodes when Kibana bundle present.
+**Licensing**: Shows license status, type, issue/expiry dates, max nodes/units, issuer, and issued-to organization. Omitted if license data absent.
 
-**FeaturesIntegrations**: `features` prop is nullable. Kibana health badges (alerting, task manager) rendered when Kibana data present. Fleet badge rendered only when `fleet.total > 0`.
+**Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard displays vCPU count (from `available_processors`), RAM, disk capacity in the format `"32 vCPU · 61.0 GiB RAM · 1.4 TiB disk"`, and `instanceConfiguration` below the capacity line. Role badges on their own line below node name (10px font, wrapping). Node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen. Kibana section rendered below ES nodes when Kibana bundle present.
+
+**FeaturesIntegrations**: `features` prop is nullable. Kibana health badges (alerting, task manager) rendered when Kibana data present. Fleet badge rendered only when `fleet.total > 0`. Data views section shows Kibana data views as badges when present.
+
+**DataStreams**: Paginated table (default 10/page) with system-streams toggle. Shows name, isSystem flag, status, index count, ILM policy, and managedBy field. Omitted if no data streams present.
+
+**CrossCluster**: Displays CCR/CCS configuration details. Rendered only when cross-cluster replication or search is configured.
+
+**Plugins**: Unique installed plugins table, deduplicated by component name with version. Omitted if no plugins present.
+
+**IndexLandscape**: Paginated index table (default 10/page). Shows indices, shards, replicas, size, docs, health, ILM policy.
 
 ## Utilities
 

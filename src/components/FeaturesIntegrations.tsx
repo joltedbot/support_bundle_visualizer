@@ -115,11 +115,14 @@ export default function FeaturesIntegrations({ features, ml, ilm, replication, k
     }
   }
 
+  const dataViews = kibana?.dataViews ?? []
+
   const hasSolutions = (features?.solutionTypes.length ?? 0) > 0
   const hasFeatures = badges.length > 0
   const hasKibanaHealth = kibanaBadges.length > 0
+  const hasDataViews = dataViews.length > 0
 
-  if (!hasSolutions && !hasFeatures && !hasKibanaHealth) return null
+  if (!hasSolutions && !hasFeatures && !hasKibanaHealth && !hasDataViews) return null
 
   return (
     <div>
@@ -166,6 +169,22 @@ export default function FeaturesIntegrations({ features, ml, ilm, replication, k
             {kibanaBadges.map((badge) => (
               <EuiFlexItem key={badge.label} grow={false}>
                 <EuiBadge color={badge.color}>{badge.label}</EuiBadge>
+              </EuiFlexItem>
+            ))}
+          </EuiFlexGroup>
+          {hasDataViews && <EuiSpacer size="m" />}
+        </>
+      )}
+
+      {hasDataViews && (
+        <>
+          <EuiText size="xs" color="subdued" style={{ marginBottom: 6 }}>
+            <strong>Data views</strong>
+          </EuiText>
+          <EuiFlexGroup gutterSize="s" wrap responsive={false}>
+            {dataViews.map((name) => (
+              <EuiFlexItem key={name} grow={false}>
+                <EuiBadge color="hollow">{name}</EuiBadge>
               </EuiFlexItem>
             ))}
           </EuiFlexGroup>

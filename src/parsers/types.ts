@@ -40,6 +40,7 @@ export interface NodeInfo {
   roles: NodeRole[]
   tier: 'master' | 'hot' | 'warm' | 'cold' | 'frozen' | 'coordinating' | 'mixed'
   az?: string
+  instanceConfiguration?: string  // e.g. "aws.es.datahot.c6gd"
   // Resource stats (may be absent if nodes_stats not present)
   heapPercent?: number      // 0–100
   cpuPercent?: number       // 0–100
@@ -161,6 +162,7 @@ export interface KibanaInfo {
     updating: number
     inactive: number
   } | null
+  dataViews?: string[]  // titles of configured data views
 }
 
 export interface RetentionBucket {
@@ -176,6 +178,32 @@ export interface SizingMetrics {
   primaryRetentionDays: number | null       // modal bucket's day value
 }
 
+export interface LicenseInfo {
+  status: string
+  type: string
+  issueDate: string | null
+  expiryDate: string | null
+  maxNodes: number | null
+  maxResourceUnits: number | null
+  issuedTo: string | null
+  issuer: string | null
+}
+
+export interface PluginEntry {
+  component: string
+  version: string
+}
+
+export interface DataStreamInfo {
+  name: string
+  isSystem: boolean
+  status: string
+  indexCount: number
+  ilmPolicy?: string
+  lifecycle?: string   // data_retention value e.g. "90d"
+  managedBy?: string   // next_generation_managed_by when not "Unmanaged"
+}
+
 export interface BundleModel {
   identity: ClusterIdentity | null
   health: ClusterHealth | null
@@ -189,6 +217,9 @@ export interface BundleModel {
   replication: ReplicationInfo | null
   snapshots: SnapshotInfo | null
   sizing: SizingMetrics | null
+  license: LicenseInfo | null
+  plugins: PluginEntry[]
+  dataStreams: DataStreamInfo[]
 }
 
 export interface GeneratedBundle {

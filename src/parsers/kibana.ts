@@ -86,6 +86,16 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     }
   }
 
+  // Data views
+  let dataViews: string[] | undefined
+  const dataViewsJson = parseJson(files, 'kibana_data_views.json')
+  if (isObj(dataViewsJson) && Array.isArray(dataViewsJson.data_view)) {
+    dataViews = (dataViewsJson.data_view as unknown[])
+      .filter(isObj)
+      .map(v => (typeof v.name === 'string' && v.name ? v.name : typeof v.title === 'string' ? v.title : ''))
+      .filter(Boolean)
+  }
+
   return {
     version,
     instanceName,
@@ -98,5 +108,6 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     hasPermanentEncryptionKey,
     taskManagerStatus,
     fleet,
+    dataViews,
   }
 }

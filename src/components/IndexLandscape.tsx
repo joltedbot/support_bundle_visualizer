@@ -26,7 +26,7 @@ interface SortState {
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
-const DEFAULT_PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 10
 
 export default function IndexLandscape({ indices, shards }: Props) {
   const [showSystem, setShowSystem] = useState(false)

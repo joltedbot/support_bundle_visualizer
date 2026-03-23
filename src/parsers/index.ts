@@ -12,6 +12,9 @@ import { parseFeatures } from './features'
 import { parseReplication } from './replication'
 import { parseSnapshots } from './snapshots'
 import { parseSizing } from './sizing'
+import { parseLicense } from './license'
+import { parsePlugins } from './plugins'
+import { parseDataStreams } from './datastreams'
 
 export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const { files } = data
@@ -37,6 +40,9 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     replication: parseReplication(files),
     snapshots: parseSnapshots(files),
     sizing: parseSizing(files, indices),
+    license: parseLicense(files),
+    plugins: parsePlugins(files),
+    dataStreams: parseDataStreams(files),
   }
 }
 

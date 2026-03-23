@@ -122,6 +122,13 @@ function NodeCard({ node }: { node: NodeInfo }) {
         </EuiText>
       )}
 
+      {/* Instance configuration */}
+      {node.instanceConfiguration && (
+        <EuiText size="xs" color="subdued" style={{ marginTop: 1, fontFamily: 'monospace' }}>
+          {node.instanceConfiguration}
+        </EuiText>
+      )}
+
       <EuiSpacer size="xs" />
 
       {/* Progress bars */}

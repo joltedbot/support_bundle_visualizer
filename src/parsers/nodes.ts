@@ -191,6 +191,8 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       diskUsedPercent = ((stats.diskTotal - stats.diskAvail) / stats.diskTotal) * 100
     }
 
+    const instanceConfiguration = node.attributes?.instance_configuration
+
     result.push({
       id,
       name,
@@ -198,6 +200,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       roles,
       tier,
       az,
+      instanceConfiguration,
       heapPercent: stats?.heapPercent,
       cpuPercent: stats?.cpuPercent,
       diskUsedPercent,

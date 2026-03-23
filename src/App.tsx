@@ -11,10 +11,14 @@ import {
 } from '@elastic/eui'
 import ClusterHeader from './components/ClusterHeader'
 import Overview from './components/Overview'
+import Licensing from './components/Licensing'
 import Topology from './components/Topology'
-import IndexLandscape from './components/IndexLandscape'
 import FeaturesIntegrations from './components/FeaturesIntegrations'
 import DataProfile from './components/DataProfile'
+import IndexLandscape from './components/IndexLandscape'
+import DataStreams from './components/DataStreams'
+import CrossCluster from './components/CrossCluster'
+import Plugins from './components/Plugins'
 import BestPractices from './components/BestPractices'
 
 const data = rawBundleData as unknown as GeneratedBundle
@@ -55,24 +59,25 @@ function App() {
         <EuiPageBody>
           <EuiSpacer size="l" />
           <Overview model={model} kibana={kibana ?? null} />
+
+          {model.license && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Licensing</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <Licensing license={model.license} />
+            </>
+          )}
+
           <EuiSpacer size="l" />
-          <EuiTitle size="s">
-            <h3>Topology</h3>
-          </EuiTitle>
+          <EuiTitle size="s"><h3>Topology</h3></EuiTitle>
           <EuiSpacer size="s" />
           <Topology nodes={model.nodes} kibana={kibana ?? null} />
-          <EuiSpacer size="l" />
-          <EuiTitle size="s">
-            <h3>Index Landscape</h3>
-          </EuiTitle>
-          <EuiSpacer size="s" />
-          <IndexLandscape indices={model.indices} shards={model.shards} />
-          <EuiSpacer size="l" />
+
           {(model.features || kibana) && (
             <>
-              <EuiTitle size="s">
-                <h3>Features & Integrations</h3>
-              </EuiTitle>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Features & Integrations</h3></EuiTitle>
               <EuiSpacer size="s" />
               <FeaturesIntegrations
                 features={model.features}
@@ -82,22 +87,53 @@ function App() {
                 snapshots={model.snapshots}
                 kibana={kibana ?? null}
               />
-              <EuiSpacer size="l" />
             </>
           )}
-          <EuiTitle size="s">
-            <h3>Data Profile</h3>
-          </EuiTitle>
+
+          <EuiSpacer size="l" />
+          <EuiTitle size="s"><h3>Data Profile</h3></EuiTitle>
           <EuiSpacer size="s" />
           <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} />
+
+          <EuiSpacer size="l" />
+          <EuiTitle size="s"><h3>Index Landscape</h3></EuiTitle>
+          <EuiSpacer size="s" />
+          <IndexLandscape indices={model.indices} shards={model.shards} />
+
+          {model.dataStreams.length > 0 && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Data Streams</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <DataStreams dataStreams={model.dataStreams} />
+            </>
+          )}
+
+          {model.replication && (model.replication.hasCCR || model.replication.remoteClusterCount > 0) && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Cross-Cluster</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <CrossCluster replication={model.replication} />
+            </>
+          )}
+
+          {model.plugins.length > 0 && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Plugins</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <Plugins plugins={model.plugins} />
+            </>
+          )}
+
           <EuiSpacer size="l" />
           <BestPractices />
+
           {notes && (
             <>
               <EuiSpacer size="l" />
-              <EuiTitle size="s">
-                <h3>Notes</h3>
-              </EuiTitle>
+              <EuiTitle size="s"><h3>Notes</h3></EuiTitle>
               <EuiSpacer size="s" />
               <EuiPanel paddingSize="m">
                 <EuiText>
@@ -106,6 +142,7 @@ function App() {
               </EuiPanel>
             </>
           )}
+
           <EuiSpacer size="xl" />
         </EuiPageBody>
       </EuiPage>
