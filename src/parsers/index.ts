@@ -27,6 +27,16 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     return policy ? { ...idx, ilmPolicy: policy } : idx
   })
 
+  // Parse features and aiMl separately so we can merge semantic/vector counts
+  const features = parseFeatures(files, indices)
+  const aiMlBase = parseML(files, indices)
+  const aiMl = aiMlBase ? {
+    ...aiMlBase,
+    semanticTextIndexCount: features?.semanticTextIndexCount ?? 0,
+    denseVectorIndexCount: features?.denseVectorIndexCount ?? 0,
+    sparseVectorIndexCount: features?.sparseVectorIndexCount ?? 0,
+  } : null
+
   return {
     identity: parseManifest(files),
     health: parseHealth(files),
@@ -34,9 +44,8 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     indices,
     shards: parseShards(files),
     stats: parseStats(files),
-    ilm: parseILM(files),
-    ml: parseML(files),
-    features: parseFeatures(files, indices),
+    aiMl,
+    features,
     replication: parseReplication(files),
     snapshots: parseSnapshots(files),
     sizing: parseSizing(files, indices),
