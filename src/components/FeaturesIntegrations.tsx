@@ -5,11 +5,10 @@ import {
   EuiText,
   EuiSpacer,
 } from '@elastic/eui'
-import type { FeatureInfo, MLInfo, ILMInfo, ReplicationInfo, SnapshotInfo, KibanaInfo } from '../parsers/types'
+import type { FeatureInfo, ILMInfo, ReplicationInfo, SnapshotInfo, KibanaInfo } from '../parsers/types'
 
 interface Props {
   features: FeatureInfo | null
-  ml: MLInfo | null
   ilm: ILMInfo | null
   replication: ReplicationInfo | null
   snapshots: SnapshotInfo | null
@@ -33,14 +32,8 @@ interface FeatureBadge {
   color?: string
 }
 
-export default function FeaturesIntegrations({ features, ml, ilm, replication, kibana }: Props) {
+export default function FeaturesIntegrations({ features, ilm, replication, kibana }: Props) {
   const badges: FeatureBadge[] = []
-
-  if (features?.hasML && ml) {
-    badges.push({ label: `ML (${ml.anomalyDetectionJobCount} anomaly jobs)`, color: '#6c4a9e' })
-  } else if (features?.hasML) {
-    badges.push({ label: 'ML', color: '#6c4a9e' })
-  }
 
   if (features?.hasILM && ilm) {
     badges.push({ label: `ILM (${ilm.policyCount} policies)`, color: '#017d73' })
