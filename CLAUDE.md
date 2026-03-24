@@ -34,6 +34,8 @@ npx vitest run           # Run tests
 ## Project Structure
 
 ```
+public/
+  favicon.svg       # Elastic logo favicon, copied to each output build
 scripts/
   generate.ts       # Node.js generator: reads bundle from disk → src/generated/bundleData.ts
 src/
@@ -49,7 +51,7 @@ src/
     stats.ts, ilm.ts, ml.ts, features.ts, replication.ts, snapshots.ts
   components/       # UI sections (one file per section)
     ClusterHeader, Overview, Licensing, Topology, FeaturesIntegrations,
-    DataProfile, IndexLandscape, DataStreams, CrossCluster, Plugins, BestPractices
+    DataProfile, AiMlSection, IndexLandscape, DataStreams, CrossCluster, Plugins, BestPractices
   utils/
     bundleReader.ts  # BundleData interface + parseJsonFile / getTextFile helpers
     format.ts        # formatBytes, formatCount, healthColor, resourceColor
@@ -90,6 +92,10 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 **FeaturesIntegrations**: `features` prop is nullable. Kibana health badges (alerting, task manager) rendered when Kibana data present. Fleet badge rendered only when `fleet.total > 0`. Data views section shows Kibana data views as badges when present.
 
+**DataProfile**: Summary panels (Data Profile, ILM & Tiering, Snapshots, Sizing Estimates) with full-width ILM Policies table below. The ILM summary card (tier counts, policy count) remains in DataProfile; the full ILM Policies table is now a separate top-level section after Plugins.
+
+**AiMlSection**: AI & Machine Learning content (anomaly detection, trained models, DFA, ML node memory, semantic search, AI features). Positioned between DataProfile and IndexLandscape. Omitted if no ML/AI data present. Semantic Search panel shows dense_vector fields grouped by `(dims, inferenceId)` composite key. Each group displays index count, source label (inference model name or "External" for field-level embeddings), and known model hints (e.g., 1536 dims → OpenAI ada-002, 384 → E5-small). Dense vector dims and inference model are resolved via three-step fallback: (1) field-level `inference_id`, (2) index `default_pipeline` → pipeline's `inference` processor `model_id`, (3) null (External).
+
 **DataStreams**: Paginated table (default 10/page) with system-streams toggle. Shows name, isSystem flag, status, index count, ILM policy, and managedBy field. Omitted if no data streams present.
 
 **CrossCluster**: Displays CCR/CCS configuration details. Rendered only when cross-cluster replication or search is configured.
@@ -97,6 +103,18 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 **Plugins**: Unique installed plugins table, deduplicated by component name with version. Omitted if no plugins present.
 
 **IndexLandscape**: Paginated index table (default 10/page). Shows indices, shards, replicas, size, docs, health, ILM policy.
+
+## Parsers: Technical Details
+
+**manifest.ts** — Cluster identity and region detection:
+- `parseClusterIdentity()` orchestrates region detection with a three-tier fallback: (1) node settings (`cloud.region`, `cloud.provider` from nodes.json), (2) cat_nodeattrs.txt AZ parsing, (3) host URL parsing from `manifest.json` diagnosticInputs or diagnostic_manifest.json flags
+- `parseRegionFromHostUrl()` extracts region and cloud provider from ESS host URLs: AWS (`*.region.aws.found.io`), Azure (`*.region.azure.elastic-cloud.com`), GCP (`*.region.gcp.cloud.es.io`)
+- `parseRegionFromNodeAttrs()` parses availability_zone and region attributes from cat_nodeattrs.txt, handling AWS AZ format (`us-east-1a` → `us-east-1`) and Azure AZ format (`eastus2-1` → `eastus2`)
+- Previously only AWS regions were detected from host URLs; Azure and GCP cloud deployments now correctly show region in Deployment card
+
+**features.ts** — Dense vector and semantic text scanning:
+- `scanMappingProperties()` scans all index mappings and returns arrays of dense_vector, semantic_text, and sparse_vector fields with dims and inference_id per field
+- `parseFeatures()` groups dense_vector indices by `(dims, inferenceId)` composite key, enabling per-dim breakdown in SemanticSearchPanel showing index count and source (model name or "External")
 
 ## Utilities
 

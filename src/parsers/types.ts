@@ -180,6 +180,12 @@ export interface AiMlInfo {
   sparseVectorIndexCount: number
 }
 
+export interface DenseVectorDimGroup {
+  dims: number
+  count: number          // number of indices with this dim count
+  inferenceId: string | null  // null = externally generated embeddings
+}
+
 export interface FeatureInfo {
   solutionTypes: ('search' | 'observability' | 'security')[]
   hasVectorSearch: boolean        // dense_vector or sparse_vector fields
@@ -189,6 +195,7 @@ export interface FeatureInfo {
   semanticTextIndexCount: number
   semanticTextIndexNames: string[]
   denseVectorIndexCount: number
+  denseVectorDimGroups: DenseVectorDimGroup[]
   sparseVectorIndexCount: number
   hasML: boolean
   hasILM: boolean
@@ -202,6 +209,7 @@ export interface FeatureInfo {
   watcherCount: number
   transformCount: number
   enrichPolicyCount: number
+  activeInferenceEndpoints: string[]   // endpoint IDs referenced in mappings or pipelines
 }
 
 export interface ReplicationInfo {

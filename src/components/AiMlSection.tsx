@@ -346,10 +346,23 @@ function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
   )
 }
 
+const DENSE_VECTOR_DIM_HINTS: Array<{ dims: number; hint: string }> = [
+  { dims: 384,  hint: 'E5-small / MiniLM' },
+  { dims: 768,  hint: 'E5-base / BERT-base' },
+  { dims: 1024, hint: 'E5-large / Cohere v3' },
+  { dims: 1536, hint: 'OpenAI ada-002' },
+  { dims: 3072, hint: 'OpenAI text-embedding-3-large' },
+]
+
+function dimHint(dims: number): string | null {
+  return DENSE_VECTOR_DIM_HINTS.find(h => h.dims === dims)?.hint ?? null
+}
+
 function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
   const names = features.semanticTextIndexNames
-  const visibleNames = names.slice(0, 5)
-  const overflow = names.length - 5
+  const userIndexNames = names.filter(n => !n.startsWith('.')).sort()
+  const systemIndexNames = names.filter(n => n.startsWith('.')).sort()
+  const bothGroups = userIndexNames.length > 0 && systemIndexNames.length > 0
 
   return (
     <EuiPanel paddingSize="m">
@@ -372,37 +385,76 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
           </EuiFlexItem>
         ))}
       </EuiFlexGroup>
-      {visibleNames.length > 0 && (
-        <EuiFlexGroup gutterSize="xs" wrap>
-          {visibleNames.map(name => (
-            <EuiFlexItem key={name} grow={false}>
-              <EuiBadge color="hollow" style={{ fontSize: 10 }}>{name}</EuiBadge>
-            </EuiFlexItem>
-          ))}
-          {overflow > 0 && (
-            <EuiFlexItem grow={false}>
-              <EuiBadge color="hollow" style={{ fontSize: 10, color: '#6b7694' }}>+ {overflow} more</EuiBadge>
-            </EuiFlexItem>
+      {features.denseVectorDimGroups.length > 0 && (
+        <div style={{ marginTop: 10, marginBottom: names.length > 0 ? 12 : 0 }}>
+          {features.denseVectorDimGroups.map(({ dims, count, inferenceId }) => {
+            const hint = dimHint(dims)
+            const typeLabel = inferenceId ? inferenceId : 'External'
+            return (
+              <div key={dims} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13, color: '#c2c6d4' }}>
+                <span style={{ fontWeight: 600, color: '#4c9aff', minWidth: 36 }}>{dims}</span>
+                <span style={{ color: '#6b7694' }}>dims</span>
+                <span style={{ color: '#6b7694' }}>·</span>
+                <span>{count} {count === 1 ? 'index' : 'indices'}</span>
+                <span style={{ color: '#6b7694' }}>·</span>
+                <span style={{ color: '#6b7694' }}>{typeLabel}{hint ? ` · ${hint}` : ''}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {names.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          {userIndexNames.length > 0 && (
+            <>
+              {bothGroups && (
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 5 }}>
+                  User
+                </div>
+              )}
+              {userIndexNames.map(name => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4c9aff', flexShrink: 0, display: 'inline-block' }} />
+                  <code style={{ fontSize: 13, color: '#c2c6d4' }}>{name}</code>
+                </div>
+              ))}
+            </>
           )}
-        </EuiFlexGroup>
+          {systemIndexNames.length > 0 && (
+            <>
+              {bothGroups && (
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 5, marginTop: 10 }}>
+                  System
+                </div>
+              )}
+              {systemIndexNames.map(name => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#444c60', flexShrink: 0, display: 'inline-block' }} />
+                  <code style={{ fontSize: 13, color: '#8892a4' }}>{name}</code>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
       )}
     </EuiPanel>
   )
 }
 
-function AIFeaturesPanel({ aiMl }: { aiMl: AiMlInfo }) {
+function AIFeaturesPanel({ aiMl, features }: { aiMl: AiMlInfo; features: FeatureInfo | null }) {
   const { aiFeatures } = aiMl
+  const activeEndpoints = features?.activeInferenceEndpoints ?? []
 
   const Dot = ({ color }: { color: string }) => (
     <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: color, marginRight: 6, flexShrink: 0, marginTop: 3 }} />
   )
 
   const Pill = ({ dotColor, title, subtitle }: { dotColor: string; title: string; subtitle: string }) => (
-    <div style={{ display: 'inline-flex', alignItems: 'flex-start', background: '#111827', border: '1px solid #2c3040', borderRadius: 4, padding: '5px 10px', fontSize: 11, color: '#c2c6d4', marginBottom: 6 }}>
+    <div style={{ display: 'inline-flex', alignItems: 'flex-start', background: '#111827', border: '1px solid #2c3040', borderRadius: 4, padding: '5px 10px', fontSize: 13, color: '#c2c6d4', marginBottom: 6 }}>
       <Dot color={dotColor} />
       <div>
         <div>{title}</div>
-        <div style={{ fontSize: 9, color: '#6b7694' }}>{subtitle}</div>
+        <div style={{ fontSize: 13, color: '#6b7694' }}>{subtitle}</div>
       </div>
     </div>
   )
@@ -463,11 +515,11 @@ function AIFeaturesPanel({ aiMl }: { aiMl: AiMlInfo }) {
           </SubSection>
         )}
 
-        {(aiFeatures.inferenceEndpointCount > 0 || aiFeatures.mlInferenceStorageBytes > 0) && (
+        {(activeEndpoints.length > 0 || aiFeatures.mlInferenceStorageBytes > 0) && (
           <SubSection title="Inference System">
-            {aiFeatures.inferenceEndpointCount > 0 && (
-              <Pill dotColor="#4c9aff" title={`${formatCount(aiFeatures.inferenceEndpointCount)} inference endpoints`} subtitle=".inference index" />
-            )}
+            {activeEndpoints.map(id => (
+              <Pill key={id} dotColor="#4c9aff" title={id} subtitle="referenced in mappings / pipelines" />
+            ))}
             {aiFeatures.mlInferenceStorageBytes > 0 && (
               <Pill dotColor="#4c9aff" title="ML inference storage" subtitle={`.ml-inference-native-* · ${formatBytes(aiFeatures.mlInferenceStorageBytes)}`} />
             )}
@@ -521,7 +573,7 @@ export default function AiMlSection({ aiMl, features }: Props) {
     aiFeatures.hasObservabilityAiAssistant ||
     aiFeatures.hasChatAgents ||
     aiFeatures.hasProductDocIndices ||
-    aiFeatures.inferenceEndpointCount > 0 ||
+    (features?.activeInferenceEndpoints.length ?? 0) > 0 ||
     aiFeatures.mlInferenceStorageBytes > 0
 
   // Anomaly job breakdowns for stat card
@@ -632,7 +684,7 @@ export default function AiMlSection({ aiMl, features }: Props) {
           <EuiSpacer size="m" />
         </>
       )}
-      {showAiFeaturesPanel && <AIFeaturesPanel aiMl={aiMl} />}
+      {showAiFeaturesPanel && <AIFeaturesPanel aiMl={aiMl} features={features} />}
     </div>
   )
 }

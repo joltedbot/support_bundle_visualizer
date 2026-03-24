@@ -1,5 +1,5 @@
 import { parseJsonFile } from '../utils/bundleReader'
-import type { FeatureInfo, IndexInfo } from './types'
+import type { DenseVectorDimGroup, FeatureInfo, IndexInfo } from './types'
 
 interface WatcherStatsJson {
   stats?: Array<{ watch_count?: number }>
@@ -24,6 +24,8 @@ interface RemoteClusterJson {
 
 type MappingValue = {
   type?: string
+  dims?: number
+  inference_id?: string
   properties?: Record<string, MappingValue>
   fields?: Record<string, MappingValue>
 }
@@ -33,6 +35,19 @@ type MappingIndex = {
     properties?: Record<string, MappingValue>
   }
 }
+
+type SettingsIndex = {
+  settings?: { index?: { default_pipeline?: string; final_pipeline?: string } }
+}
+
+type InferenceProcessor = {
+  model_id?: string
+  inference_id?: string
+}
+
+type PipelineProcessor = { inference?: InferenceProcessor }
+
+type Pipeline = { processors?: PipelineProcessor[] }
 
 const OBSERVABILITY_PATTERNS = [
   /^\.logs-/,
@@ -54,27 +69,47 @@ const SECURITY_PATTERNS = [
   /^\.items-/,
 ]
 
+type DenseVectorField = { dims: number; inferenceId: string | null }
+
+type MappingScanResult = {
+  hasDenseVector: boolean
+  hasSparseVector: boolean
+  hasSemanticText: boolean
+  hasGeoFields: boolean
+  denseVectorFields: DenseVectorField[]
+  inferenceIds: string[]   // all inference_id values found on any field type
+}
+
 /**
  * Recursively scan mapping properties for specific field types.
- * Returns flags: hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields.
+ * Returns flags, dense_vector field details, and all inference_id references found.
  */
 function scanMappingProperties(
   props: Record<string, MappingValue>,
   depth = 0
-): { hasDenseVector: boolean; hasSparseVector: boolean; hasSemanticText: boolean; hasGeoFields: boolean } {
+): MappingScanResult {
   let hasDenseVector = false
   let hasSparseVector = false
   let hasSemanticText = false
   let hasGeoFields = false
+  const denseVectorFields: DenseVectorField[] = []
+  const inferenceIds: string[] = []
 
-  if (depth > 10) return { hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields }
+  if (depth > 10) return { hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields, denseVectorFields, inferenceIds }
 
   for (const field of Object.values(props)) {
     if (!field || typeof field !== 'object') continue
     const type = field.type
-    if (type === 'dense_vector') hasDenseVector = true
+    if (type === 'dense_vector') {
+      hasDenseVector = true
+      denseVectorFields.push({ dims: field.dims ?? 0, inferenceId: field.inference_id ?? null })
+      if (field.inference_id) inferenceIds.push(field.inference_id)
+    }
     if (type === 'sparse_vector') hasSparseVector = true
-    if (type === 'semantic_text') hasSemanticText = true
+    if (type === 'semantic_text') {
+      hasSemanticText = true
+      if (field.inference_id) inferenceIds.push(field.inference_id)
+    }
     if (type === 'geo_point' || type === 'geo_shape') hasGeoFields = true
 
     if (field.properties) {
@@ -83,6 +118,8 @@ function scanMappingProperties(
       if (sub.hasSparseVector) hasSparseVector = true
       if (sub.hasSemanticText) hasSemanticText = true
       if (sub.hasGeoFields) hasGeoFields = true
+      denseVectorFields.push(...sub.denseVectorFields)
+      inferenceIds.push(...sub.inferenceIds)
     }
     if (field.fields) {
       const sub = scanMappingProperties(field.fields, depth + 1)
@@ -90,10 +127,12 @@ function scanMappingProperties(
       if (sub.hasSparseVector) hasSparseVector = true
       if (sub.hasSemanticText) hasSemanticText = true
       if (sub.hasGeoFields) hasGeoFields = true
+      denseVectorFields.push(...sub.denseVectorFields)
+      inferenceIds.push(...sub.inferenceIds)
     }
   }
 
-  return { hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields }
+  return { hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields, denseVectorFields, inferenceIds }
 }
 
 /**
@@ -122,6 +161,40 @@ export function parseFeatures(
   }
   if (solutionTypes.size === 0) solutionTypes.add('search')
 
+  // Build index → default pipeline lookup from settings.json
+  const indexToPipeline = new Map<string, string>()
+  const settingsRaw = parseJsonFile<Record<string, SettingsIndex>>(files, 'settings.json')
+  if (settingsRaw && typeof settingsRaw === 'object') {
+    for (const [indexName, indexSettings] of Object.entries(settingsRaw)) {
+      const idxBlock = indexSettings?.settings?.index
+      const pipeline = idxBlock?.default_pipeline ?? idxBlock?.final_pipeline
+      if (pipeline) indexToPipeline.set(indexName, pipeline)
+    }
+  }
+
+  // Build pipeline → model_id lookup from pipelines.json inference processors
+  const pipelineToModelId = new Map<string, string>()
+  const pipelines = parseJsonFile<Record<string, Pipeline>>(files, 'pipelines.json')
+  const ingestPipelineCount = pipelines ? Object.keys(pipelines).length : 0
+  const hasIngestPipelines = ingestPipelineCount > 0
+  if (pipelines && typeof pipelines === 'object') {
+    for (const [pipelineName, pipeline] of Object.entries(pipelines)) {
+      for (const proc of pipeline?.processors ?? []) {
+        const inf = proc?.inference
+        if (inf) {
+          const modelId = inf.model_id ?? inf.inference_id
+          if (modelId) { pipelineToModelId.set(pipelineName, modelId); break }
+        }
+      }
+    }
+  }
+
+  // Collect inference IDs referenced in pipeline inference processors (globally)
+  const pipelineInferenceIds = new Set<string>()
+  for (const modelId of pipelineToModelId.values()) {
+    pipelineInferenceIds.add(modelId)
+  }
+
   // Mapping scan for field types
   let hasVectorSearch = false
   let hasSemanticText = false
@@ -130,13 +203,34 @@ export function parseFeatures(
   let denseVectorIndexCount = 0
   let sparseVectorIndexCount = 0
   const semanticTextIndexNames: string[] = []
+  // composite key "dims::inferenceId" → { dims, count, inferenceId }
+  const dimMap = new Map<string, { dims: number; count: number; inferenceId: string | null }>()
+  const mappingInferenceIds = new Set<string>()
 
   const mappingRaw = parseJsonFile<Record<string, MappingIndex>>(files, 'mapping.json')
   if (mappingRaw && typeof mappingRaw === 'object') {
     for (const [indexName, indexMapping] of Object.entries(mappingRaw)) {
       if (!indexMapping?.mappings?.properties) continue
       const result = scanMappingProperties(indexMapping.mappings.properties)
-      if (result.hasDenseVector) { hasVectorSearch = true; denseVectorIndexCount++ }
+      if (result.hasDenseVector) {
+        hasVectorSearch = true
+        denseVectorIndexCount++
+        const dvField = result.denseVectorFields[0]
+        if (dvField) {
+          // Resolve inferenceId: field-level → ingest pipeline model → null (external)
+          const resolvedId =
+            dvField.inferenceId ??
+            pipelineToModelId.get(indexToPipeline.get(indexName) ?? '') ??
+            null
+          const key = `${dvField.dims}::${resolvedId ?? ''}`
+          const existing = dimMap.get(key)
+          if (existing) {
+            existing.count++
+          } else {
+            dimMap.set(key, { dims: dvField.dims, count: 1, inferenceId: resolvedId })
+          }
+        }
+      }
       if (result.hasSparseVector) { hasVectorSearch = true; sparseVectorIndexCount++ }
       if (result.hasSemanticText) {
         hasSemanticText = true
@@ -144,14 +238,17 @@ export function parseFeatures(
         semanticTextIndexNames.push(indexName)
       }
       if (result.hasGeoFields) hasGeoFields = true
+      for (const id of result.inferenceIds) mappingInferenceIds.add(id)
       // No early exit — must count all indices
     }
   }
 
-  // Ingest pipelines
-  const pipelines = parseJsonFile<Record<string, unknown>>(files, 'pipelines.json')
-  const ingestPipelineCount = pipelines ? Object.keys(pipelines).length : 0
-  const hasIngestPipelines = ingestPipelineCount > 0
+  const activeInferenceEndpoints = Array.from(
+    new Set([...mappingInferenceIds, ...pipelineInferenceIds])
+  ).sort()
+
+  const denseVectorDimGroups: DenseVectorDimGroup[] = Array.from(dimMap.values())
+    .sort((a, b) => b.count - a.count)
 
   // Watcher
   const watcherStats = parseJsonFile<WatcherStatsJson>(files, 'commercial/watcher_stats.json')
@@ -202,6 +299,7 @@ export function parseFeatures(
     semanticTextIndexCount,
     semanticTextIndexNames,
     denseVectorIndexCount,
+    denseVectorDimGroups,
     sparseVectorIndexCount,
     hasML,
     hasILM,
@@ -215,5 +313,6 @@ export function parseFeatures(
     watcherCount,
     transformCount,
     enrichPolicyCount,
+    activeInferenceEndpoints,
   }
 }

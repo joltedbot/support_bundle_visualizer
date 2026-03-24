@@ -12,6 +12,7 @@ interface ManifestJson {
   runner?: string
   collectionDate?: string
   'Product Version'?: { version?: string }
+  diagnosticInputs?: string
 }
 
 interface NodesJson {
@@ -34,6 +35,24 @@ interface VersionJson {
 }
 
 /**
+ * Parse region+provider from a host URL string (from diagnosticInputs or flags).
+ * Handles AWS (*.region.aws.found.io), Azure (*.region.azure.elastic-cloud.com),
+ * and GCP (*.region.gcp.cloud.es.io).
+ */
+function parseRegionFromHostUrl(input: string): { region: string; provider: string } | undefined {
+  // AWS: uuid.us-east-1.aws.found.io
+  let m = input.match(/host='[^']*\.([a-z]+-[a-z]+-\d+)\.aws\./)
+  if (m) return { region: m[1], provider: 'aws' }
+  // Azure: uuid.eastus2.azure.elastic-cloud.com
+  m = input.match(/host='[^']*\.([a-z][a-z0-9-]+)\.azure\./)
+  if (m) return { region: m[1], provider: 'azure' }
+  // GCP: uuid.us-central1.gcp.cloud.es.io
+  m = input.match(/host='[^']*\.([a-z][a-z0-9-]+)\.gcp\./)
+  if (m) return { region: m[1], provider: 'gcp' }
+  return undefined
+}
+
+/**
  * Parse region from cat_nodeattrs.txt.
  * Looks for rows with attr=availability_zone or attr=region to extract region.
  */
@@ -49,9 +68,12 @@ function parseRegionFromNodeAttrs(content: string): string | undefined {
       return value
     }
     if (attr === 'availability_zone') {
-      // Extract region prefix: us-east-1a → us-east-1
-      const match = value.match(/^([a-z]+-[a-z]+-\d+)[a-z]$/)
-      if (match) return match[1]
+      // AWS format: us-east-1a → us-east-1
+      const awsMatch = value.match(/^([a-z]+-[a-z]+-\d+)[a-z]$/)
+      if (awsMatch) return awsMatch[1]
+      // Azure/GCP format: eastus2-1 → eastus2
+      const azureMatch = value.match(/^(.+)-\d+$/)
+      if (azureMatch) return azureMatch[1]
       return value
     }
   }
@@ -114,12 +136,15 @@ export function parseManifest(files: Map<string, string>): ClusterIdentity | nul
     region = parseRegionFromNodeAttrs(nodeAttrsContent)
   }
 
-  // Try to extract region from the flags field (host URL) as fallback
-  if (!region && diagManifest?.flags) {
-    const match = diagManifest.flags.match(/\.([a-z]+-[a-z]+-\d+)\.aws\./)
-    if (match) {
-      region = match[1]
-      if (!cloudProvider) cloudProvider = 'aws'
+  // Try to extract region+provider from host URL — check both manifest sources
+  if (!region || !cloudProvider) {
+    const hostInput = diagManifest?.flags ?? manifestJson?.diagnosticInputs
+    if (hostInput) {
+      const result = parseRegionFromHostUrl(hostInput)
+      if (result) {
+        if (!region) region = result.region
+        if (!cloudProvider) cloudProvider = result.provider
+      }
     }
   }
 
