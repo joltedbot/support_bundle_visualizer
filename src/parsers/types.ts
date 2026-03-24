@@ -104,11 +104,80 @@ export interface ILMInfo {
   policies: ILMPolicyDetail[]
 }
 
-export interface MLInfo {
-  enabled: boolean
-  anomalyDetectionJobCount: number
-  trainedModelCount: number
-  memoryUsageBytes: number
+// ── AI / ML types ────────────────────────────────────────────────────────────
+
+export type AnomalyJobState = 'opened' | 'closed' | 'failed' | 'opening' | 'closing'
+export type MemoryStatus = 'ok' | 'soft_limit' | 'hard_limit'
+export type DatafeedState = 'started' | 'stopped' | 'starting' | 'stopping'
+export type JobOrigin = 'security' | 'observability' | 'apm' | 'user'
+export type ModelClass = 'elser' | 'e5' | 'lang_ident' | 'nlp' | 'dfa'
+export type DFAType = 'classification' | 'regression' | 'outlier_detection'
+
+export interface AnomalyJob {
+  jobId: string
+  state: AnomalyJobState
+  datafeedState: DatafeedState | null
+  memoryStatus: MemoryStatus
+  modelBytes: number
+  processedRecordCount: number
+  bucketCount: number
+  origin: JobOrigin
+  assignmentExplanation: string
+}
+
+export interface TrainedModel {
+  modelId: string
+  modelClass: ModelClass
+  inferenceTask: string | null
+  deployed: boolean
+  deploymentState: 'started' | 'starting' | 'failed' | null
+  allocationCount: number
+  targetAllocationCount: number
+  inferenceCount: number
+  avgInferenceTimeMs: number | null
+  licenseLevel: string
+}
+
+export interface DFAJob {
+  id: string
+  analysisType: DFAType
+  state: string
+}
+
+export interface MLNodeMemory {
+  nodeName: string
+  maxBytes: number
+  anomalyDetectorsBytes: number
+  nativeInferenceBytes: number
+  dataFrameAnalyticsBytes: number
+}
+
+export interface AIFeatures {
+  hasSecurityAiAssistant: boolean
+  hasObservabilityAiAssistant: boolean
+  observabilityConversationCount: number
+  hasChatAgents: boolean
+  chatAgentCount: number
+  chatConversationCount: number
+  chatToolCount: number
+  hasProductDocIndices: boolean
+  productDocIndexCount: number
+  inferenceEndpointCount: number        // from .inference index docCount
+  mlInferenceStorageBytes: number       // from .ml-inference-native-* storeSizeBytes
+}
+
+export interface AiMlInfo {
+  mlEnabled: boolean
+  upgradeMode: boolean
+  anomalyJobs: AnomalyJob[]
+  trainedModels: TrainedModel[]         // includes lang_ident_model_1 — callers filter by modelClass
+  dfaJobs: DFAJob[]
+  mlNodeMemory: MLNodeMemory[]
+  aiFeatures: AIFeatures
+  // Populated in parsers/index.ts from the features mapping scan
+  semanticTextIndexCount: number
+  denseVectorIndexCount: number
+  sparseVectorIndexCount: number
 }
 
 export interface FeatureInfo {
@@ -116,6 +185,11 @@ export interface FeatureInfo {
   hasVectorSearch: boolean        // dense_vector or sparse_vector fields
   hasSemanticText: boolean        // semantic_text fields
   hasGeoFields: boolean           // geo_point or geo_shape fields
+  // semantic/vector index counts (from mapping scan)
+  semanticTextIndexCount: number
+  semanticTextIndexNames: string[]
+  denseVectorIndexCount: number
+  sparseVectorIndexCount: number
   hasML: boolean
   hasILM: boolean
   hasCCR: boolean
@@ -213,7 +287,7 @@ export interface BundleModel {
   shards: ShardInfo[]
   stats: ClusterStats | null
   ilm: ILMInfo | null
-  ml: MLInfo | null
+  aiMl: AiMlInfo | null
   features: FeatureInfo | null
   replication: ReplicationInfo | null
   snapshots: SnapshotInfo | null
