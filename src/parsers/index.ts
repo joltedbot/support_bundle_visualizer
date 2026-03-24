@@ -44,6 +44,7 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     indices,
     shards: parseShards(files),
     stats: parseStats(files),
+    ilm: parseILM(files),
     aiMl,
     features,
     replication: parseReplication(files),

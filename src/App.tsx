@@ -15,6 +15,7 @@ import Licensing from './components/Licensing'
 import Topology from './components/Topology'
 import FeaturesIntegrations from './components/FeaturesIntegrations'
 import DataProfile from './components/DataProfile'
+import AiMlSection from './components/AiMlSection'
 import IndexLandscape from './components/IndexLandscape'
 import DataStreams from './components/DataStreams'
 import CrossCluster from './components/CrossCluster'
@@ -81,7 +82,6 @@ function App() {
               <EuiSpacer size="s" />
               <FeaturesIntegrations
                 features={model.features}
-                ml={model.ml}
                 ilm={model.ilm}
                 replication={model.replication}
                 snapshots={model.snapshots}
@@ -94,6 +94,15 @@ function App() {
           <EuiTitle size="s"><h3>Data Profile</h3></EuiTitle>
           <EuiSpacer size="s" />
           <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} />
+
+          {model.aiMl && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>AI &amp; Machine Learning</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <AiMlSection aiMl={model.aiMl} features={model.features} />
+            </>
+          )}
 
           <EuiSpacer size="l" />
           <EuiTitle size="s"><h3>Index Landscape</h3></EuiTitle>
