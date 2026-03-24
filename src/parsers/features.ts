@@ -203,8 +203,9 @@ export function parseFeatures(
   let denseVectorIndexCount = 0
   let sparseVectorIndexCount = 0
   const semanticTextIndexNames: string[] = []
-  // composite key "dims::inferenceId" → { dims, count, inferenceId }
-  const dimMap = new Map<string, { dims: number; count: number; inferenceId: string | null }>()
+  const sparseVectorIndexNames: string[] = []
+  // composite key "dims::inferenceId" → { dims, count, inferenceId, indexNames }
+  const dimMap = new Map<string, { dims: number; count: number; inferenceId: string | null; indexNames: string[] }>()
   const mappingInferenceIds = new Set<string>()
 
   const mappingRaw = parseJsonFile<Record<string, MappingIndex>>(files, 'mapping.json')
@@ -226,12 +227,13 @@ export function parseFeatures(
           const existing = dimMap.get(key)
           if (existing) {
             existing.count++
+            existing.indexNames.push(indexName)
           } else {
-            dimMap.set(key, { dims: dvField.dims, count: 1, inferenceId: resolvedId })
+            dimMap.set(key, { dims: dvField.dims, count: 1, inferenceId: resolvedId, indexNames: [indexName] })
           }
         }
       }
-      if (result.hasSparseVector) { hasVectorSearch = true; sparseVectorIndexCount++ }
+      if (result.hasSparseVector) { hasVectorSearch = true; sparseVectorIndexCount++; sparseVectorIndexNames.push(indexName) }
       if (result.hasSemanticText) {
         hasSemanticText = true
         semanticTextIndexCount++
@@ -249,6 +251,7 @@ export function parseFeatures(
 
   const denseVectorDimGroups: DenseVectorDimGroup[] = Array.from(dimMap.values())
     .sort((a, b) => b.count - a.count)
+    .map(g => ({ ...g, indexNames: g.indexNames.sort() }))
 
   // Watcher
   const watcherStats = parseJsonFile<WatcherStatsJson>(files, 'commercial/watcher_stats.json')
@@ -301,6 +304,7 @@ export function parseFeatures(
     denseVectorIndexCount,
     denseVectorDimGroups,
     sparseVectorIndexCount,
+    sparseVectorIndexNames,
     hasML,
     hasILM,
     hasCCR,

@@ -184,6 +184,7 @@ export interface DenseVectorDimGroup {
   dims: number
   count: number          // number of indices with this dim count
   inferenceId: string | null  // null = externally generated embeddings
+  indexNames: string[]   // names of indices in this group
 }
 
 export interface FeatureInfo {
@@ -197,6 +198,7 @@ export interface FeatureInfo {
   denseVectorIndexCount: number
   denseVectorDimGroups: DenseVectorDimGroup[]
   sparseVectorIndexCount: number
+  sparseVectorIndexNames: string[]
   hasML: boolean
   hasILM: boolean
   hasCCR: boolean

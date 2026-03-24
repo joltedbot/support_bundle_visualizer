@@ -358,18 +358,55 @@ function dimHint(dims: number): string | null {
   return DENSE_VECTOR_DIM_HINTS.find(h => h.dims === dims)?.hint ?? null
 }
 
+function IndexNameList({ names, dotColor = '#4c9aff' }: { names: string[]; dotColor?: string }) {
+  const userNames = names.filter(n => !n.startsWith('.')).sort()
+  const systemNames = names.filter(n => n.startsWith('.')).sort()
+  const bothGroups = userNames.length > 0 && systemNames.length > 0
+  return (
+    <div style={{ marginTop: 6 }}>
+      {userNames.length > 0 && (
+        <>
+          {bothGroups && (
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 4 }}>User</div>
+          )}
+          {userNames.map(name => (
+            <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0, display: 'inline-block' }} />
+              <code style={{ fontSize: 12, color: '#c2c6d4' }}>{name}</code>
+            </div>
+          ))}
+        </>
+      )}
+      {systemNames.length > 0 && (
+        <>
+          {bothGroups && (
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 4, marginTop: 8 }}>System</div>
+          )}
+          {systemNames.map(name => (
+            <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#444c60', flexShrink: 0, display: 'inline-block' }} />
+              <code style={{ fontSize: 12, color: '#8892a4' }}>{name}</code>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  )
+}
+
 function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
-  const names = features.semanticTextIndexNames
-  const userIndexNames = names.filter(n => !n.startsWith('.')).sort()
-  const systemIndexNames = names.filter(n => n.startsWith('.')).sort()
-  const bothGroups = userIndexNames.length > 0 && systemIndexNames.length > 0
+  const semanticNames = features.semanticTextIndexNames
+  const sparseNames = features.sparseVectorIndexNames ?? []
+  const hasDenseGroups = features.denseVectorDimGroups.length > 0
+  const hasSparseNames = sparseNames.length > 0
+  const hasSemanticNames = semanticNames.length > 0
 
   return (
     <EuiPanel paddingSize="m">
       <EuiText size="xs" style={{ marginBottom: 12 }}>
         <strong style={PANEL_LABEL_STYLE}>Semantic &amp; Vector Search</strong>
       </EuiText>
-      <EuiFlexGroup gutterSize="m" wrap style={{ marginBottom: names.length > 0 ? 12 : 0 }}>
+      <EuiFlexGroup gutterSize="m" wrap style={{ marginBottom: 12 }}>
         {[
           { label: 'semantic_text indices', count: features.semanticTextIndexCount },
           { label: 'dense_vector indices', count: features.denseVectorIndexCount },
@@ -385,56 +422,45 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
           </EuiFlexItem>
         ))}
       </EuiFlexGroup>
-      {features.denseVectorDimGroups.length > 0 && (
-        <div style={{ marginTop: 10, marginBottom: names.length > 0 ? 12 : 0 }}>
-          {features.denseVectorDimGroups.map(({ dims, count, inferenceId }) => {
+
+      {hasDenseGroups && (
+        <div style={{ marginTop: 4 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 6 }}>dense_vector</div>
+          {features.denseVectorDimGroups.map(({ dims, count, inferenceId, indexNames }) => {
             const hint = dimHint(dims)
             const typeLabel = inferenceId ? inferenceId : 'External'
             return (
-              <div key={dims} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13, color: '#c2c6d4' }}>
-                <span style={{ fontWeight: 600, color: '#4c9aff', minWidth: 36 }}>{dims}</span>
-                <span style={{ color: '#6b7694' }}>dims</span>
-                <span style={{ color: '#6b7694' }}>·</span>
-                <span>{count} {count === 1 ? 'index' : 'indices'}</span>
-                <span style={{ color: '#6b7694' }}>·</span>
-                <span style={{ color: '#6b7694' }}>{typeLabel}{hint ? ` · ${hint}` : ''}</span>
+              <div key={`${dims}::${inferenceId ?? ''}`} style={{ marginBottom: indexNames.length > 0 ? 10 : 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#c2c6d4' }}>
+                  <span style={{ fontWeight: 600, color: '#4c9aff', minWidth: 36 }}>{dims}</span>
+                  <span style={{ color: '#6b7694' }}>dims</span>
+                  <span style={{ color: '#6b7694' }}>·</span>
+                  <span>{count} {count === 1 ? 'index' : 'indices'}</span>
+                  <span style={{ color: '#6b7694' }}>·</span>
+                  <span style={{ color: '#6b7694' }}>{typeLabel}{hint ? ` · ${hint}` : ''}</span>
+                </div>
+                {indexNames.length > 0 && (
+                  <div style={{ paddingLeft: 16 }}>
+                    <IndexNameList names={indexNames} dotColor="#4c9aff" />
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
       )}
-      {names.length > 0 && (
-        <div style={{ marginTop: 8 }}>
-          {userIndexNames.length > 0 && (
-            <>
-              {bothGroups && (
-                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 5 }}>
-                  User
-                </div>
-              )}
-              {userIndexNames.map(name => (
-                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4c9aff', flexShrink: 0, display: 'inline-block' }} />
-                  <code style={{ fontSize: 13, color: '#c2c6d4' }}>{name}</code>
-                </div>
-              ))}
-            </>
-          )}
-          {systemIndexNames.length > 0 && (
-            <>
-              {bothGroups && (
-                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 5, marginTop: 10 }}>
-                  System
-                </div>
-              )}
-              {systemIndexNames.map(name => (
-                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#444c60', flexShrink: 0, display: 'inline-block' }} />
-                  <code style={{ fontSize: 13, color: '#8892a4' }}>{name}</code>
-                </div>
-              ))}
-            </>
-          )}
+
+      {hasSparseNames && (
+        <div style={{ marginTop: hasDenseGroups ? 10 : 4 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 6 }}>sparse_vector</div>
+          <IndexNameList names={sparseNames} dotColor="#7b61ff" />
+        </div>
+      )}
+
+      {hasSemanticNames && (
+        <div style={{ marginTop: (hasDenseGroups || hasSparseNames) ? 10 : 4 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 6 }}>semantic_text</div>
+          <IndexNameList names={semanticNames} dotColor="#00bfb3" />
         </div>
       )}
     </EuiPanel>
