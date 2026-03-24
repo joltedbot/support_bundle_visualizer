@@ -567,6 +567,7 @@ export default function AiMlSection({ aiMl, features }: Props) {
     (features?.sparseVectorIndexCount ?? 0)
 
   const { aiFeatures } = aiMl
+  const activeInferenceEndpoints = features?.activeInferenceEndpoints ?? []
   const showSemanticPanel = semanticCount > 0
   const showAiFeaturesPanel =
     aiFeatures.hasSecurityAiAssistant ||
@@ -635,12 +636,12 @@ export default function AiMlSection({ aiMl, features }: Props) {
             sub="semantic_text fields"
           />
         )}
-        {aiFeatures.inferenceEndpointCount > 0 && (
+        {activeInferenceEndpoints.length > 0 && (
           <StatCard
             label="Inference Endpoints"
-            value={aiFeatures.inferenceEndpointCount}
+            value={activeInferenceEndpoints.length}
             valueColor="#4c9aff"
-            sub="from .inference index"
+            sub="referenced in mappings / pipelines"
           />
         )}
         {aiAssistantLabel && (
