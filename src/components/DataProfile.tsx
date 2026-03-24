@@ -26,7 +26,7 @@ interface Props {
 const ILM_PAGE_SIZE_OPTIONS = [10, 20, 50]
 const ILM_DEFAULT_PAGE_SIZE = 10
 
-function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) {
+export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) {
   const [showSystem, setShowSystem] = useState(false)
   const [showEmpty, setShowEmpty] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
@@ -182,9 +182,7 @@ export default function DataProfile({ stats, ilm, snapshots, sizing }: Props) {
     sizing.avgQueryRateQPS !== null ||
     sizing.ingestRateGBPerDay !== null
   )
-  const hasIlmPolicies = ilm !== null && ilm.policies.length > 0
-
-  if (!hasStats && !hasIlm && !hasSnapshots && !hasSizing && !hasIlmPolicies) return null
+  if (!hasStats && !hasIlm && !hasSnapshots && !hasSizing) return null
 
   return (
     <>
@@ -318,16 +316,6 @@ export default function DataProfile({ stats, ilm, snapshots, sizing }: Props) {
         )}
       </EuiFlexGroup>
 
-      {hasIlmPolicies && (
-        <>
-          <EuiSpacer size="l" />
-          <EuiPanel paddingSize="m">
-            <EuiTitle size="xs"><h4>ILM Policies</h4></EuiTitle>
-            <EuiSpacer size="s" />
-            <ILMPoliciesTable policies={ilm!.policies} />
-          </EuiPanel>
-        </>
-      )}
     </>
   )
 }

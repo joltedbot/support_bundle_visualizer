@@ -14,7 +14,7 @@ import Overview from './components/Overview'
 import Licensing from './components/Licensing'
 import Topology from './components/Topology'
 import FeaturesIntegrations from './components/FeaturesIntegrations'
-import DataProfile from './components/DataProfile'
+import DataProfile, { ILMPoliciesTable } from './components/DataProfile'
 import AiMlSection from './components/AiMlSection'
 import IndexLandscape from './components/IndexLandscape'
 import DataStreams from './components/DataStreams'
@@ -133,6 +133,15 @@ function App() {
               <EuiTitle size="s"><h3>Plugins</h3></EuiTitle>
               <EuiSpacer size="s" />
               <Plugins plugins={model.plugins} />
+            </>
+          )}
+
+          {model.ilm && model.ilm.policies.length > 0 && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>ILM Policies</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <ILMPoliciesTable policies={model.ilm.policies} />
             </>
           )}
 
