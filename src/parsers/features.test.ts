@@ -63,4 +63,25 @@ describe('parseFeatures — semantic/vector index counts', () => {
     const files = new Map([['mapping.json', JSON.stringify(mapping)]])
     expect(parseFeatures(files, [])?.semanticTextIndexCount).toBe(1)
   })
+
+  it('detects dense_vector in multi-fields (fields path)', () => {
+    const mapping = {
+      'idx-fields': {
+        mappings: {
+          properties: {
+            body: {
+              type: 'text',
+              fields: {
+                embedding: { type: 'dense_vector', dims: 768 },
+              },
+            },
+          },
+        },
+      },
+    }
+    const files = new Map([['mapping.json', JSON.stringify(mapping)]])
+    const result = parseFeatures(files, [])
+    expect(result?.denseVectorIndexCount).toBe(1)
+    expect(result?.hasVectorSearch).toBe(true)
+  })
 })
