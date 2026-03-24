@@ -56,46 +56,44 @@ const SECURITY_PATTERNS = [
 
 /**
  * Recursively scan mapping properties for specific field types.
- * Returns flags: hasVectorSearch, hasSemanticText, hasGeoFields.
+ * Returns flags: hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields.
  */
 function scanMappingProperties(
   props: Record<string, MappingValue>,
   depth = 0
-): { hasVectorSearch: boolean; hasSemanticText: boolean; hasGeoFields: boolean } {
-  let hasVectorSearch = false
+): { hasDenseVector: boolean; hasSparseVector: boolean; hasSemanticText: boolean; hasGeoFields: boolean } {
+  let hasDenseVector = false
+  let hasSparseVector = false
   let hasSemanticText = false
   let hasGeoFields = false
 
-  // Guard against deeply nested or circular structures
-  if (depth > 10) return { hasVectorSearch, hasSemanticText, hasGeoFields }
+  if (depth > 10) return { hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields }
 
   for (const field of Object.values(props)) {
     if (!field || typeof field !== 'object') continue
-
     const type = field.type
-    if (type === 'dense_vector' || type === 'sparse_vector') hasVectorSearch = true
+    if (type === 'dense_vector') hasDenseVector = true
+    if (type === 'sparse_vector') hasSparseVector = true
     if (type === 'semantic_text') hasSemanticText = true
     if (type === 'geo_point' || type === 'geo_shape') hasGeoFields = true
 
-    // Recurse into nested properties
     if (field.properties) {
       const sub = scanMappingProperties(field.properties, depth + 1)
-      if (sub.hasVectorSearch) hasVectorSearch = true
+      if (sub.hasDenseVector) hasDenseVector = true
+      if (sub.hasSparseVector) hasSparseVector = true
       if (sub.hasSemanticText) hasSemanticText = true
       if (sub.hasGeoFields) hasGeoFields = true
     }
     if (field.fields) {
       const sub = scanMappingProperties(field.fields, depth + 1)
-      if (sub.hasVectorSearch) hasVectorSearch = true
+      if (sub.hasDenseVector) hasDenseVector = true
+      if (sub.hasSparseVector) hasSparseVector = true
       if (sub.hasSemanticText) hasSemanticText = true
       if (sub.hasGeoFields) hasGeoFields = true
     }
-
-    // Early exit if all flags found
-    if (hasVectorSearch && hasSemanticText && hasGeoFields) break
   }
 
-  return { hasVectorSearch, hasSemanticText, hasGeoFields }
+  return { hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields }
 }
 
 /**
@@ -128,16 +126,25 @@ export function parseFeatures(
   let hasVectorSearch = false
   let hasSemanticText = false
   let hasGeoFields = false
+  let semanticTextIndexCount = 0
+  let denseVectorIndexCount = 0
+  let sparseVectorIndexCount = 0
+  const semanticTextIndexNames: string[] = []
 
   const mappingRaw = parseJsonFile<Record<string, MappingIndex>>(files, 'mapping.json')
   if (mappingRaw && typeof mappingRaw === 'object') {
-    for (const indexMapping of Object.values(mappingRaw)) {
+    for (const [indexName, indexMapping] of Object.entries(mappingRaw)) {
       if (!indexMapping?.mappings?.properties) continue
       const result = scanMappingProperties(indexMapping.mappings.properties)
-      if (result.hasVectorSearch) hasVectorSearch = true
-      if (result.hasSemanticText) hasSemanticText = true
+      if (result.hasDenseVector) { hasVectorSearch = true; denseVectorIndexCount++ }
+      if (result.hasSparseVector) { hasVectorSearch = true; sparseVectorIndexCount++ }
+      if (result.hasSemanticText) {
+        hasSemanticText = true
+        semanticTextIndexCount++
+        semanticTextIndexNames.push(indexName)
+      }
       if (result.hasGeoFields) hasGeoFields = true
-      if (hasVectorSearch && hasSemanticText && hasGeoFields) break
+      // No early exit — must count all indices
     }
   }
 
@@ -192,6 +199,10 @@ export function parseFeatures(
     hasVectorSearch,
     hasSemanticText,
     hasGeoFields,
+    semanticTextIndexCount,
+    semanticTextIndexNames,
+    denseVectorIndexCount,
+    sparseVectorIndexCount,
     hasML,
     hasILM,
     hasCCR,
