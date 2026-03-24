@@ -165,7 +165,7 @@ export function parseML(files: Map<string, string>, indices: IndexInfo[]): AiMlI
   if (!mlInfo && !trainedModelsJson && !memStatsJson) return null
 
   // ── Status ──────────────────────────────────────────────────────────────────
-  const mlEnabled = mlInfo !== null && 'native_code' in (mlInfo ?? {}) && Boolean(mlInfo?.native_code)
+  const mlEnabled = mlInfo !== null && 'native_code' in mlInfo
   const upgradeMode = mlInfo?.upgrade_mode ?? false
 
   // ── Anomaly Detection ───────────────────────────────────────────────────────
