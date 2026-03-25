@@ -22,7 +22,12 @@ export default defineConfig({
     {
       name: 'inject-page-title',
       transformIndexHtml(html) {
-        const title = buildConfig.pageTitle ?? 'Bundle Visualizer'
+        const raw = buildConfig.pageTitle ?? 'Bundle Visualizer'
+        const title = raw
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
         return html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
       },
     },

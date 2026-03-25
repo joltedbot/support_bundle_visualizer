@@ -11,7 +11,7 @@
  *   kibana-api-diagnostics-YYYYMMDD/  (optional)
  */
 import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, resolve, sep } from 'node:path'
 import { parseBundle } from '../src/parsers/index.ts'
 import { parseKibana } from '../src/parsers/kibana.ts'
 import type { BundleData } from '../src/utils/bundleReader.ts'
@@ -32,7 +32,13 @@ if (!customerDir || !customerName) {
 }
 
 const root = process.cwd()
-const customerPath = join(root, 'diagnostics', customerDir)
+const diagnosticsBase = resolve(root, 'diagnostics')
+const customerPath = resolve(diagnosticsBase, customerDir)
+
+if (!customerPath.startsWith(diagnosticsBase + sep)) {
+  console.error('Error: --customer must be a directory within diagnostics/')
+  process.exit(1)
+}
 
 let entries: string[]
 try {
