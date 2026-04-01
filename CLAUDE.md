@@ -37,6 +37,7 @@ npx vitest run           # Run tests
 ```
 public/
   favicon.svg       # Elastic logo favicon, copied to each output build
+  (icons.svg removed — was unused scaffold template artifact)
 scripts/
   generate.ts       # Node.js generator: reads bundle from disk → src/generated/bundleData.ts
 src/
@@ -67,6 +68,8 @@ GENERATE.md         # SA/Claude workflow instructions — read this to run a gen
 ## Build Output
 
 Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~2MB) with all CSS and JavaScript inlined. This is required because ES module `type="module"` scripts fail to load via `file://` protocol (CORS restriction). The output file can be opened directly in a browser without a server.
+
+**Note**: `vite-plugin-singlefile@2.3.2` emits an `inlineDynamicImports` deprecation warning during build. This originates from inside the plugin itself, not our config. Awaiting upstream plugin update; no action required on our side.
 
 ## Testing
 

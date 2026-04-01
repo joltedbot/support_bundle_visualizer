@@ -44,6 +44,8 @@ Read and execute the instructions in GENERATE.md
 
 Claude will ask you to confirm the customer name and any notes, then run the generate and build steps automatically.
 
+**Note on sandbox restrictions:** Claude Code runs in a sandbox that restricts Unix socket creation. The `tsx` runtime (used by generate) requires sockets for IPC and may fail with `EPERM`. If this occurs, Claude will ask you to run the command outside the sandbox using the `!` prefix: `! pnpm run generate -- --customer acme-corp --name "ACME Corp"`
+
 ### 3. Open the report
 
 ```
