@@ -20,6 +20,9 @@ importers:
       '@elastic/eui-theme-borealis':
         specifier: ^6.2.0
         version: 6.2.0(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@emotion/cache':
+        specifier: 11.14.0
+        version: 11.14.0
       '@emotion/css':
         specifier: ^11.13.5
         version: 11.13.5
