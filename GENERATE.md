@@ -10,11 +10,26 @@ Ask the user:
 
 > "Which customer directory inside `diagnostics/` should I use for this run? (e.g., `hinge`)"
 
-The `diagnostics/` folder should contain a subfolder named after the customer. Inside that subfolder the SA must have placed:
-- `api-diagnostics-YYYYMMDD-HHMMSS/` — the Elasticsearch diagnostic bundle (**required**)
-- `kibana-api-diagnostics-YYYYMMDD-HHMMSS/` — the Kibana diagnostic bundle (**optional but recommended**)
+The `diagnostics/` folder should contain a subfolder named after the customer. That subfolder has one of two layouts:
 
-If the Kibana bundle is absent, the app works without it and omits Kibana-specific data silently.
+**Single deployment** (bundles directly inside):
+```
+diagnostics/<customer>/
+  api-diagnostics-YYYYMMDD-HHMMSS/     ← ES bundle (required)
+  kibana-api-diagnostics-YYYYMMDD-HHMMSS/  ← Kibana bundle (optional)
+```
+
+**Multiple deployments** (each subdirectory is a deployment):
+```
+diagnostics/<customer>/
+  <deployment-1>/
+    api-diagnostics-YYYYMMDD-HHMMSS/
+    kibana-api-diagnostics-YYYYMMDD-HHMMSS/
+  <deployment-2>/
+    api-diagnostics-YYYYMMDD-HHMMSS/
+```
+
+The generate script auto-detects which layout is present. If the structure doesn't match either pattern, stop and ask the user to check the directory.
 
 ## Step 2 — Confirm the customer display name
 
@@ -26,9 +41,11 @@ Ask the user to confirm or correct it:
 
 Use the confirmed name exactly — it may include spaces, capitalisation, or punctuation (e.g., "Hinge (Dating App)", "ACME Corp").
 
-## Step 2b — Ask for the cluster/deployment name
+## Step 2b — Ask for the cluster/deployment name (single deployment only)
 
-The cluster name stored in the diagnostic bundle is an internal UUID, not the human-readable deployment name. Ask the user:
+**Skip this step for multi-deployment customers.** In multi-deployment mode, cluster names are derived automatically from the deployment directory names (hyphens replaced with spaces).
+
+For single deployments, the cluster name stored in the diagnostic bundle is an internal UUID, not the human-readable deployment name. Ask the user:
 
 > "What's the name of this cluster or deployment? (e.g., 'Hinge Prod', 'Logging Cluster'). Press enter to skip."
 
@@ -47,46 +64,64 @@ If the user provides notes, include them as the `--notes` argument. Notes appear
 Run the following command, substituting the values confirmed above:
 
 ```bash
-npm run generate -- --customer "<dirname>" --name "<Customer Display Name>" [--cluster "<Cluster Name>"] [--notes "<notes text>"]
+pnpm run generate -- --customer "<dirname>" --name "<Customer Display Name>" [--cluster "<Cluster Name>"] [--notes "<notes text>"]
 ```
 
 Examples:
+
+**Single deployment:**
 ```bash
-npm run generate -- --customer hinge --name "Hinge" --cluster "Hinge Prod"
-npm run generate -- --customer acme --name "ACME Corp" --cluster "Logging Cluster" --notes "Pre-renewal call. Focus on shard sizing and ILM gaps."
+pnpm run generate -- --customer Hinge --name "Hinge" --cluster "Hinge Prod"
 ```
 
-The script will:
-1. Read all files from `diagnostics/<dirname>/api-diagnostics-*/`
-2. Parse the bundle into a structured data model
-3. Detect whether a Kibana bundle is present
-4. Write `src/generated/bundleData.ts` (this file is gitignored and never committed)
-
-## Step 5 — Build the report
-
+**Multi-deployment:**
 ```bash
-npm run build
+pnpm run generate -- --customer "ADA Support" --name "ADA Support"
 ```
 
-This produces `output/<dirname>/index.html` (and supporting assets alongside it). Open `output/<dirname>/index.html` directly in any browser — no server required.
+For single deployments, the script generates data files. For multi-deployment customers, the script generates and builds all deployments automatically — skip to Step 6.
 
-Each customer gets their own folder under `output/`, so reports are never overwritten when switching between customers.
+## Step 5 — Build the report (single deployment only)
+
+**Skip this step for multi-deployment customers** — the generate script handles the build for each deployment.
+
+```bash
+pnpm run build
+```
+
+This produces `output/<dirname>/index.html`.
 
 ## Step 6 — Done
 
 Tell the user where the output is:
 
+**Single deployment:**
 > "Report generated at `output/<dirname>/index.html`. Open it in your browser — no server needed."
+
+**Multi-deployment:**
+> "Reports generated for all deployments in `output/<dirname>/`. Each deployment has its own `index.html`. Open any of them in your browser — no server needed."
 
 ---
 
 ## Folder structure reference
 
+**Single deployment:**
 ```
 diagnostics/
   <customer>/
     api-diagnostics-YYYYMMDD-HHMMSS/     ← ES bundle (required)
     kibana-api-diagnostics-YYYYMMDD-HHMMSS/  ← Kibana bundle (optional)
+```
+
+**Multi-deployment:**
+```
+diagnostics/
+  <customer>/
+    <deployment-1>/
+      api-diagnostics-YYYYMMDD-HHMMSS/
+      kibana-api-diagnostics-YYYYMMDD-HHMMSS/
+    <deployment-2>/
+      api-diagnostics-YYYYMMDD-HHMMSS/
 ```
 
 Create a new customer folder for each engagement. Multiple customers can coexist in `diagnostics/` — the generate script only processes the one you specify.
@@ -96,4 +131,4 @@ Create a new customer folder for each engagement. Multiple customers can coexist
 - `diagnostics/` is gitignored — diagnostic files are never committed.
 - `src/generated/bundleData.ts` is gitignored — generated customer data is never committed.
 - The `dist/` folder is gitignored — built reports are never committed.
-- Be mindful when sharing `dist/index.html` — it contains cluster topology and configuration data.
+- Be mindful when sharing report HTML files — they contain cluster topology and configuration data.

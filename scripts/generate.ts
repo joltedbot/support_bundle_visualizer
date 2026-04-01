@@ -12,6 +12,7 @@
  */
 import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, relative, resolve, sep } from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { parseBundle } from '../src/parsers/index.ts'
 import { parseKibana } from '../src/parsers/kibana.ts'
 import type { BundleData } from '../src/utils/bundleReader.ts'
@@ -40,24 +41,52 @@ if (!customerPath.startsWith(diagnosticsBase + sep)) {
   process.exit(1)
 }
 
-let entries: string[]
-try {
-  entries = readdirSync(customerPath)
-} catch {
-  console.error(`Error: diagnostics/${customerDir}/ not found`)
-  process.exit(1)
+type DeploymentMode =
+  | { kind: 'single' }
+  | { kind: 'multi'; deployments: string[] }
+  | { kind: 'ambiguous' }
+
+function detectDeploymentMode(customerPath: string): DeploymentMode {
+  const entries = readdirSync(customerPath)
+  const isDirAt = (base: string, name: string) => {
+    try { return statSync(join(base, name)).isDirectory() } catch { return false }
+  }
+
+  const hasBundleAtTopLevel = entries.some(e =>
+    (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDirAt(customerPath, e)
+  )
+
+  if (hasBundleAtTopLevel) {
+    return { kind: 'single' }
+  }
+
+  const subdirs = entries.filter(e => !e.startsWith('.') && isDirAt(customerPath, e))
+  const deployments = subdirs.filter(sub => {
+    const subPath = join(customerPath, sub)
+    const subEntries = readdirSync(subPath)
+    return subEntries.some(e =>
+      (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDirAt(subPath, e)
+    )
+  })
+
+  if (deployments.length > 0) {
+    return { kind: 'multi', deployments: deployments.sort() }
+  }
+
+  return { kind: 'ambiguous' }
 }
 
-const isDir = (name: string) => {
-  try { return statSync(join(customerPath, name)).isDirectory() } catch { return false }
+function runBuild(): void {
+  console.log('\nBuilding...')
+  execFileSync('pnpm', ['run', 'build'], { cwd: root, stdio: 'inherit' })
 }
 
-const esBundleName = entries.find(e => (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDir(e))
-const kibanaBundleName = entries.find(e => e.startsWith('kibana-api-diagnostics-') && isDir(e))
-
-if (!esBundleName) {
-  console.error(`Error: No api-diagnostics-* or local-diagnostics-* folder found in diagnostics/${customerDir}/`)
-  process.exit(1)
+interface DeploymentConfig {
+  bundleParentPath: string
+  customerName: string
+  clusterName: string | null
+  notes: string | null
+  outputDir: string
 }
 
 function readDirRecursive(dir: string): Map<string, string> {
@@ -81,59 +110,132 @@ function readDirRecursive(dir: string): Map<string, string> {
   return files
 }
 
-const esBundlePath = join(customerPath, esBundleName)
-const files = readDirRecursive(esBundlePath)
+async function generateForDeployment(config: DeploymentConfig): Promise<void> {
+  const isDirAt = (base: string, name: string) => {
+    try { return statSync(join(base, name)).isDirectory() } catch { return false }
+  }
 
-console.log(`Reading ${files.size} files from ${esBundleName}...`)
+  let entries: string[]
+  try {
+    entries = readdirSync(config.bundleParentPath)
+  } catch {
+    console.error(`Error: ${config.bundleParentPath} not found`)
+    process.exit(1)
+  }
 
-const bundleData: BundleData = { files, rootName: esBundleName }
-const model = await parseBundle(bundleData)
+  const esBundleName = entries.find(e => (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDirAt(config.bundleParentPath, e))
+  const kibanaBundleName = entries.find(e => e.startsWith('kibana-api-diagnostics-') && isDirAt(config.bundleParentPath, e))
 
-let kibana = null
-if (kibanaBundleName) {
-  const kibanaPath = join(customerPath, kibanaBundleName)
-  const kibanaFiles = readDirRecursive(kibanaPath)
-  console.log(`Reading ${kibanaFiles.size} files from ${kibanaBundleName}...`)
-  kibana = parseKibana(kibanaFiles)
+  if (!esBundleName) {
+    console.error(`Error: No api-diagnostics-* or local-diagnostics-* folder found in ${config.bundleParentPath}`)
+    process.exit(1)
+  }
+
+  const esBundlePath = join(config.bundleParentPath, esBundleName)
+  const files = readDirRecursive(esBundlePath)
+
+  console.log(`Reading ${files.size} files from ${esBundleName}...`)
+
+  const bundleData: BundleData = { files, rootName: esBundleName }
+  const model = await parseBundle(bundleData)
+
+  let kibana = null
+  if (kibanaBundleName) {
+    const kibanaPath = join(config.bundleParentPath, kibanaBundleName)
+    const kibanaFiles = readDirRecursive(kibanaPath)
+    console.log(`Reading ${kibanaFiles.size} files from ${kibanaBundleName}...`)
+    kibana = parseKibana(kibanaFiles)
+  }
+
+  const output = {
+    model,
+    customerName: config.customerName,
+    clusterName: config.clusterName,
+    notes: config.notes,
+    generatedAt: new Date().toISOString(),
+    hasKibanaBundle: Boolean(kibanaBundleName),
+    kibana,
+  }
+
+  const outDir = join(root, 'src', 'generated')
+  mkdirSync(outDir, { recursive: true })
+
+  // Write build config so vite.config.ts can set the correct output directory
+  const pageTitle = config.clusterName
+    ? `${config.customerName} — ${config.clusterName}`
+    : config.customerName
+  writeFileSync(
+    join(outDir, 'buildConfig.json'),
+    JSON.stringify({ customerDir: config.outputDir, pageTitle }, null, 2),
+    'utf-8'
+  )
+
+  const outPath = join(outDir, 'bundleData.ts')
+  const fileContent = [
+    '// AUTO-GENERATED by `npm run generate` — do not edit manually',
+    '// Contains customer data — do not commit or push',
+    '',
+    `export const bundleData = ${JSON.stringify(output, null, 2)}`,
+    '',
+  ].join('\n')
+
+  writeFileSync(outPath, fileContent, 'utf-8')
+
+  console.log(`\n✓ Generated src/generated/bundleData.ts`)
+  console.log(`  Customer : ${config.customerName}`)
+  console.log(`  ES bundle: ${esBundleName}`)
+  console.log(`  Kibana   : ${kibanaBundleName ?? 'not found (optional)'}`)
+  console.log(`  Notes    : ${config.notes ?? '(none)'}`)
+  console.log(`  Output   : ${config.outputDir}`)
 }
 
-const output = {
-  model,
-  customerName,
-  clusterName,
-  notes,
-  generatedAt: new Date().toISOString(),
-  hasKibanaBundle: Boolean(kibanaBundleName),
-  kibana,
+const mode = detectDeploymentMode(customerPath)
+
+if (mode.kind === 'ambiguous') {
+  console.error(
+    `Error: No diagnostic bundles found in diagnostics/${customerDir}/.\n` +
+    `Expected either api-diagnostics-*/local-diagnostics-* directly in the directory,\n` +
+    `or subdirectories that each contain api-diagnostics-*/local-diagnostics-*.\n` +
+    `Please check the directory structure.`
+  )
+  process.exit(1)
 }
 
-const outDir = join(root, 'src', 'generated')
-mkdirSync(outDir, { recursive: true })
+if (mode.kind === 'single') {
+  await generateForDeployment({
+    bundleParentPath: customerPath,
+    customerName,
+    clusterName,
+    notes,
+    outputDir: customerDir,
+  })
+  console.log(`\nNext step: pnpm run build`)
+} else {
+  console.log(`Found ${mode.deployments.length} deployments for ${customerName}:\n`)
+  for (const dep of mode.deployments) {
+    console.log(`  • ${dep}`)
+  }
+  console.log('')
 
-// Write build config so vite.config.ts can set the correct output directory
-const pageTitle = clusterName
-  ? `${customerName} — ${clusterName}`
-  : customerName
-writeFileSync(
-  join(outDir, 'buildConfig.json'),
-  JSON.stringify({ customerDir, pageTitle }, null, 2),
-  'utf-8'
-)
+  for (const dep of mode.deployments) {
+    const deploymentClusterName = dep.replace(/-/g, ' ')
+    console.log(`\n${'='.repeat(60)}`)
+    console.log(`Processing deployment: ${dep}`)
+    console.log(`${'='.repeat(60)}`)
 
-const outPath = join(outDir, 'bundleData.ts')
-const fileContent = [
-  '// AUTO-GENERATED by `npm run generate` — do not edit manually',
-  '// Contains customer data — do not commit or push',
-  '',
-  `export const bundleData = ${JSON.stringify(output, null, 2)}`,
-  '',
-].join('\n')
+    await generateForDeployment({
+      bundleParentPath: join(customerPath, dep),
+      customerName,
+      clusterName: deploymentClusterName,
+      notes,
+      outputDir: `${customerDir}/${dep}`,
+    })
 
-writeFileSync(outPath, fileContent, 'utf-8')
+    runBuild()
+  }
 
-console.log(`\n✓ Generated src/generated/bundleData.ts`)
-console.log(`  Customer : ${customerName}`)
-console.log(`  ES bundle: ${esBundleName}`)
-console.log(`  Kibana   : ${kibanaBundleName ?? 'not found (optional)'}`)
-console.log(`  Notes    : ${notes ?? '(none)'}`)
-console.log(`\nNext step: npm run build`)
+  console.log(`\n${'='.repeat(60)}`)
+  console.log(`✓ All ${mode.deployments.length} deployments processed.`)
+  console.log(`Reports are in output/${customerDir}/`)
+  console.log(`${'='.repeat(60)}`)
+}

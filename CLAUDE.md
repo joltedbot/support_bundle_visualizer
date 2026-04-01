@@ -22,11 +22,12 @@ npm install --legacy-peer-deps
 ## Commands
 
 ```bash
-npm run generate -- --customer <dirname> --name "Name" [--cluster "Cluster"] [--notes "text"]
+pnpm run generate -- --customer <dirname> --name "Name" [--cluster "Cluster"] [--notes "text"]
                          # Read bundle from diagnostics/<dirname>/, write src/generated/bundleData.ts
-                         # Also writes src/generated/buildConfig.json used by vite.config.ts
-                         # --cluster is optional; sets the cluster name in header and browser title
-npm run build            # TypeScript check + Vite build → output/<dirname>/index.html (single inlined file)
+                         # Auto-detects single vs multi-deployment layout
+                         # Multi-deployment: generates + builds all deployments automatically
+                         # --cluster is optional; ignored for multi-deployment (uses dir names)
+pnpm run build           # TypeScript check + Vite build → output/<dirname>/index.html (single inlined file)
 npm run dev              # Dev server (requires bundleData.ts to exist — run generate first)
 npx vitest run           # Run tests
 ```
@@ -136,6 +137,21 @@ The tool supports two types of Elasticsearch diagnostic bundles:
 
 Both bundle types have identical internal file structure, so all parsers work with both. `generate.ts` auto-detects the bundle type and folder naming.
 
+## Multi-Deployment Customers
+
+Some customers have multiple deployments. Their directory structure has an extra level:
+
+```
+diagnostics/<customer>/
+  <deployment-1>/
+    api-diagnostics-YYYYMMDD-HHMMSS/
+    kibana-api-diagnostics-YYYYMMDD-HHMMSS/
+  <deployment-2>/
+    api-diagnostics-YYYYMMDD-HHMMSS/
+```
+
+`generate.ts` auto-detects this layout. For multi-deployment customers, the script generates and builds all deployments in one run. Each deployment's cluster name is derived from its directory name (hyphens replaced with spaces). Output goes to `output/<customer>/<deployment>/index.html`.
+
 ## Kibana Bundle Support
 
 `generate.ts` detects `kibana-api-diagnostics-*/` alongside the ES bundle and calls `parseKibana()`. The `KibanaInfo` object is stored as `GeneratedBundle.kibana` (null when absent).
@@ -146,10 +162,14 @@ Both bundle types have identical internal file structure, so all parsers work wi
 
 `diagnostics/Hinge/` — gitignored, available locally.
 Hinge (dating app): 21 nodes (3 master + 18 hot), 117 indices, ES 9.3.1, AWS us-east-1. Kibana bundle also present.
-Run: `npm run generate -- --customer Hinge --name "Hinge" --cluster "Hinge Prod"`
+Run: `pnpm run generate -- --customer Hinge --name "Hinge" --cluster "Hinge Prod"`
 
 `diagnostics/FI.Span/` — gitignored, available locally. Kibana bundle also present.
-Run: `npm run generate -- --customer "FI.Span" --name "FI.Span"`
+Run: `pnpm run generate -- --customer "FI.Span" --name "FI.Span"`
 
 `diagnostics/Presidents Choice Financial/` — gitignored, available locally. Self-hosted bundle, no Kibana.
-Run: `npm run generate -- --customer "Presidents Choice Financial" --name "Presidents Choice Financial"`
+Run: `pnpm run generate -- --customer "Presidents Choice Financial" --name "Presidents Choice Financial"`
+
+`diagnostics/ADA Support/` — gitignored, available locally. Multi-deployment customer.
+ADA Support: 3 deployments (airflow-azure-eastus2-production_us2, api-azure-centralus-dev_us1, api-azure-eastus2-production_us2).
+Run: `pnpm run generate -- --customer "ADA Support" --name "ADA Support"`
