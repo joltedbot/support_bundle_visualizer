@@ -12,6 +12,7 @@ docs/
 .secretlintignore
 .secretlintrc.json 
 .claude/
+.gemini
 GEMINI.md
 
 # Generated bundle data — contains customer data, never commit

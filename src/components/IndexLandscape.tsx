@@ -113,6 +113,28 @@ export default function IndexLandscape({ indices, shards }: Props) {
       },
     },
     {
+      field: 'models',
+      name: 'Models',
+      width: '180px',
+      truncateText: true,
+      render: (models: string[] | undefined) => {
+        if (!models || models.length === 0) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+        return (
+          <EuiFlexGroup gutterSize="xs" wrap responsive={false}>
+            {models.map((m) => (
+              <EuiFlexItem key={m} grow={false}>
+                <EuiToolTip content={m}>
+                  <EuiBadge color="hollow" style={{ fontSize: '0.85em' }}>
+                    {m.length > 20 ? `${m.substring(0, 20)}…` : m}
+                  </EuiBadge>
+                </EuiToolTip>
+              </EuiFlexItem>
+            ))}
+          </EuiFlexGroup>
+        )
+      },
+    },
+    {
       field: 'health',
       name: 'Health',
       width: '90px',

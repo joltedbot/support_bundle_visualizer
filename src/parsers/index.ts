@@ -7,6 +7,7 @@ import { parseIndices } from './indices'
 import { parseShards } from './shards'
 import { parseStats } from './stats'
 import { parseILM, buildIndexPolicyMap } from './ilm'
+import { buildIndexModelMap } from './indexModels'
 import { parseML } from './ml'
 import { parseFeatures } from './features'
 import { parseReplication } from './replication'
@@ -22,9 +23,16 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
 
   // Join ILM policy names onto each index
   const indexPolicyMap = buildIndexPolicyMap(files)
+  // Join model names onto each index
+  const indexModelMap = buildIndexModelMap(files)
+
   const indices = rawIndices.map((idx) => {
     const policy = indexPolicyMap.get(idx.name)
-    return policy ? { ...idx, ilmPolicy: policy } : idx
+    const models = indexModelMap.get(idx.name)
+    let updated = idx
+    if (policy) updated = { ...updated, ilmPolicy: policy }
+    if (models) updated = { ...updated, models }
+    return updated
   })
 
   // Parse features and aiMl separately so we can merge semantic/vector counts
