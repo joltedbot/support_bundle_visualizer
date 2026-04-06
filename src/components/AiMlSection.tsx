@@ -9,7 +9,7 @@ import {
   EuiBasicTable,
   EuiCallOut,
 } from '@elastic/eui'
-import type { AiMlInfo, FeatureInfo, AnomalyJob, TrainedModel, DFAJob, MLNodeMemory } from '../parsers/types'
+import type { AiMlInfo, FeatureInfo, AnomalyJob, TrainedModel, DFAJob, MLNodeMemory, DenseVectorDimGroup } from '../parsers/types'
 import { formatBytes, formatCount } from '../utils/format'
 
 interface Props {
@@ -427,7 +427,6 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
         <div style={{ marginTop: 4 }}>
           <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7694', marginBottom: 6 }}>dense_vector</div>
           {features.denseVectorDimGroups.map(({ dims, count, inferenceId, indexNames }) => {
-            const hint = dimHint(dims)
             const typeLabel = inferenceId ? inferenceId : 'External'
             return (
               <div key={`${dims}::${inferenceId ?? ''}`} style={{ marginBottom: indexNames.length > 0 ? 10 : 4 }}>
@@ -437,7 +436,7 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
                   <span style={{ color: '#6b7694' }}>·</span>
                   <span>{count} {count === 1 ? 'index' : 'indices'}</span>
                   <span style={{ color: '#6b7694' }}>·</span>
-                  <span style={{ color: '#6b7694' }}>{typeLabel}{hint ? ` · ${hint}` : ''}</span>
+                  <span style={{ color: '#6b7694' }}>{typeLabel}</span>
                 </div>
                 {indexNames.length > 0 && (
                   <div style={{ paddingLeft: 16 }}>
@@ -467,34 +466,55 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
   )
 }
 
+const Dot = ({ color }: { color: string }) => (
+  <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: color, marginRight: 6, flexShrink: 0, marginTop: 3 }} />
+)
+
+const Pill = ({ dotColor, title, subtitle }: { dotColor: string; title: string; subtitle: string }) => (
+  <div style={{ display: 'inline-flex', alignItems: 'flex-start', background: '#111827', border: '1px solid #2c3040', borderRadius: 4, padding: '5px 10px', fontSize: 13, color: '#c2c6d4', marginBottom: 6 }}>
+    <Dot color={dotColor} />
+    <div>
+      <div>{title}</div>
+      <div style={{ fontSize: 13, color: '#6b7694' }}>{subtitle}</div>
+    </div>
+  </div>
+)
+
+const SubSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <EuiFlexItem style={{ minWidth: 220 }}>
+    <EuiText size="xs" color="subdued" style={{ textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+      <strong>{title}</strong>
+    </EuiText>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {children}
+    </div>
+  </EuiFlexItem>
+)
+
 function AIFeaturesPanel({ aiMl, features }: { aiMl: AiMlInfo; features: FeatureInfo | null }) {
   const { aiFeatures } = aiMl
   const activeEndpoints = features?.activeInferenceEndpoints ?? []
+  const externalGroups = features?.denseVectorDimGroups.filter(g => g.inferenceId === null) ?? []
 
-  const Dot = ({ color }: { color: string }) => (
-    <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: color, marginRight: 6, flexShrink: 0, marginTop: 3 }} />
-  )
-
-  const Pill = ({ dotColor, title, subtitle }: { dotColor: string; title: string; subtitle: string }) => (
-    <div style={{ display: 'inline-flex', alignItems: 'flex-start', background: '#111827', border: '1px solid #2c3040', borderRadius: 4, padding: '5px 10px', fontSize: 13, color: '#c2c6d4', marginBottom: 6 }}>
-      <Dot color={dotColor} />
-      <div>
-        <div>{title}</div>
-        <div style={{ fontSize: 13, color: '#6b7694' }}>{subtitle}</div>
-      </div>
-    </div>
-  )
-
-  const SubSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <EuiFlexItem style={{ minWidth: 220 }}>
-      <EuiText size="xs" color="subdued" style={{ textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
-        <strong>{title}</strong>
-      </EuiText>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {children}
-      </div>
-    </EuiFlexItem>
-  )
+  const externalColumns = [
+    {
+      field: 'dims' as const,
+      name: 'Dimensions',
+      render: (d: number) => <span style={{ fontWeight: 600, color: '#4c9aff' }}>{d}</span>,
+    },
+    {
+      field: 'count' as const,
+      name: 'Indices',
+      render: (c: number) => formatCount(c),
+    },
+    {
+      name: 'Likely Model',
+      render: (g: DenseVectorDimGroup) => {
+        const hint = dimHint(g.dims)
+        return hint ? <EuiBadge color="hollow">{hint}</EuiBadge> : <span style={{ color: '#6b7694' }}>—</span>
+      }
+    }
+  ]
 
   return (
     <EuiPanel paddingSize="m">
@@ -552,6 +572,19 @@ function AIFeaturesPanel({ aiMl, features }: { aiMl: AiMlInfo; features: Feature
           </SubSection>
         )}
       </EuiFlexGroup>
+
+      {externalGroups.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <EuiText size="xs" color="subdued" style={{ textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
+            <strong>External Models</strong>
+          </EuiText>
+          <EuiBasicTable
+            items={externalGroups}
+            columns={externalColumns}
+            tableLayout="auto"
+          />
+        </div>
+      )}
     </EuiPanel>
   )
 }
@@ -601,7 +634,8 @@ export default function AiMlSection({ aiMl, features }: Props) {
     aiFeatures.hasChatAgents ||
     aiFeatures.hasProductDocIndices ||
     (features?.activeInferenceEndpoints.length ?? 0) > 0 ||
-    aiFeatures.mlInferenceStorageBytes > 0
+    aiFeatures.mlInferenceStorageBytes > 0 ||
+    (features?.denseVectorDimGroups.filter(g => g.inferenceId === null).length ?? 0) > 0
 
   // Anomaly job breakdowns for stat card
   const openedJobs = aiMl.anomalyJobs.filter(j => j.state === 'opened').length
