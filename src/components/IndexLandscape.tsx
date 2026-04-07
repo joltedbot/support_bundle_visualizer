@@ -115,7 +115,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
     {
       field: 'models',
       name: 'Models',
-      width: '180px',
+      width: '250px',
       truncateText: true,
       render: (models: string[] | undefined) => {
         if (!models || models.length === 0) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
@@ -125,7 +125,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
               <EuiFlexItem key={m} grow={false}>
                 <EuiToolTip content={m}>
                   <EuiBadge color="hollow" style={{ fontSize: '0.85em' }}>
-                    {m.length > 20 ? `${m.substring(0, 20)}…` : m}
+                    {m.length > 40 ? `${m.substring(0, 40)}…` : m}
                   </EuiBadge>
                 </EuiToolTip>
               </EuiFlexItem>

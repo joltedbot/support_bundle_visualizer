@@ -41,6 +41,8 @@ function scanMappingsForModels(
     if (!field || typeof field !== 'object') continue
     if (field.inference_id) {
       models.add(field.inference_id)
+    } else if (field.type === 'dense_vector' && field.dims) {
+      models.add(`External - Dense - ${field.dims}dims`)
     }
 
     if (field.properties) {

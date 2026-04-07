@@ -81,4 +81,20 @@ describe('buildIndexModelMap', () => {
     const result = buildIndexModelMap(files)
     expect(result.get('idx-5')).toEqual(['model-deep'])
   })
+
+  it('extracts external models from mapping using dense_vector dims', () => {
+    const files = new Map<string, string>()
+    files.set('mapping.json', JSON.stringify({
+      'idx-6': {
+        mappings: {
+          properties: {
+            'vec': { type: 'dense_vector', dims: 1536 }
+          }
+        }
+      }
+    }))
+
+    const result = buildIndexModelMap(files)
+    expect(result.get('idx-6')).toEqual(['External - Dense - 1536dims'])
+  })
 })

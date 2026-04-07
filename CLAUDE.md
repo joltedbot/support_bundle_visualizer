@@ -98,7 +98,7 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 **DataProfile**: Summary panels (Data Profile, ILM & Tiering, Snapshots, Sizing Estimates) with full-width ILM Policies table below. The ILM summary card (tier counts, policy count) remains in DataProfile; the full ILM Policies table is now a separate top-level section after Plugins.
 
-**AiMlSection**: AI & Machine Learning content (anomaly detection, trained models, DFA, ML node memory, semantic search, AI features). Positioned between DataProfile and IndexLandscape. Omitted if no ML/AI data present. Semantic Search panel shows dense_vector fields grouped by `(dims, inferenceId)` composite key. Each group displays index count, source label (inference model name or "External" for field-level embeddings), and known model hints (e.g., 1536 dims → OpenAI ada-002, 384 → E5-small). Dense vector dims and inference model are resolved via three-step fallback: (1) field-level `inference_id`, (2) index `default_pipeline` → pipeline's `inference` processor `model_id`, (3) null (External).
+**AiMlSection**: AI & Machine Learning content (anomaly detection, trained models, DFA, ML node memory, semantic search, AI features). Positioned between DataProfile and IndexLandscape. Omitted if no ML/AI data present. Semantic Search panel shows dense_vector fields grouped by `(dims, inferenceId)` composite key. Each group displays index count, source label (inference model name or "External" for field-level embeddings), and known model hints (e.g., 1536 dims → OpenAI ada-002, 384 → E5-small). Dense vector dims and inference model are resolved via three-step fallback: (1) field-level `inference_id`, (2) index `default_pipeline` → pipeline's `inference` processor `model_id`, (3) fallback string `"External - Dense - {dims}dims"`.
 
 **DataStreams**: Paginated table (default 10/page) with system-streams toggle. Shows name, isSystem flag, status, index count, ILM policy, and managedBy field. Omitted if no data streams present.
 
@@ -106,7 +106,7 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 **Plugins**: Unique installed plugins table, deduplicated by component name with version. Omitted if no plugins present.
 
-**IndexLandscape**: Paginated index table (default 10/page). Shows indices, shards, replicas, size, docs, health, ILM policy.
+**IndexLandscape**: Paginated index table (default 10/page). Shows indices, models, shards, replicas, size, docs, health, ILM policy. The **Models** column (250px) displays associated inference models or external dense vector dimensions; names are truncated at 40 characters.
 
 ## Parsers: Technical Details
 
