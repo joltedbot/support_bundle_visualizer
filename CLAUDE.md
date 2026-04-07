@@ -58,6 +58,7 @@ src/
     bundleReader.ts  # BundleData interface + parseJsonFile / getTextFile helpers
     format.ts        # formatBytes, formatCount, healthColor, resourceColor
     nodeRoles.ts     # Node role sorting, AZ grouping, role utilities
+    modelHints.ts    # Embedding model dimension lookup and label enrichment
 docs/
   superpowers/      # Design specs and implementation plans
     specs/
@@ -129,7 +130,11 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 - `buildSummaryBar(nodes: Node[]): SummaryEntry[]` — tier counts for the summary bar
 - `SummaryEntry` interface: `{ tier: string; count: number }`
 
-See `src/utils/nodeRoles.test.ts` for test coverage.
+**modelHints.ts** exports:
+- `getModelHint(dims: number): string | null` — returns likely model hint for dimension count
+- `enrichModelLabel(modelId: string): string` — enriches "External - Dense - {dims}dims" labels with hints
+
+See `src/utils/nodeRoles.test.ts` and `src/utils/modelHints.test.ts` for test coverage.
 
 ## Bundle Types
 

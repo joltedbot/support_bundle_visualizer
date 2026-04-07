@@ -19,6 +19,7 @@ import type {
   DenseVectorDimGroup,
 } from "../parsers/types";
 import { formatBytes, formatCount } from "../utils/format";
+import { getModelHint } from "../utils/modelHints";
 
 interface Props {
   aiMl: AiMlInfo;
@@ -464,18 +465,6 @@ function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
   );
 }
 
-const DENSE_VECTOR_DIM_HINTS: Array<{ dims: number; hint: string }> = [
-  { dims: 384, hint: "E5-small / MiniLM" },
-  { dims: 768, hint: "E5-base / BERT-base" },
-  { dims: 1024, hint: "E5-large / Cohere v3" },
-  { dims: 1536, hint: "OpenAI ada-002" },
-  { dims: 3072, hint: "OpenAI text-embedding-3-large" },
-];
-
-function dimHint(dims: number): string | null {
-  return DENSE_VECTOR_DIM_HINTS.find((h) => h.dims === dims)?.hint ?? null;
-}
-
 function IndexNameList({
   names,
   dotColor = "#4c9aff",
@@ -815,7 +804,7 @@ function AIFeaturesPanel({
     {
       name: "Likely Model",
       render: (g: DenseVectorDimGroup) => {
-        const hint = dimHint(g.dims);
+        const hint = getModelHint(g.dims);
         return hint ? (
           <EuiBadge color="hollow">{hint}</EuiBadge>
         ) : (

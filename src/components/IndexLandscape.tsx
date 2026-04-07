@@ -12,6 +12,7 @@ import {
 } from '@elastic/eui'
 import type { IndexInfo, ShardInfo } from '../parsers/types'
 import { formatBytes, formatCount, healthColor } from '../utils/format'
+import { enrichModelLabel } from '../utils/modelHints'
 
 interface Props {
   indices: IndexInfo[]
@@ -123,9 +124,9 @@ export default function IndexLandscape({ indices, shards }: Props) {
           <EuiFlexGroup gutterSize="xs" wrap responsive={false}>
             {models.map((m) => (
               <EuiFlexItem key={m} grow={false}>
-                <EuiToolTip content={m}>
+                <EuiToolTip content={enrichModelLabel(m)}>
                   <EuiBadge color="hollow" style={{ fontSize: '0.85em' }}>
-                    {m.length > 40 ? `${m.substring(0, 40)}…` : m}
+                    {enrichModelLabel(m).length > 40 ? `${enrichModelLabel(m).substring(0, 40)}…` : enrichModelLabel(m)}
                   </EuiBadge>
                 </EuiToolTip>
               </EuiFlexItem>
