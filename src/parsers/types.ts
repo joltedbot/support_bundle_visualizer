@@ -290,6 +290,15 @@ export interface DataStreamInfo {
   managedBy?: string   // next_generation_managed_by when not "Unmanaged"
 }
 
+export interface PipelineInfo {
+  name: string
+  description?: string
+  createdDate?: string
+  metaPackageName?: string
+  metaManaged?: boolean
+  metaManagedBy?: string
+}
+
 export interface BundleModel {
   identity: ClusterIdentity | null
   health: ClusterHealth | null
@@ -306,6 +315,7 @@ export interface BundleModel {
   license: LicenseInfo | null
   plugins: PluginEntry[]
   dataStreams: DataStreamInfo[]
+  ingestPipelines: PipelineInfo[]
 }
 
 export interface GeneratedBundle {

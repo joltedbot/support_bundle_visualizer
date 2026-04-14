@@ -16,6 +16,7 @@ import { parseSizing } from './sizing'
 import { parseLicense } from './license'
 import { parsePlugins } from './plugins'
 import { parseDataStreams } from './datastreams'
+import { parsePipelines } from './pipelines'
 
 export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const { files } = data
@@ -61,6 +62,7 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     license: parseLicense(files),
     plugins: parsePlugins(files),
     dataStreams: parseDataStreams(files),
+    ingestPipelines: parsePipelines(files),
   }
 }
 

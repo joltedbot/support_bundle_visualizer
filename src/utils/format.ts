@@ -14,6 +14,17 @@ export function formatCount(n: number): string {
   return String(n)
 }
 
+export function formatDate(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 export function healthColor(
   status: string
 ): 'success' | 'warning' | 'danger' | 'default' {

@@ -18,6 +18,7 @@ import DataProfile, { ILMPoliciesTable } from './components/DataProfile'
 import AiMlSection from './components/AiMlSection'
 import IndexLandscape from './components/IndexLandscape'
 import DataStreams from './components/DataStreams'
+import IngestPipelines from './components/IngestPipelines'
 import CrossCluster from './components/CrossCluster'
 import Plugins from './components/Plugins'
 import BestPractices from './components/BestPractices'
@@ -115,6 +116,15 @@ function App() {
               <EuiTitle size="s"><h3>Data Streams</h3></EuiTitle>
               <EuiSpacer size="s" />
               <DataStreams dataStreams={model.dataStreams} />
+            </>
+          )}
+
+          {model.ingestPipelines.length > 0 && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Ingest Pipelines</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <IngestPipelines pipelines={model.ingestPipelines} />
             </>
           )}
 
