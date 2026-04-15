@@ -2,6 +2,8 @@ import type { BundleData } from '../utils/bundleReader'
 import type { BundleModel } from './types'
 import { parseManifest } from './manifest'
 import { parseHealth } from './health'
+import { parseInternalHealth } from './internalHealth'
+import { parseAuth } from './auth'
 import { parseNodes } from './nodes'
 import { parseIndices } from './indices'
 import { parseShards } from './shards'
@@ -104,6 +106,8 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
   return {
     identity: parseManifest(files),
     health: parseHealth(files),
+    internalHealth: parseInternalHealth(files),
+    auth: parseAuth(files),
     nodes: nodesWithShardCounts,
     indices,
     shards,

@@ -294,6 +294,10 @@ export function parseFeatures(
   const mlInfo = parseJsonFile<Record<string, unknown>>(files, 'commercial/ml_info.json')
   const hasML = mlInfo !== null
 
+  // Logstash
+  const logstashRaw = parseJsonFile<Record<string, unknown>>(files, 'commercial/logstash_pipeline.json')
+  const logstashPipelines = logstashRaw ? Object.keys(logstashRaw).length : 0
+
   return {
     solutionTypes: Array.from(solutionTypes),
     hasVectorSearch,
@@ -317,6 +321,7 @@ export function parseFeatures(
     watcherCount,
     transformCount,
     enrichPolicyCount,
+    logstash: logstashPipelines,
     activeInferenceEndpoints,
   }
 }

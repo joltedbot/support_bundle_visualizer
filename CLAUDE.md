@@ -60,11 +60,13 @@ src/
     kibana.ts       # parseKibana() — reads Kibana diagnostic bundle
     license.ts, plugins.ts, datastreams.ts  # License, plugins, data streams
     manifest.ts, health.ts, nodes.ts, indices.ts, shards.ts,
-    stats.ts, ilm.ts, ml.ts, features.ts, replication.ts, snapshots.ts
+    stats.ts, ilm.ts, ml.ts, features.ts, replication.ts, snapshots.ts,
+    internalHealth.ts, auth.ts  # Internal health, Identity & Auth
     clusterSettings.ts  # Parses cluster_settings.json (max_shards_per_node etc.)
   components/       # UI sections (one file per section)
-    ClusterHeader, Overview, Licensing, Topology, FeaturesIntegrations,
-    DataProfile, AiMlSection, IndexLandscape, DataStreams, CrossCluster, Plugins, BestPractices
+    ClusterHeader, Overview, InternalHealthSection, Licensing, Topology, 
+    FeaturesIntegrations, FleetSection, DataProfile, SnapshotRepositories, 
+    AiMlSection, IndexLandscape, DataStreams, CrossCluster, Plugins, BestPractices
   utils/
     bundleReader.ts  # BundleData interface + parseJsonFile / getTextFile helpers
     format.ts        # formatBytes, formatCount, healthColor, resourceColor
@@ -101,21 +103,27 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 **ClusterHeader**: Shows customer name, optional cluster name (passed via `--cluster` flag in generate command), collection timestamp, and generated timestamp. Cluster name is displayed in normal font (not monospace). Omitted if null/empty. Deployment type/region info has moved to the Overview card row.
 
-**Overview**: Stats card row. Card order: Cluster health → Deployment → Solution → Total nodes → User indices → Active shards → Total store size → Total documents → Avg doc size. Both Deployment and Solution use a custom layout (not EuiStat) with a plain `size="s"` label at top (no subdued color, to match Cluster health). **Deployment card**: `runner: "cli"` → label "Deployment" + bold "Self-Hosted"; `runner: "ess"` → label "Deployment" + bold "AWS · us-east-1" + bold "ECH" below; omitted when runner absent. **Solution card**: label "Solution" + solution badge(s) (Search/Observability/Security) + bold "ES v{version}" + bold "Kibana v{version}" (when Kibana present); omitted if `features` is null or `solutionTypes` is empty. All bold text is `size="s"` strong.
+**Overview**: Stats card row. Card order: Cluster health → Deployment → Solution → Identity → Total nodes → User indices → Active shards → Total store size → Total documents → Avg doc size. Both Deployment and Solution use a custom layout (not EuiStat) with a plain `size="s"` label at top (no subdued color, to match Cluster health). **Deployment card**: `runner: "cli"` → label "Deployment" + bold "Self-Hosted"; `runner: "ess"` → label "Deployment" + bold "AWS · us-east-1" + bold "ECH" below; omitted when runner absent. **Solution card**: label "Solution" + solution badge(s) (Search/Observability/Security) + bold "ES v{version}" + bold "Kibana v{version}" (when Kibana present); omitted if `features` is null or `solutionTypes` is empty. **Identity card**: label "Identity" + provider badge(s) (SAML/AD/LDAP/OIDC) + bold "{count} native users"; omitted if no auth data. All bold text is `size="s"` strong.
+
+**InternalHealthSection**: Renders between Overview and Licensing. Displays per-indicator status (green/yellow/red) for master stability, disk, shards, ILM/SLM, etc. Human-readable symptoms and key details shown for non-green indicators. Omitted if `internal_health.json` is missing.
 
 **Licensing**: Shows license status, type, issue/expiry dates, max nodes/units, issuer, and issued-to organization. Omitted if license data absent.
 
 **Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard displays vCPU count (from `available_processors`), RAM, disk capacity in the format `"32 vCPU · 61.0 GiB RAM · 1.4 TiB disk"`, and `instanceConfiguration` below the capacity line. Resource gauges: "JVM Heap Used" (heap_used_percent), "JVM Heap / RAM" (heapMaxBytes / ramTotal %, with bytes displayed; green ≤50%, yellow 51–55%, red ≥56%), "Disk Used" (diskUsedPercent), "Shards" (shardCount / maxShardsPerNode, showing count/max text below bar; green ≤85%, yellow 86–95%, red ≥96%; frozen nodes use `cluster.max_shards_per_node.frozen` if set, else fall back to base value; default 1000 when not configured), and "CPU" (cpuPercent). Gauges render only when their source data is present. Role badges on their own line below node name (10px font, wrapping). Node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen. Kibana section rendered below ES nodes when Kibana bundle present.
 
-**FeaturesIntegrations**: `features` prop is nullable. Kibana health badges (alerting, task manager) rendered when Kibana data present. Fleet badge rendered only when `fleet.total > 0`. Data views section shows Kibana data views as badges when present.
+**FeaturesIntegrations**: `features` prop is nullable. Kibana health badges (alerting, task manager) rendered when Kibana data present. Logstash badge shows pipeline count when detected. Synthetics sub-section shows project/monitor/location counts when in use. Data views section shows Kibana data views as badges when present.
+
+**FleetSection**: Renders after FeaturesIntegrations. Always shows header. Displays "No Kibana Data" message if Kibana bundle is missing, or "Not Deployed" if Fleet is inactive. When deployed, shows Fleet Server hosts, agent summary, Agent Policies table (with counts and integrations), and Installed Integrations table.
 
 **DataProfile**: Summary panels (Data Profile, ILM & Tiering, Snapshots, Sizing Estimates) with full-width ILM Policies table below. The ILM & Tiering card shows ILM policy count, managed index count, and per-tier rows combining ILM managed index counts with shard-based tier storage (computed via shard-to-node join). Tier storage covers all indices, not just ILM-managed ones. For tiers where shard store reports 0 (e.g., frozen/searchable snapshot indices), falls back to node-level disk usage (diskTotal - diskAvail) as an approximation. Tiers with zero indices and zero storage are omitted. The full ILM Policies table is a separate top-level section after Plugins.
+
+**SnapshotRepositories**: Standalone table section after DataProfile. Shows Name, Type, Snapshot Count, Status Summary (success/failed counts), and Key Settings (bucket, path, etc.).
 
 **AiMlSection**: AI & Machine Learning content (anomaly detection, trained models, DFA, ML node memory, semantic search, AI features). Positioned between DataProfile and IndexLandscape. Omitted if no ML/AI data present. Semantic Search panel shows dense_vector fields grouped by `(dims, inferenceId)` composite key. Each group displays index count, source label (inference model name or "External" for field-level embeddings), and known model hints (e.g., 1536 dims → OpenAI ada-002, 384 → E5-small). Dense vector dims and inference model are resolved via three-step fallback: (1) field-level `inference_id`, (2) index `default_pipeline` → pipeline's `inference` processor `model_id`, (3) fallback string `"External - Dense - {dims}dims"`.
 
 **DataStreams**: Paginated table (default 10/page) with system-streams toggle. Shows name, isSystem flag, status, index count, ILM policy, and managedBy field. Omitted if no data streams present.
 
-**CrossCluster**: Displays CCR/CCS configuration details. Rendered only when cross-cluster replication or search is configured.
+**CrossCluster**: Displays CCR/CCS configuration details. Includes Remote Clusters table (mode, connected, proxy address), Follower Indices table (status, leader index), and Auto-Follow Patterns table. Rendered only when cross-cluster replication or search is configured.
 
 **Plugins**: Unique installed plugins table, deduplicated by component name with version. Omitted if no plugins present.
 

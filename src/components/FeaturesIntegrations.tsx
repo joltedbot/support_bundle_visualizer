@@ -77,6 +77,10 @@ export default function FeaturesIntegrations({ features, ilm, replication, kiban
     badges.push({ label: `Enrich Policies (${features.enrichPolicyCount})` })
   }
 
+  if (features?.logstash && features.logstash > 0) {
+    badges.push({ label: `Logstash (${features.logstash} pipelines)` })
+  }
+
   if (features?.hasGeoFields) {
     badges.push({ label: 'Geo Fields' })
   }
@@ -109,13 +113,15 @@ export default function FeaturesIntegrations({ features, ilm, replication, kiban
   }
 
   const dataViews = kibana?.dataViews ?? []
+  const synthetics = kibana?.synthetics
 
   const hasSolutions = (features?.solutionTypes.length ?? 0) > 0
   const hasFeatures = badges.length > 0
   const hasKibanaHealth = kibanaBadges.length > 0
   const hasDataViews = dataViews.length > 0
+  const hasSynthetics = !!synthetics
 
-  if (!hasSolutions && !hasFeatures && !hasKibanaHealth && !hasDataViews) return null
+  if (!hasSolutions && !hasFeatures && !hasKibanaHealth && !hasDataViews && !hasSynthetics) return null
 
   return (
     <div>
@@ -180,6 +186,32 @@ export default function FeaturesIntegrations({ features, ilm, replication, kiban
                 <EuiBadge color="hollow">{name}</EuiBadge>
               </EuiFlexItem>
             ))}
+          </EuiFlexGroup>
+        </>
+      )}
+
+      {hasSynthetics && (
+        <>
+          {(hasSolutions || hasFeatures || hasKibanaHealth || hasDataViews) && <EuiSpacer size="m" />}
+          <EuiText size="xs" color="subdued" style={{ marginBottom: 6 }}>
+            <strong>Synthetics</strong>
+          </EuiText>
+          <EuiFlexGroup gutterSize="s" wrap responsive={false}>
+            {synthetics.projectCount > 0 && (
+              <EuiFlexItem grow={false}>
+                <EuiBadge color="hollow">{synthetics.projectCount} projects</EuiBadge>
+              </EuiFlexItem>
+            )}
+            {synthetics.monitorTypes.map((type: string) => (
+              <EuiFlexItem key={type} grow={false}>
+                <EuiBadge color="hollow">{type}</EuiBadge>
+              </EuiFlexItem>
+            ))}
+            {synthetics.locationCount > 0 && (
+              <EuiFlexItem grow={false}>
+                <EuiBadge color="hollow">{synthetics.locationCount} locations</EuiBadge>
+              </EuiFlexItem>
+            )}
           </EuiFlexGroup>
         </>
       )}

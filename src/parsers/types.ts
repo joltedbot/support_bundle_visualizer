@@ -213,7 +213,32 @@ export interface FeatureInfo {
   watcherCount: number
   transformCount: number
   enrichPolicyCount: number
+  logstash: number
   activeInferenceEndpoints: string[]   // endpoint IDs referenced in mappings or pipelines
+}
+
+export interface RemoteCluster {
+  name: string
+  mode: string
+  connected: boolean
+  proxyAddress: string | null
+  skipUnavailable: boolean
+  socketConnections?: number
+  maxSocketConnections?: number
+}
+
+export interface FollowerIndex {
+  followerIndex: string
+  remoteCluster: string
+  leaderIndex: string
+  status: string
+}
+
+export interface AutoFollowPattern {
+  name: string
+  remoteCluster: string
+  leaderIndexPatterns: string[]
+  followIndexPattern: string
 }
 
 export interface ReplicationInfo {
@@ -221,13 +246,46 @@ export interface ReplicationInfo {
   followerIndexCount: number
   remoteClusterCount: number
   remoteClusterNames: string[]
+  remoteClusters: RemoteCluster[]
+  followerIndices: FollowerIndex[]
+  autoFollowPatterns: AutoFollowPattern[]
+}
+
+export interface SnapshotRepository {
+  name: string
+  type: string  // s3, gcs, azure, fs
+  snapshotCount: number
+  successCount: number
+  failedCount: number
+  settings: Record<string, string>
 }
 
 export interface SnapshotInfo {
   repositoryCount: number
   repositoryNames: string[]
+  repositories: SnapshotRepository[]
   hasSLM: boolean
   slmPolicyCount: number
+}
+
+export interface FleetAgentPolicy {
+  name: string
+  id: string
+  agentCount: number
+  isManaged: boolean
+  isPreconfigured: boolean
+  status: string
+  updatedAt: string
+  version: string
+  packagePolicies: string[]  // names of integrations
+}
+
+export interface FleetPackage {
+  name: string
+  title: string
+  version: string
+  status: string
+  policyNames: string[]
 }
 
 export interface KibanaInfo {
@@ -248,6 +306,15 @@ export interface KibanaInfo {
     error: number
     updating: number
     inactive: number
+  } | null
+  fleetSettings: { fleetServerHosts: string[]; isConfigured: boolean } | null
+  fleetPolicies: FleetAgentPolicy[]
+  fleetInstalledPackages: FleetPackage[]
+  synthetics: {
+    projectCount: number
+    monitorTypes: string[]
+    locationCount: number
+    tagCount: number
   } | null
   dataViews?: string[]  // titles of configured data views
 }
@@ -291,6 +358,18 @@ export interface DataStreamInfo {
   managedBy?: string   // next_generation_managed_by when not "Unmanaged"
 }
 
+export interface IdentityProvider {
+  type: string  // 'saml' | 'active_directory' | 'ldap' | 'oidc' | 'native' | etc.
+  name: string  // realm name (e.g. 'saml1')
+  label: string  // human-friendly (e.g. 'Okta SAML', 'AD · cpr.ca')
+}
+
+export interface IdentityInfo {
+  nativeUserCount: number  // non-reserved native users
+  reservedUserCount: number
+  providers: IdentityProvider[]
+}
+
 export interface PipelineInfo {
   name: string
   description?: string
@@ -305,9 +384,22 @@ export interface ClusterSettings {
   maxShardsPerNodeFrozen: number | null
 }
 
+export interface HealthIndicator {
+  status: 'green' | 'yellow' | 'red' | 'unknown'
+  symptom: string
+  details: Record<string, unknown> | null
+}
+
+export interface InternalHealth {
+  overallStatus: string
+  indicators: Record<string, HealthIndicator>
+}
+
 export interface BundleModel {
   identity: ClusterIdentity | null
   health: ClusterHealth | null
+  internalHealth: InternalHealth | null
+  auth: IdentityInfo | null
   nodes: NodeInfo[]
   indices: IndexInfo[]
   shards: ShardInfo[]

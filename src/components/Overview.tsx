@@ -117,6 +117,29 @@ export default function Overview({ model, kibana }: Props) {
         </EuiFlexItem>
       )}
 
+      {model.auth && (
+        <EuiFlexItem grow={false}>
+          <EuiPanel paddingSize="m" style={{ minWidth: 140 }}>
+            <EuiText size="s" style={{ marginBottom: 4 }}>Identity</EuiText>
+            <EuiFlexGroup gutterSize="xs" wrap responsive={false}>
+              {model.auth.providers.map((p) => (
+                <EuiFlexItem grow={false} key={p.name}>
+                  <EuiBadge color="hollow">{p.label}</EuiBadge>
+                </EuiFlexItem>
+              ))}
+            </EuiFlexGroup>
+            {model.auth.nativeUserCount > 0 && (
+              <EuiText size="s" style={{ marginTop: 4 }}>
+                <strong>{model.auth.nativeUserCount} native users</strong>
+              </EuiText>
+            )}
+            {model.auth.providers.length === 0 && model.auth.nativeUserCount === 0 && (
+              <EuiText size="s" style={{ marginTop: 4 }}><strong>Native Auth</strong></EuiText>
+            )}
+          </EuiPanel>
+        </EuiFlexItem>
+      )}
+
       {health && (
         <EuiFlexItem grow={false}>
           <EuiPanel paddingSize="m" style={{ minWidth: 120 }}>

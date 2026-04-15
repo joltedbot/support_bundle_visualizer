@@ -11,10 +11,13 @@ import {
 } from '@elastic/eui'
 import ClusterHeader from './components/ClusterHeader'
 import Overview from './components/Overview'
+import InternalHealthSection from './components/InternalHealthSection'
 import Licensing from './components/Licensing'
 import Topology from './components/Topology'
 import FeaturesIntegrations from './components/FeaturesIntegrations'
+import FleetSection from './components/FleetSection'
 import DataProfile, { ILMPoliciesTable } from './components/DataProfile'
+import SnapshotRepositories from './components/SnapshotRepositories'
 import AiMlSection from './components/AiMlSection'
 import IndexLandscape from './components/IndexLandscape'
 import DataStreams from './components/DataStreams'
@@ -62,6 +65,13 @@ function App() {
           <EuiSpacer size="l" />
           <Overview model={model} kibana={kibana ?? null} />
 
+          {model.internalHealth && (
+            <>
+              <EuiSpacer size="l" />
+              <InternalHealthSection internalHealth={model.internalHealth} />
+            </>
+          )}
+
           {model.license && (
             <>
               <EuiSpacer size="l" />
@@ -96,10 +106,16 @@ function App() {
             </>
           )}
 
+          <FleetSection kibana={kibana ?? null} />
+
           <EuiSpacer size="l" />
           <EuiTitle size="s"><h3>Data Profile</h3></EuiTitle>
           <EuiSpacer size="s" />
           <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
+
+          {model.snapshots && model.snapshots.repositories.length > 0 && (
+            <SnapshotRepositories repositories={model.snapshots.repositories} />
+          )}
 
           {model.aiMl && (
             <>

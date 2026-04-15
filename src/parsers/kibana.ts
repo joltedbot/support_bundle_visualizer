@@ -86,6 +86,65 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     }
   }
 
+  // Fleet Settings
+  let fleetSettings: KibanaInfo['fleetSettings'] = null
+  const fleetSettingsJson = parseJson(files, 'kibana_fleet_settings.json')
+  if (isObj(fleetSettingsJson)) {
+    fleetSettings = {
+      fleetServerHosts: Array.isArray(fleetSettingsJson.fleet_server_hosts) ? (fleetSettingsJson.fleet_server_hosts as string[]) : [],
+      isConfigured: !!fleetSettingsJson.is_configured,
+    }
+  }
+
+  // Fleet Policies
+  const fleetPolicies: KibanaInfo['fleetPolicies'] = []
+  const fleetPoliciesJson = parseJson(files, 'kibana_fleet_agent_policies_1.json')
+  if (isObj(fleetPoliciesJson) && Array.isArray(fleetPoliciesJson.items)) {
+    for (const item of fleetPoliciesJson.items) {
+      if (!isObj(item)) continue
+      const packagePolicies = Array.isArray(item.package_policies)
+        ? item.package_policies
+            .filter(isObj)
+            .map(pp => (isObj(pp.package) ? String((pp.package as Record<string, unknown>).name || '') : ''))
+            .filter(Boolean)
+        : []
+
+      fleetPolicies.push({
+        name: String(item.name || ''),
+        id: String(item.id || ''),
+        agentCount: typeof item.agents_count === 'number' ? item.agents_count : 0,
+        isManaged: !!item.is_managed,
+        isPreconfigured: !!item.is_preconfigured,
+        status: String(item.status || ''),
+        updatedAt: String(item.updated_at || ''),
+        version: String(item.version || ''),
+        packagePolicies,
+      })
+    }
+  }
+
+  // Fleet Installed Packages
+  const fleetInstalledPackages: KibanaInfo['fleetInstalledPackages'] = []
+  const fleetPackagesJson = parseJson(files, 'kibana_fleet_packages.json')
+  if (isObj(fleetPackagesJson) && Array.isArray(fleetPackagesJson.items)) {
+    for (const item of fleetPackagesJson.items) {
+      if (!isObj(item) || item.status !== 'installed') continue
+      
+      const name = String(item.name || '')
+      const policyNames = fleetPolicies
+        .filter(p => p.packagePolicies.includes(name))
+        .map(p => p.name)
+
+      fleetInstalledPackages.push({
+        name,
+        title: String(item.title || ''),
+        version: String(item.version || ''),
+        status: String(item.status || ''),
+        policyNames,
+      })
+    }
+  }
+
   // Data views
   let dataViews: string[] | undefined
   const dataViewsJson = parseJson(files, 'kibana_data_views.json')
@@ -94,6 +153,28 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
       .filter(isObj)
       .map(v => (typeof v.name === 'string' && v.name ? v.name : typeof v.title === 'string' ? v.title : ''))
       .filter(Boolean)
+  }
+
+  // Synthetics
+  let synthetics: KibanaInfo['synthetics'] = null
+  const synthJson = parseJson(files, 'kibana_synthetics_monitor_filters.json')
+  if (isObj(synthJson)) {
+    const monitorTypesRaw = Array.isArray(synthJson.monitorTypes) ? synthJson.monitorTypes : []
+    const monitorTypes: string[] = monitorTypesRaw.map((t: unknown) =>
+      typeof t === 'string' ? t : (t && typeof t === 'object' && 'label' in t) ? String((t as Record<string, unknown>).label) : ''
+    ).filter(Boolean)
+    const tags = Array.isArray(synthJson.tags) ? synthJson.tags : []
+    const locations = Array.isArray(synthJson.locations) ? synthJson.locations : []
+    const projects = Array.isArray(synthJson.projects) ? synthJson.projects : []
+    
+    if (monitorTypes.length > 0 || tags.length > 0 || locations.length > 0 || projects.length > 0) {
+      synthetics = {
+        projectCount: projects.length,
+        monitorTypes,
+        locationCount: locations.length,
+        tagCount: tags.length,
+      }
+    }
   }
 
   return {
@@ -108,6 +189,10 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     hasPermanentEncryptionKey,
     taskManagerStatus,
     fleet,
+    fleetSettings,
+    fleetPolicies,
+    fleetInstalledPackages,
+    synthetics,
     dataViews,
   }
 }
