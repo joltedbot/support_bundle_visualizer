@@ -17,6 +17,7 @@ import { parseLicense } from './license'
 import { parsePlugins } from './plugins'
 import { parseDataStreams } from './datastreams'
 import { parsePipelines } from './pipelines'
+import { parseClusterSettings } from './clusterSettings'
 
 export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const { files } = data
@@ -46,12 +47,66 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     sparseVectorIndexCount: features?.sparseVectorIndexCount ?? 0,
   } : null
 
+  const nodes = parseNodes(files)
+  const shards = parseShards(files)
+
+  // Compute shard counts per node
+  const shardCountsByNode = new Map<string, number>()
+  for (const shard of shards) {
+    if (shard.node) {
+      shardCountsByNode.set(shard.node, (shardCountsByNode.get(shard.node) ?? 0) + 1)
+    }
+  }
+  const nodesWithShardCounts = nodes.map((node) => {
+    const count = shardCountsByNode.get(node.name)
+    return count !== undefined ? { ...node, shardCount: count } : node
+  })
+
+  // Compute tier storage via shard-to-node join
+  const nodeTierMap = new Map<string, string>()
+  for (const node of nodes) {
+    nodeTierMap.set(node.name, node.tier)
+  }
+  const tierStorageMap: Record<string, number> = {}
+  for (const shard of shards) {
+    if (shard.node) {
+      const tier = nodeTierMap.get(shard.node)
+      if (tier) {
+        tierStorageMap[tier] = (tierStorageMap[tier] ?? 0) + shard.storeSizeBytes
+      }
+    }
+  }
+
+  // Fallback: for tiers where shard store reports 0 (e.g. frozen/searchable snapshots),
+  // use node-level disk usage (diskTotal - diskAvail) as an approximation
+  const tiersByNode = new Map<string, string>()
+  for (const node of nodes) {
+    tiersByNode.set(node.name, node.tier)
+  }
+  const nodeDiskByTier: Record<string, number> = {}
+  for (const node of nodes) {
+    if (node.diskTotal != null && node.diskAvail != null) {
+      const used = node.diskTotal - node.diskAvail
+      if (used > 0) {
+        nodeDiskByTier[node.tier] = (nodeDiskByTier[node.tier] ?? 0) + used
+      }
+    }
+  }
+  // Apply node-disk fallback only for tiers with zero shard-based storage
+  for (const [tier, diskUsed] of Object.entries(nodeDiskByTier)) {
+    if (!tierStorageMap[tier] || tierStorageMap[tier] === 0) {
+      tierStorageMap[tier] = diskUsed
+    }
+  }
+
+  const tierStorage = Object.keys(tierStorageMap).length > 0 ? tierStorageMap : null
+
   return {
     identity: parseManifest(files),
     health: parseHealth(files),
-    nodes: parseNodes(files),
+    nodes: nodesWithShardCounts,
     indices,
-    shards: parseShards(files),
+    shards,
     stats: parseStats(files),
     ilm: parseILM(files),
     aiMl,
@@ -63,6 +118,8 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     plugins: parsePlugins(files),
     dataStreams: parseDataStreams(files),
     ingestPipelines: parsePipelines(files),
+    clusterSettings: parseClusterSettings(files),
+    tierStorage,
   }
 }
 

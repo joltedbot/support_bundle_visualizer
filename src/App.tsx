@@ -74,7 +74,12 @@ function App() {
           <EuiSpacer size="l" />
           <EuiTitle size="s"><h3>Topology</h3></EuiTitle>
           <EuiSpacer size="s" />
-          <Topology nodes={model.nodes} kibana={kibana ?? null} />
+          <Topology
+            nodes={model.nodes}
+            kibana={kibana ?? null}
+            maxShardsPerNode={model.clusterSettings?.maxShardsPerNode ?? null}
+            maxShardsPerNodeFrozen={model.clusterSettings?.maxShardsPerNodeFrozen ?? null}
+          />
 
           {(model.features || kibana) && (
             <>
@@ -94,7 +99,7 @@ function App() {
           <EuiSpacer size="l" />
           <EuiTitle size="s"><h3>Data Profile</h3></EuiTitle>
           <EuiSpacer size="s" />
-          <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} />
+          <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
 
           {model.aiMl && (
             <>

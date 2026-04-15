@@ -18,6 +18,8 @@ import {
 interface Props {
   nodes: NodeInfo[]
   kibana: KibanaInfo | null
+  maxShardsPerNode: number | null
+  maxShardsPerNodeFrozen: number | null
 }
 
 // ─── Colours & labels ────────────────────────────────────────────────────────
@@ -57,7 +59,7 @@ const DATA_ROLE_TO_TIER: Partial<Record<NodeRole, string>> = {
 
 // ─── NodeCard ─────────────────────────────────────────────────────────────────
 
-function NodeCard({ node }: { node: NodeInfo }) {
+function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: NodeInfo; maxShardsPerNode: number | null; maxShardsPerNodeFrozen: number | null }) {
   // Primary badge: data tier role wins; fall back to first non-rcc management role
   const primaryRole: NodeRole =
     node.roles.find(r => DATA_ROLE_TO_TIER[r]) ??
@@ -172,6 +174,26 @@ function NodeCard({ node }: { node: NodeInfo }) {
         </div>
       )}
 
+      {node.shardCount !== undefined && (() => {
+        const shardMax = (node.tier === 'frozen' && maxShardsPerNodeFrozen != null)
+          ? maxShardsPerNodeFrozen
+          : (maxShardsPerNode ?? 1000)
+        const shardPct = shardMax > 0 ? Math.round((node.shardCount / shardMax) * 100) : 0
+        const shardColor = resourceColor(shardPct, 86, 96)
+        return (
+          <div style={{ marginBottom: 4 }}>
+            <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
+              <EuiFlexItem><EuiText size="xs" color="subdued">Shards</EuiText></EuiFlexItem>
+              <EuiFlexItem grow={false}><EuiText size="xs">{shardPct}%</EuiText></EuiFlexItem>
+            </EuiFlexGroup>
+            <EuiProgress value={shardPct} max={100} size="s" color={shardColor} />
+            <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
+              {node.shardCount} / {shardMax}
+            </EuiText>
+          </div>
+        )
+      })()}
+
       {node.cpuPercent !== undefined && (
         <div>
           <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
@@ -224,7 +246,7 @@ function SummaryBar({ nodes }: { nodes: NodeInfo[] }) {
 
 // ─── Node group (AZ groups) ───────────────────────────────────────────────────
 
-function NodeGroup({ label, nodes }: { label: string; nodes: NodeInfo[] }) {
+function NodeGroup({ label, nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: { label: string; nodes: NodeInfo[]; maxShardsPerNode: number | null; maxShardsPerNodeFrozen: number | null }) {
   const sorted = sortNodesByRole(nodes)
   return (
     <div style={{ marginBottom: 16 }}>
@@ -232,7 +254,7 @@ function NodeGroup({ label, nodes }: { label: string; nodes: NodeInfo[] }) {
       <EuiFlexGroup wrap gutterSize="s" responsive={false}>
         {sorted.map((node) => (
           <EuiFlexItem key={node.id} grow={false}>
-            <NodeCard node={node} />
+            <NodeCard node={node} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} />
           </EuiFlexItem>
         ))}
       </EuiFlexGroup>
@@ -244,7 +266,7 @@ function NodeGroup({ label, nodes }: { label: string; nodes: NodeInfo[] }) {
 
 const TIER_FALLBACK_ORDER = ['master', 'ml', 'ingest', 'transform', 'coordinating', 'hot', 'warm', 'cold', 'frozen', 'mixed'] as const
 
-function TierFallbackView({ nodes }: { nodes: NodeInfo[] }) {
+function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: { nodes: NodeInfo[]; maxShardsPerNode: number | null; maxShardsPerNodeFrozen: number | null }) {
   const grouped = new Map<string, NodeInfo[]>()
   for (const tier of TIER_FALLBACK_ORDER) {
     const group = nodes.filter((n) => n.tier === tier)
@@ -261,7 +283,7 @@ function TierFallbackView({ nodes }: { nodes: NodeInfo[] }) {
           <EuiFlexGroup wrap gutterSize="s" responsive={false}>
             {sortNodesByRole(tierNodes).map((node) => (
               <EuiFlexItem key={node.id} grow={false}>
-                <NodeCard node={node} />
+                <NodeCard node={node} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} />
               </EuiFlexItem>
             ))}
           </EuiFlexGroup>
@@ -307,7 +329,7 @@ function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function Topology({ nodes, kibana }: Props) {
+export default function Topology({ nodes, kibana, maxShardsPerNode, maxShardsPerNodeFrozen }: Props) {
   if (nodes.length === 0 && !kibana) return null
 
   const azGroups = nodes.length > 0 ? groupNodesByAZ(nodes) : null
@@ -318,10 +340,10 @@ export default function Topology({ nodes, kibana }: Props) {
 
       {nodes.length > 0 && (azGroups ? (
         Array.from(azGroups.entries()).map(([az, azNodes]) => (
-          <NodeGroup key={az} label={az} nodes={azNodes} />
+          <NodeGroup key={az} label={az} nodes={azNodes} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} />
         ))
       ) : (
-        <TierFallbackView nodes={nodes} />
+        <TierFallbackView nodes={nodes} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} />
       ))}
 
       {kibana && (

@@ -50,6 +50,7 @@ export interface NodeInfo {
   diskAvail?: number        // bytes
   ramTotal?: number         // bytes
   availableProcessors?: number
+  shardCount?: number       // total shards assigned to this node
 }
 
 export interface IndexInfo {
@@ -299,6 +300,11 @@ export interface PipelineInfo {
   metaManagedBy?: string
 }
 
+export interface ClusterSettings {
+  maxShardsPerNode: number | null
+  maxShardsPerNodeFrozen: number | null
+}
+
 export interface BundleModel {
   identity: ClusterIdentity | null
   health: ClusterHealth | null
@@ -316,6 +322,8 @@ export interface BundleModel {
   plugins: PluginEntry[]
   dataStreams: DataStreamInfo[]
   ingestPipelines: PipelineInfo[]
+  clusterSettings: ClusterSettings | null
+  tierStorage: Record<string, number> | null
 }
 
 export interface GeneratedBundle {

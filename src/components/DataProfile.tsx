@@ -21,6 +21,7 @@ interface Props {
   ilm: ILMInfo | null
   snapshots: SnapshotInfo | null
   sizing: SizingMetrics | null
+  tierStorage: Record<string, number> | null
 }
 
 const ILM_PAGE_SIZE_OPTIONS = [10, 20, 50]
@@ -174,9 +175,9 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
   )
 }
 
-export default function DataProfile({ stats, ilm, snapshots, sizing }: Props) {
+export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage }: Props) {
   const hasStats = stats !== null
-  const hasIlm = ilm !== null
+  const hasIlm = ilm !== null || (tierStorage !== null && Object.keys(tierStorage).length > 0)
   const hasSnapshots = snapshots !== null
   const hasSizing = sizing !== null && (
     sizing.avgQueryRateQPS !== null ||
@@ -225,43 +226,49 @@ export default function DataProfile({ stats, ilm, snapshots, sizing }: Props) {
           </EuiFlexItem>
         )}
 
-        {hasIlm && (
-          <EuiFlexItem grow={false} style={{ minWidth: 240 }}>
-            <EuiPanel paddingSize="m">
-              <EuiTitle size="xs"><h4>ILM & Tiering</h4></EuiTitle>
-              <EuiSpacer size="s" />
-              <EuiDescriptionList
-                compressed
-                listItems={[
-                  {
-                    title: 'ILM policies',
-                    description: String(ilm.policyCount),
-                  },
-                  {
-                    title: 'Managed indices',
-                    description: String(ilm.managedIndexCount),
-                  },
-                  {
-                    title: 'Hot indices',
-                    description: String(ilm.tiers.hot),
-                  },
-                  {
-                    title: 'Warm indices',
-                    description: String(ilm.tiers.warm),
-                  },
-                  {
-                    title: 'Cold indices',
-                    description: String(ilm.tiers.cold),
-                  },
-                  {
-                    title: 'Frozen indices',
-                    description: String(ilm.tiers.frozen),
-                  },
-                ]}
-              />
-            </EuiPanel>
-          </EuiFlexItem>
-        )}
+        {hasIlm && (() => {
+          const TIER_ORDER = ['hot', 'warm', 'cold', 'frozen', 'master', 'coordinating', 'mixed'] as const
+          const tierItems: { title: string; description: string }[] = []
+
+          // ILM summary rows
+          if (ilm) {
+            tierItems.push({ title: 'ILM policies', description: String(ilm.policyCount) })
+            tierItems.push({ title: 'Managed indices', description: String(ilm.managedIndexCount) })
+          }
+
+          // Tier rows: combine ILM index counts with shard-based storage
+          const ilmTiers = ilm?.tiers ?? { hot: 0, warm: 0, cold: 0, frozen: 0 }
+          const TIER_LABELS: Record<string, string> = {
+            hot: 'Hot', warm: 'Warm', cold: 'Cold', frozen: 'Frozen',
+            master: 'Master', coordinating: 'Coordinating', mixed: 'Mixed',
+          }
+
+          for (const tier of TIER_ORDER) {
+            const indexCount = (ilmTiers as Record<string, number>)[tier] ?? 0
+            const storageBytes = tierStorage?.[tier] ?? 0
+            // Show row if either ILM has indices or tier has storage
+            if (indexCount > 0 || storageBytes > 0) {
+              const label = `${TIER_LABELS[tier] ?? tier}`
+              const parts: string[] = []
+              if (indexCount > 0) parts.push(`${indexCount} managed indices`)
+              if (storageBytes > 0) parts.push(formatBytes(storageBytes))
+              tierItems.push({ title: label, description: parts.join(' · ') })
+            }
+          }
+
+          return (
+            <EuiFlexItem grow={false} style={{ minWidth: 240 }}>
+              <EuiPanel paddingSize="m">
+                <EuiTitle size="xs"><h4>ILM & Tiering</h4></EuiTitle>
+                <EuiSpacer size="s" />
+                <EuiDescriptionList
+                  compressed
+                  listItems={tierItems}
+                />
+              </EuiPanel>
+            </EuiFlexItem>
+          )
+        })()}
 
         {hasSnapshots && (
           <EuiFlexItem grow={false} style={{ minWidth: 240 }}>

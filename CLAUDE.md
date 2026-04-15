@@ -51,6 +51,7 @@ src/
     license.ts, plugins.ts, datastreams.ts  # License, plugins, data streams
     manifest.ts, health.ts, nodes.ts, indices.ts, shards.ts,
     stats.ts, ilm.ts, ml.ts, features.ts, replication.ts, snapshots.ts
+    clusterSettings.ts  # Parses cluster_settings.json (max_shards_per_node etc.)
   components/       # UI sections (one file per section)
     ClusterHeader, Overview, Licensing, Topology, FeaturesIntegrations,
     DataProfile, AiMlSection, IndexLandscape, DataStreams, CrossCluster, Plugins, BestPractices
@@ -93,11 +94,11 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 
 **Licensing**: Shows license status, type, issue/expiry dates, max nodes/units, issuer, and issued-to organization. Omitted if license data absent.
 
-**Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard displays vCPU count (from `available_processors`), RAM, disk capacity in the format `"32 vCPU · 61.0 GiB RAM · 1.4 TiB disk"`, and `instanceConfiguration` below the capacity line. Three resource gauges: "JVM Heap Used" (heap_used_percent), "JVM Heap / RAM" (heapMaxBytes / ramTotal %, with bytes displayed; green ≤50%, yellow 51–55%, red ≥56%), and "Disk Used" (diskUsedPercent). CPU gauge also present. Gauges render only when their source data is present. Role badges on their own line below node name (10px font, wrapping). Node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen. Kibana section rendered below ES nodes when Kibana bundle present.
+**Topology**: Nodes grouped by availability zone (alphabetically, "Unknown AZ" last) when AZ data available; falls back to tier grouping. Each AZ section shows node count and tier breakdown. Summary bar at top shows all non-zero tier counts. Each NodeCard displays vCPU count (from `available_processors`), RAM, disk capacity in the format `"32 vCPU · 61.0 GiB RAM · 1.4 TiB disk"`, and `instanceConfiguration` below the capacity line. Resource gauges: "JVM Heap Used" (heap_used_percent), "JVM Heap / RAM" (heapMaxBytes / ramTotal %, with bytes displayed; green ≤50%, yellow 51–55%, red ≥56%), "Disk Used" (diskUsedPercent), "Shards" (shardCount / maxShardsPerNode, showing count/max text below bar; green ≤85%, yellow 86–95%, red ≥96%; frozen nodes use `cluster.max_shards_per_node.frozen` if set, else fall back to base value; default 1000 when not configured), and "CPU" (cpuPercent). Gauges render only when their source data is present. Role badges on their own line below node name (10px font, wrapping). Node sort order: master > ml > ingest > transform > coordinating > hot > warm > cold > frozen. Kibana section rendered below ES nodes when Kibana bundle present.
 
 **FeaturesIntegrations**: `features` prop is nullable. Kibana health badges (alerting, task manager) rendered when Kibana data present. Fleet badge rendered only when `fleet.total > 0`. Data views section shows Kibana data views as badges when present.
 
-**DataProfile**: Summary panels (Data Profile, ILM & Tiering, Snapshots, Sizing Estimates) with full-width ILM Policies table below. The ILM summary card (tier counts, policy count) remains in DataProfile; the full ILM Policies table is now a separate top-level section after Plugins.
+**DataProfile**: Summary panels (Data Profile, ILM & Tiering, Snapshots, Sizing Estimates) with full-width ILM Policies table below. The ILM & Tiering card shows ILM policy count, managed index count, and per-tier rows combining ILM managed index counts with shard-based tier storage (computed via shard-to-node join). Tier storage covers all indices, not just ILM-managed ones. For tiers where shard store reports 0 (e.g., frozen/searchable snapshot indices), falls back to node-level disk usage (diskTotal - diskAvail) as an approximation. Tiers with zero indices and zero storage are omitted. The full ILM Policies table is a separate top-level section after Plugins.
 
 **AiMlSection**: AI & Machine Learning content (anomaly detection, trained models, DFA, ML node memory, semantic search, AI features). Positioned between DataProfile and IndexLandscape. Omitted if no ML/AI data present. Semantic Search panel shows dense_vector fields grouped by `(dims, inferenceId)` composite key. Each group displays index count, source label (inference model name or "External" for field-level embeddings), and known model hints (e.g., 1536 dims → OpenAI ada-002, 384 → E5-small). Dense vector dims and inference model are resolved via three-step fallback: (1) field-level `inference_id`, (2) index `default_pipeline` → pipeline's `inference` processor `model_id`, (3) fallback string `"External - Dense - {dims}dims"`.
 
@@ -120,6 +121,12 @@ Build via `vite-plugin-singlefile` produces a single self-contained HTML file (~
 **features.ts** — Dense vector and semantic text scanning:
 - `scanMappingProperties()` scans all index mappings and returns arrays of dense_vector, semantic_text, and sparse_vector fields with dims and inference_id per field
 - `parseFeatures()` groups dense_vector indices by `(dims, inferenceId)` composite key, enabling per-dim breakdown in SemanticSearchPanel showing index count and source (model name or "External")
+
+**clusterSettings.ts** — Cluster-level settings:
+- `parseClusterSettings()` reads `cluster_settings.json` to extract `cluster.max_shards_per_node` and `cluster.max_shards_per_node.frozen`
+- Handles both persistent and transient settings (transient wins, matching ES precedence)
+- Supports both nested object structure and flat dotted-key format
+- Returns `ClusterSettings` with `maxShardsPerNode` and `maxShardsPerNodeFrozen` (null when not configured; ES default of 1000 applied at render time)
 
 ## Utilities
 
