@@ -32,6 +32,16 @@ npm run dev              # Dev server (requires bundleData.ts to exist — run g
 npx vitest run           # Run tests
 ```
 
+## Diagnostic Bundle Data Reference
+
+**`docs/BUNDLE_DATA_INDEX.md`** is the authoritative index of all data available in ES and Kibana diagnostic bundles. Consult this file first when:
+- Determining what data a bundle file contains (file descriptions, ES API mappings, top-level keys)
+- Checking which files the app currently parses vs which are unused
+- Planning new features that need bundle data (the "Unused Data" section lists 32 categories of untapped data with SA-value assessments)
+- Understanding cloud vs self-hosted data differences
+
+Do NOT re-scan bundle directories or re-read individual bundle files to answer questions that this index already covers.
+
 ## Project Structure
 
 ```
@@ -61,6 +71,7 @@ src/
     nodeRoles.ts     # Node role sorting, AZ grouping, role utilities
     modelHints.ts    # Embedding model dimension lookup and label enrichment
 docs/
+  BUNDLE_DATA_INDEX.md  # Authoritative index of all bundle file contents and app usage status
   superpowers/      # Design specs and implementation plans
     specs/
     plans/
