@@ -13,10 +13,10 @@ A local tool for Elastic SAs to quickly orient on a customer cluster from an Ela
 ## Setup (first time)
 
 ```bash
-npm install --legacy-peer-deps
+pnpm install
 ```
 
-(React 19 and `@elastic/charts` have peer dependency conflicts; `--legacy-peer-deps` allows installation.)
+(pnpm v10 handles the React 19 and `@elastic/charts` peer dependency conflicts automatically.)
 
 ## Generating a report
 
@@ -60,16 +60,16 @@ Open this file directly in any browser — no server needed. It's a self-contain
 
 ```bash
 # Generate bundle data
-npm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
+pnpm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
 
 # Build the report
-npm run build
+pnpm run build
 
 # Output is at:
 open output/acme-corp/index.html
 
 # Run tests (optional)
-npx vitest run
+pnpm dlx vitest run
 ```
 
 The `--cluster` flag is optional and sets the cluster name displayed in the report header and browser title. Omit it if the cluster name is unknown.

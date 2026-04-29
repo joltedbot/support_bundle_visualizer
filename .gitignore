@@ -13,6 +13,7 @@ docs/
 .secretlintrc.json 
 .claude/
 .gemini
+.pnpm-store
 GEMINI.md
 
 # Generated bundle data — contains customer data, never commit
