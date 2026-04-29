@@ -19,7 +19,7 @@ interface Props {
   shards: ShardInfo[]
 }
 
-type SortField = 'storeSizeBytes' | 'docCount'
+type SortField = 'storeSizeBytes' | 'docCount' | 'avgShardSizeBytes'
 
 interface SortState {
   field: SortField
@@ -164,6 +164,17 @@ export default function IndexLandscape({ indices, shards }: Props) {
       align: 'right' as const,
     },
     {
+      field: 'avgShardSizeBytes',
+      name: 'Avg Shard Size',
+      width: '120px',
+      align: 'right' as const,
+      sortable: true,
+      render: (b: number) => {
+        if (b === 0) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+        return formatBytes(b)
+      },
+    },
+    {
       field: 'docCount',
       name: 'Docs',
       width: '100px',
@@ -197,7 +208,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<IndexInfo>) {
     if (newSort) {
-      const validSortFields: SortField[] = ['storeSizeBytes', 'docCount']
+      const validSortFields: SortField[] = ['storeSizeBytes', 'docCount', 'avgShardSizeBytes']
       if (validSortFields.includes(newSort.field as SortField)) {
         setSort({ field: newSort.field as SortField, direction: newSort.direction })
         setPageIndex(0)

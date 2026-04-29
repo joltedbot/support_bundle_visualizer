@@ -62,6 +62,7 @@ export interface IndexInfo {
   replicaShards: number
   docCount: number
   storeSizeBytes: number
+  avgShardSizeBytes: number
   ilmPolicy?: string  // policy name from ilm_explain.json, if managed
   models?: string[]   // names of embedding/reranking models used
 }

@@ -14,6 +14,7 @@ function makeIndex(name: string, docCount = 0, storeSizeBytes = 0): IndexInfo {
     replicaShards: 0,
     docCount,
     storeSizeBytes,
+    avgShardSizeBytes: 0,
   }
 }
 

@@ -56,6 +56,7 @@ export function parseIndices(files: Map<string, string>): IndexInfo[] {
   const repIdx = col('rep')
   const docsCountIdx = col('docs.count')
   const storeSizeIdx = col('store.size')
+  const priStoreSizeIdx = col('pri.store.size')
 
   // Require at minimum health, status, index columns
   if (healthIdx === -1 || statusIdx === -1 || indexIdx === -1) return []
@@ -77,6 +78,9 @@ export function parseIndices(files: Map<string, string>): IndexInfo[] {
     const replicaShards = repIdx !== -1 ? (parseInt(parts[repIdx] ?? '0', 10) || 0) : 0
     const docCount = docsCountIdx !== -1 ? (parseInt(parts[docsCountIdx] ?? '0', 10) || 0) : 0
     const storeSizeBytes = storeSizeIdx !== -1 ? parseSize(parts[storeSizeIdx] ?? '') : 0
+    const priStoreSizeBytes = priStoreSizeIdx !== -1 ? parseSize(parts[priStoreSizeIdx] ?? '') : 0
+
+    const avgShardSizeBytes = primaryShards > 0 ? Math.round(priStoreSizeBytes / primaryShards) : 0
 
     result.push({
       name,
@@ -87,6 +91,7 @@ export function parseIndices(files: Map<string, string>): IndexInfo[] {
       replicaShards,
       docCount,
       storeSizeBytes,
+      avgShardSizeBytes,
     })
   }
 

@@ -89,6 +89,7 @@ Do NOT:
 - **Defensive Parsing**: Parsers in `src/parsers/` must never throw, returning `null` or empty objects instead. A naive agent might use strict error handling; this would cause a single missing file in a bundle to crash the entire generation process.
 - **Kibana Sizing**: Use `heap.size_limit` from `kibana_status.json` for instance size. A naive agent might use OS RAM from the bundle; in Elastic Cloud, OS RAM reflects the host machine (e.g., 64GB) while the instance is actually much smaller (e.g., 1GB).
 - **Node Sorting**: Topology view uses a fixed priority (master > ml > ingest > etc). A naive agent might use alphabetical sorting; fixed priority is required so the "brain" of the cluster is always visible first regardless of naming.
+- **Average Shard Size Calculation**: Use `pri.store.size` from `cat_indices.txt` to calculate average primary shard size. A naive agent might try to aggregate individual shards from `cat_shards.txt`; this is unnecessarily complex and prone to errors when shard data is incomplete.
 - **Multi-Deployment Layout**: `generate.ts` detects a nested `diagnostics/<customer>/<deployment>/` structure. A naive agent might assume a 1:1 mapping between customer and bundle; this layout is required to process multiple environment snapshots in a single build.
 - **Vitest Configuration**: In `vite.config.ts`, you must import `defineConfig` from `vitest/config` (not `vite`). A naive agent might import it from `vite`; this will cause TypeScript errors because the `test:` config block is not part of Vite's default type definitions.
 

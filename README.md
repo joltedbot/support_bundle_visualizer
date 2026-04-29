@@ -84,7 +84,7 @@ The `--cluster` flag is optional and sets the cluster name displayed in the repo
 | Cluster Header | Customer name, cluster name (if provided via `--cluster` flag) |
 | Overview | Solution type (Search/Observability/Security), ES version, cluster health, node/index counts |
 | Topology | Nodes grouped by availability zone (if available) or tier; AZ summary bar showing tier distribution; each node shows vCPU count, RAM, and disk capacity |
-| Index Landscape | Index counts, shard distribution, size breakdown |
+| Index Landscape | Index counts, shard distribution, and average shard size breakdown |
 | Features & Integrations | ILM, ML, CCR, snapshots, installed plugins |
 | Data Profile | Index size distribution, ILM policy coverage |
 | Best Practices | Automated observations and recommendations |
