@@ -2,6 +2,7 @@
 
 A local tool for Elastic SAs to quickly orient on a customer cluster from an Elasticsearch diagnostic bundle. Produces a self-contained static HTML report — no server or internet connection required.
 
+
 ## Prerequisites
 
 - Node.js 18+
