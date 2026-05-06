@@ -409,13 +409,20 @@ function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
         return (
           <div key={node.nodeName} style={{ marginBottom: 14 }}>
             <EuiFlexGroup
-              justifyContent="spaceBetween"
-              gutterSize="none"
+              justifyContent="flexStart"
+              alignItems="center"
+              gutterSize="s"
+              responsive={false}
               style={{ marginBottom: 4 }}
             >
               <EuiFlexItem grow={false}>
                 <EuiText size="xs" color="subdued">
                   {node.nodeName}
+                </EuiText>
+              </EuiFlexItem>
+              <EuiFlexItem grow={false}>
+                <EuiText size="xs" color="subdued">
+                  —
                 </EuiText>
               </EuiFlexItem>
               <EuiFlexItem grow={false}>

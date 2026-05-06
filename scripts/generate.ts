@@ -124,7 +124,10 @@ async function generateForDeployment(config: DeploymentConfig): Promise<void> {
   }
 
   const esBundleName = entries.find(e => (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDirAt(config.bundleParentPath, e))
-  const kibanaBundleName = entries.find(e => e.startsWith('kibana-api-diagnostics-') && isDirAt(config.bundleParentPath, e))
+  const kibanaBundleName = entries.find(e =>
+    (e.startsWith('kibana-api-diagnostics-') || e.startsWith('kibana-local-diagnostics-')) &&
+    isDirAt(config.bundleParentPath, e)
+  )
 
   if (!esBundleName) {
     console.error(`Error: No api-diagnostics-* or local-diagnostics-* folder found in ${config.bundleParentPath}`)
