@@ -19,7 +19,7 @@ interface NodesStatsJson {
     jvm?: { mem?: { heap_used_percent?: number; heap_max_in_bytes?: number } }
     process?: { cpu?: { percent?: number } }
     fs?: { total?: { total_in_bytes?: number; free_in_bytes?: number; available_in_bytes?: number } }
-    os?: { mem?: { total_in_bytes?: number } }
+    os?: { cpu?: { percent?: number }; mem?: { total_in_bytes?: number } }
   }>
 }
 
@@ -141,7 +141,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
     for (const [id, node] of Object.entries(nodesStatsJson.nodes)) {
       const heapPercent = node.jvm?.mem?.heap_used_percent
       const heapMaxBytes = node.jvm?.mem?.heap_max_in_bytes
-      const cpuPercent = node.process?.cpu?.percent
+      const cpuPercent = node.os?.cpu?.percent ?? node.process?.cpu?.percent
       const fsTotalBytes = node.fs?.total?.total_in_bytes
       const fsFreeBytes = node.fs?.total?.free_in_bytes ?? node.fs?.total?.available_in_bytes
       const ramTotal = node.os?.mem?.total_in_bytes
