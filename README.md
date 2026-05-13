@@ -9,7 +9,7 @@ A local tool for Elastic SAs to quickly orient on a customer cluster from an Ela
 - An Elasticsearch diagnostic bundle:
   - Cloud (ESS): `api-diagnostics-YYYYMMDD-HHMMSS/`
   - Self-hosted: `local-diagnostics-YYYYMMDD-HHMMSS/`
-- Optionally a Kibana diagnostic bundle (`kibana-api-diagnostics-YYYYMMDD-HHMMSS/`; typically only for cloud)
+- Optionally a Kibana diagnostic bundle (`kibana-api-diagnostics-YYYYMMDD-HHMMSS/` for cloud, `kibana-local-diagnostics-YYYYMMDD-HHMMSS/` for self-hosted)
 
 ## Setup (first time)
 
@@ -29,7 +29,8 @@ Create a folder named after the customer inside `diagnostics/` and place the bun
 diagnostics/
   acme-corp/
     api-diagnostics-20260101-120000/           ← ESS cloud bundle
-    kibana-api-diagnostics-20260101-120000/    ← optional, ESS cloud only
+    kibana-api-diagnostics-20260101-120000/    ← optional Kibana bundle (cloud)
+    kibana-local-diagnostics-20260101-120000/  ← optional Kibana bundle (self-hosted)
 
   my-self-hosted/
     local-diagnostics-20260101-120000/         ← self-hosted bundle
@@ -37,15 +38,14 @@ diagnostics/
 
 Multiple customers can coexist in `diagnostics/` — each gets their own subfolder.
 
-### 2. Tell Claude Code to generate the report
+### 2. Generate the report
 
+```bash
+pnpm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
+pnpm run build
 ```
-Read and execute the instructions in GENERATE.md
-```
 
-Claude will ask you to confirm the customer name and any notes, then run the generate and build steps automatically.
-
-**Note on sandbox restrictions:** Claude Code runs in a sandbox that restricts Unix socket creation. The `tsx` runtime (used by generate) requires sockets for IPC and may fail with `EPERM`. If this occurs, Claude will ask you to run the command outside the sandbox using the `!` prefix: `! pnpm run generate -- --customer acme-corp --name "ACME Corp"`
+`--cluster` and `--notes` are optional. `--cluster` sets the cluster name shown in the report header and browser title.
 
 ### 3. Open the report
 
@@ -54,26 +54,6 @@ output/<customer>/index.html
 ```
 
 Open this file directly in any browser — no server needed. It's a self-contained HTML file (~2MB) with all CSS and JavaScript inlined. Each customer has their own output folder so reports are never overwritten.
-
----
-
-## Running manually (without Claude)
-
-```bash
-# Generate bundle data
-pnpm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
-
-# Build the report
-pnpm run build
-
-# Output is at:
-open output/acme-corp/index.html
-
-# Run tests (optional)
-pnpm dlx vitest run
-```
-
-The `--cluster` flag is optional and sets the cluster name displayed in the report header and browser title. Omit it if the cluster name is unknown.
 
 ---
 
