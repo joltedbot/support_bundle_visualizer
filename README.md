@@ -45,7 +45,14 @@ pnpm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Producti
 pnpm run build
 ```
 
-`--cluster` and `--notes` are optional. `--cluster` sets the cluster name shown in the report header and browser title.
+**`pnpm run generate` flags**
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--customer <dirname>` | Yes | Folder name inside `diagnostics/` containing the bundle. Must match exactly — this is the directory name, not the display name. |
+| `--name <string>` | Yes | Customer display name shown in the report header. Quote if it contains spaces. |
+| `--cluster <string>` | No | Cluster name shown in the report header and browser tab title. Omit if unknown. |
+| `--notes <string>` | No | Free-text context added to the Notes section of the report (e.g. pre-call context, known issues). Quote if it contains spaces. |
 
 ### 3. Open the report
 
