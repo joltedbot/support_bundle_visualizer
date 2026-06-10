@@ -41,6 +41,16 @@ if (!customerPath.startsWith(diagnosticsBase + sep)) {
   process.exit(1)
 }
 
+try {
+  if (!statSync(customerPath).isDirectory()) {
+    console.error(`Error: diagnostics/${customerDir} exists but is not a directory`)
+    process.exit(1)
+  }
+} catch {
+  console.error(`Error: diagnostics/${customerDir} does not exist`)
+  process.exit(1)
+}
+
 type DeploymentMode =
   | { kind: 'single' }
   | { kind: 'multi'; deployments: string[] }
