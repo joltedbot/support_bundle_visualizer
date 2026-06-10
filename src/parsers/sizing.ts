@@ -12,6 +12,14 @@ interface NodesStatsJson {
   nodes?: Record<string, NodeStatEntry>
 }
 
+interface IndicesStatsJson {
+  _all?: {
+    primaries?: {
+      bulk?: { total_size_in_bytes?: number }
+    }
+  }
+}
+
 interface ILMPhase {
   min_age?: string
 }
@@ -56,6 +64,8 @@ export function parseSizing(files: Map<string, string>, indices: IndexInfo[]): S
   const ilmPoliciesRaw = parseJsonFile<Record<string, ILMPolicyEntry>>(files, 'commercial/ilm_policies.json')
 
   if (!nodesStatsRaw && !ilmPoliciesRaw) return null
+
+  const indicesStatsRaw = parseJsonFile<IndicesStatsJson>(files, 'indices_stats.json')
 
   // --- Query rate ---
   let avgQueryRateQPS: number | null = null
@@ -123,10 +133,21 @@ export function parseSizing(files: Map<string, string>, indices: IndexInfo[]): S
     }
   }
 
+  // --- Bulk ingest rate (raw pre-segment, uptime-based) ---
+  // _all.primaries.bulk.total_size_in_bytes is the cumulative raw _source byte
+  // volume submitted via _bulk (pre-compression, pre-segment). Use primaries to
+  // exclude replica write amplification. Divide by node uptime for an avg rate.
+  let bulkIngestRateBytesPerDay: number | null = null
+  const primariesBulkBytes = indicesStatsRaw?._all?.primaries?.bulk?.total_size_in_bytes ?? 0
+  if (primariesBulkBytes > 0 && nodeUptimeDays !== null && nodeUptimeDays > 0) {
+    bulkIngestRateBytesPerDay = primariesBulkBytes / nodeUptimeDays
+  }
+
   return {
     avgQueryRateQPS,
     nodeUptimeDays,
     ingestRateGBPerDay,
+    bulkIngestRateBytesPerDay,
     retentionDistribution,
     primaryRetentionDays,
   }

@@ -329,6 +329,7 @@ export interface SizingMetrics {
   avgQueryRateQPS: number | null     // avg QPS since last node restart
   nodeUptimeDays: number | null      // max uptime across nodes (context for QPS label)
   ingestRateGBPerDay: number | null  // estimated compressed primary GB/day (retention-based)
+  bulkIngestRateBytesPerDay: number | null  // raw pre-segment bulk bytes/day (primaries bulk total_size ÷ node uptime)
   retentionDistribution: RetentionBucket[]  // sorted ascending by days
   primaryRetentionDays: number | null       // modal bucket's day value
 }

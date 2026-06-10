@@ -181,7 +181,8 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
   const hasSnapshots = snapshots !== null
   const hasSizing = sizing !== null && (
     sizing.avgQueryRateQPS !== null ||
-    sizing.ingestRateGBPerDay !== null
+    sizing.ingestRateGBPerDay !== null ||
+    sizing.bulkIngestRateBytesPerDay !== null
   )
   if (!hasStats && !hasIlm && !hasSnapshots && !hasSizing) return null
 
@@ -315,6 +316,10 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
                   ...(sizing.ingestRateGBPerDay !== null ? [{
                     title: 'Est. avg ingest rate',
                     description: `~${sizing.ingestRateGBPerDay.toFixed(1)} GB/day (compressed primary, retention-based avg — not peak)`,
+                  }] : []),
+                  ...(sizing.bulkIngestRateBytesPerDay !== null ? [{
+                    title: 'Est. avg bulk ingest rate',
+                    description: `~${formatBytes(sizing.bulkIngestRateBytesPerDay)}/day (raw pre-segment, avg over node uptime${sizing.nodeUptimeDays !== null ? ` — ${sizing.nodeUptimeDays.toFixed(1)}d` : ''})`,
                   }] : []),
                 ]}
               />

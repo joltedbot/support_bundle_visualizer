@@ -36,7 +36,7 @@ pnpm install          # Install dependencies
 pnpm run generate     # Run data bake step — MUST run before build
 pnpm run build        # Vite build — outputs standalone index.html
 pnpm run dev          # Dev server
-pnpm test             # Vitest unit tests
+pnpm exec vitest run  # Vitest unit tests (no `test` script in package.json)
 pnpm run lint         # ESLint
 pnpm exec secretlint  # Secret scan
 ```
