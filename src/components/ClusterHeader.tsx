@@ -2,7 +2,6 @@ import {
   EuiHeader,
   EuiHeaderSectionItem,
   EuiText,
-  EuiButton,
   EuiFlexGroup,
   EuiFlexItem,
 } from '@elastic/eui'
@@ -26,16 +25,6 @@ export default function ClusterHeader({ model, customerName, clusterName, genera
     hour: 'numeric', minute: '2-digit',
   })
 
-  function handleExport() {
-    const html = document.documentElement.outerHTML
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `bundle-report-${customerName.replace(/[^a-z0-9]/gi, '-')}-${new Date().toISOString().slice(0, 10)}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
 
   return (
     <EuiHeader
@@ -77,18 +66,9 @@ export default function ClusterHeader({ model, customerName, clusterName, genera
         {
           items: [
             <EuiHeaderSectionItem key="actions">
-              <EuiFlexGroup alignItems="center" gutterSize="m" responsive={false}>
-                <EuiFlexItem grow={false}>
-                  <EuiText size="xs" color="subdued">
-                    Generated {generatedAtStr}
-                  </EuiText>
-                </EuiFlexItem>
-                <EuiFlexItem grow={false}>
-                  <EuiButton size="s" iconType="download" onClick={handleExport}>
-                    Export HTML
-                  </EuiButton>
-                </EuiFlexItem>
-              </EuiFlexGroup>
+              <EuiText size="xs" color="subdued">
+                Generated {generatedAtStr}
+              </EuiText>
             </EuiHeaderSectionItem>,
           ],
         },
