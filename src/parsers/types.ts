@@ -65,6 +65,7 @@ export interface IndexInfo {
   avgShardSizeBytes: number
   ilmPolicy?: string  // policy name from ilm_explain.json, if managed
   models?: string[]   // names of embedding/reranking models used
+  indexType?: 'index' | 'datastream-backing' | 'alias-backing'
 }
 
 export interface ShardInfo {
@@ -105,6 +106,19 @@ export interface ILMInfo {
   managedIndexCount: number
   tiers: { hot: number; warm: number; cold: number; frozen: number }
   policies: ILMPolicyDetail[]
+}
+
+export interface SLMPolicyDetail {
+  name: string
+  repository: string
+  schedule: string
+  retentionExpireAfter: string | null   // e.g. "8d"
+  retentionMaxCount: number | null
+  retentionMinCount: number | null
+  lastSuccessDate: string | null        // ISO string
+  lastFailureDate: string | null        // ISO string
+  snapshotsTaken: number
+  snapshotsFailed: number
 }
 
 // ── AI / ML types ────────────────────────────────────────────────────────────
@@ -267,6 +281,7 @@ export interface SnapshotInfo {
   repositories: SnapshotRepository[]
   hasSLM: boolean
   slmPolicyCount: number
+  slmPolicies: SLMPolicyDetail[]
 }
 
 export interface FleetAgentPolicy {
