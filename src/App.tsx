@@ -16,7 +16,7 @@ import Licensing from './components/Licensing'
 import Topology from './components/Topology'
 import FeaturesIntegrations from './components/FeaturesIntegrations'
 import FleetSection from './components/FleetSection'
-import DataProfile, { ILMPoliciesTable } from './components/DataProfile'
+import DataProfile, { ILMPoliciesTable, SLMPoliciesTable } from './components/DataProfile'
 import SnapshotRepositories from './components/SnapshotRepositories'
 import AiMlSection from './components/AiMlSection'
 import IndexLandscape from './components/IndexLandscape'
@@ -173,6 +173,15 @@ function App() {
               <EuiTitle size="s"><h3>ILM Policies</h3></EuiTitle>
               <EuiSpacer size="s" />
               <ILMPoliciesTable policies={model.ilm.policies} />
+            </>
+          )}
+
+          {model.snapshots && model.snapshots.slmPolicies.length > 0 && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>SLM Policies</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <SLMPoliciesTable policies={model.snapshots.slmPolicies} />
             </>
           )}
 
