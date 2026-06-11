@@ -1,4 +1,5 @@
 import type { BundleData } from '../utils/bundleReader'
+import { parseJsonFile } from '../utils/bundleReader'
 import type { BundleModel } from './types'
 import { parseManifest } from './manifest'
 import { parseHealth } from './health'
@@ -23,7 +24,22 @@ import { parseClusterSettings } from './clusterSettings'
 
 export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const { files } = data
-  const rawIndices = parseIndices(files)
+
+  // Build alias-backed index set from alias.json
+  const aliasJson = parseJsonFile<Record<string, { aliases?: Record<string, unknown> }>>(
+    files,
+    'alias.json'
+  )
+  const aliasBackedIndices = new Set<string>()
+  if (aliasJson) {
+    for (const [indexName, entry] of Object.entries(aliasJson)) {
+      if (entry.aliases && Object.keys(entry.aliases).length > 0) {
+        aliasBackedIndices.add(indexName)
+      }
+    }
+  }
+
+  const rawIndices = parseIndices(files, aliasBackedIndices)
 
   // Join ILM policy names onto each index
   const indexPolicyMap = buildIndexPolicyMap(files)

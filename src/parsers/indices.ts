@@ -38,7 +38,7 @@ function normalizeHealth(h: string): IndexInfo['health'] {
  * Parse cat/cat_indices.txt → IndexInfo[].
  * Columns: health status index uuid pri rep docs.count docs.deleted store.size pri.store.size
  */
-export function parseIndices(files: Map<string, string>): IndexInfo[] {
+export function parseIndices(files: Map<string, string>, aliasBackedIndices: Set<string>): IndexInfo[] {
   const content = getTextFile(files, 'cat/cat_indices.txt')
   if (!content) return []
 
@@ -82,6 +82,15 @@ export function parseIndices(files: Map<string, string>): IndexInfo[] {
 
     const avgShardSizeBytes = primaryShards > 0 ? Math.round(priStoreSizeBytes / primaryShards) : 0
 
+    let indexType: IndexInfo['indexType']
+    if (name.startsWith('.ds-')) {
+      indexType = 'datastream-backing'
+    } else if (aliasBackedIndices.has(name)) {
+      indexType = 'alias-backing'
+    } else {
+      indexType = 'index'
+    }
+
     result.push({
       name,
       isSystem: name.startsWith('.'),
@@ -92,6 +101,7 @@ export function parseIndices(files: Map<string, string>): IndexInfo[] {
       docCount,
       storeSizeBytes,
       avgShardSizeBytes,
+      indexType,
     })
   }
 
