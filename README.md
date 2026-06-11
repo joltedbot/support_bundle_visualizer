@@ -71,9 +71,9 @@ Open this file directly in any browser — no server needed. It's a self-contain
 | Cluster Header | Customer name, cluster name (if provided via `--cluster` flag) |
 | Overview | Solution type (Search/Observability/Security), ES version, cluster health, node/index counts |
 | Topology | Nodes grouped by availability zone (if available) or tier; AZ summary bar showing tier distribution; each node shows vCPU count, RAM, and disk capacity |
-| Index Landscape | Index counts, shard distribution, and average shard size breakdown |
+| Index Landscape | Index counts, shard distribution, average shard size breakdown, and index type classification (data stream backing vs. alias-backed vs. standalone) |
 | Features & Integrations | ILM, ML, CCR, snapshots, installed plugins |
-| Data Profile | Index size distribution, ILM policy coverage |
+| Data Profile | Index size distribution, ILM policy coverage, SLM (snapshot lifecycle) policy details |
 | Best Practices | Automated observations and recommendations |
 | Notes | Any pre-call context you added at generate time |
 
