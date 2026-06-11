@@ -79,6 +79,7 @@ export default function DataStreams({ dataStreams }: Props) {
       render: (_: unknown, item: DataStreamInfo) => {
         if (item.lifecycle) return <span>{item.lifecycle}</span>
         if (item.managedBy) {
+          const label = item.managedBy === 'Index Lifecycle Management' ? 'ILM' : item.managedBy
           return (
             <EuiToolTip content={item.managedBy}>
               <span
@@ -91,7 +92,7 @@ export default function DataStreams({ dataStreams }: Props) {
                   color: 'var(--euiColorSubduedText)',
                 }}
               >
-                {item.managedBy}
+                {label}
               </span>
             </EuiToolTip>
           )
