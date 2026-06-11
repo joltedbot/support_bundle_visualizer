@@ -5,3 +5,10 @@ overrides:
   d3-color: ">=3.1.0"
   prismjs: ">=1.30.0"
   uuid: ">=14.0.0"
+
+peerDependencyRules:
+  allowedVersions:
+    react: "19"
+    react-dom: "19"
+    "@types/react": "19"
+    "@types/react-dom": "19"
