@@ -90,6 +90,16 @@ export default function IndexLandscape({ indices, shards }: Props) {
       ),
     },
     {
+      field: 'indexType',
+      name: 'Type',
+      width: '110px',
+      render: (t: IndexInfo['indexType']) => {
+        if (t === 'datastream-backing') return <EuiBadge color="accent">DS backing</EuiBadge>
+        if (t === 'alias-backing') return <EuiBadge color="primary">Alias</EuiBadge>
+        return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+      },
+    },
+    {
       field: 'ilmPolicy',
       name: 'ILM Policy',
       width: '160px',
