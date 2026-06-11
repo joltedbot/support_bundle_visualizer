@@ -177,6 +177,29 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
   )
 }
 
+function formatElasticDuration(value: string): string {
+  const match = value.match(/^(\d+(?:\.\d+)?)([smhdwMy])$/)
+  if (!match) return value
+  const amount = parseFloat(match[1])
+  const unit = match[2]
+  const toSeconds: Record<string, number> = {
+    s: 1, m: 60, h: 3600, d: 86400, w: 604800, M: 2592000, y: 31536000,
+  }
+  const totalSeconds = amount * (toSeconds[unit] ?? 1)
+  const thresholds: [number, string][] = [
+    [31536000, 'year'], [2592000, 'month'], [604800, 'week'],
+    [86400, 'day'], [3600, 'hour'], [60, 'minute'], [1, 'second'],
+  ]
+  for (const [secs, label] of thresholds) {
+    if (totalSeconds >= secs) {
+      const n = totalSeconds / secs
+      const rounded = Math.round(n * 10) / 10
+      return `${rounded % 1 === 0 ? Math.round(rounded) : rounded} ${label}${rounded !== 1 ? 's' : ''}`
+    }
+  }
+  return value
+}
+
 export function SLMPoliciesTable({ policies }: { policies: SLMPolicyDetail[] }) {
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(SLM_DEFAULT_PAGE_SIZE)
@@ -235,7 +258,7 @@ export function SLMPoliciesTable({ policies }: { policies: SLMPolicyDetail[] }) 
           return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
         }
         const parts: string[] = []
-        if (expire) parts.push(expire)
+        if (expire) parts.push(formatElasticDuration(expire))
         if (item.retentionMaxCount !== null) parts.push(`${item.retentionMaxCount} max`)
         return <span style={{ fontSize: '0.85em' }}>{parts.join(' / ')}</span>
       },

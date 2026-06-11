@@ -113,10 +113,6 @@ function App() {
           <EuiSpacer size="s" />
           <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
 
-          {model.snapshots && model.snapshots.repositories.length > 0 && (
-            <SnapshotRepositories repositories={model.snapshots.repositories} />
-          )}
-
           {model.aiMl && (
             <>
               <EuiSpacer size="l" />
@@ -174,6 +170,10 @@ function App() {
               <EuiSpacer size="s" />
               <ILMPoliciesTable policies={model.ilm.policies} />
             </>
+          )}
+
+          {model.snapshots && model.snapshots.repositories.length > 0 && (
+            <SnapshotRepositories repositories={model.snapshots.repositories} />
           )}
 
           {model.snapshots && model.snapshots.slmPolicies.length > 0 && (
