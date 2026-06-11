@@ -25,7 +25,6 @@ export default function ClusterHeader({ model, customerName, clusterName, genera
     hour: 'numeric', minute: '2-digit',
   })
 
-
   return (
     <EuiHeader
       style={{ position: 'sticky', top: 0, zIndex: 1000 }}
