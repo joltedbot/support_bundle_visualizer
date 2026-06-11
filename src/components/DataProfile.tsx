@@ -13,7 +13,7 @@ import {
   type EuiBasicTableColumn,
   type Criteria,
 } from '@elastic/eui'
-import type { ClusterStats, ILMInfo, ILMPolicyDetail, SnapshotInfo, SizingMetrics } from '../parsers/types'
+import type { ClusterStats, ILMInfo, ILMPolicyDetail, SLMPolicyDetail, SnapshotInfo, SizingMetrics } from '../parsers/types'
 import { formatBytes, formatCount } from '../utils/format'
 
 interface Props {
@@ -172,6 +172,125 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
         onChange={onTableChange}
       />
     </div>
+  )
+}
+
+export function SLMPoliciesTable({ policies }: { policies: SLMPolicyDetail[] }) {
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+
+  const displayed = useMemo(() => {
+    const start = pageIndex * pageSize
+    return policies.slice(start, start + pageSize)
+  }, [policies, pageIndex, pageSize])
+
+  const columns: EuiBasicTableColumn<SLMPolicyDetail>[] = [
+    {
+      field: 'name',
+      name: 'Policy',
+      truncateText: true,
+      render: (name: string) => (
+        <EuiToolTip content={name}>
+          <span
+            style={{
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              fontSize: '0.85em',
+            }}
+          >
+            {name}
+          </span>
+        </EuiToolTip>
+      ),
+    },
+    {
+      field: 'repository',
+      name: 'Repository',
+      width: '150px',
+      truncateText: true,
+      render: (v: string) => (
+        <span style={{ fontSize: '0.85em' }}>{v || <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>}</span>
+      ),
+    },
+    {
+      field: 'schedule',
+      name: 'Schedule',
+      width: '160px',
+      render: (v: string) =>
+        v
+          ? <span style={{ fontFamily: 'monospace', fontSize: '0.8em' }}>{v}</span>
+          : <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
+    },
+    {
+      field: 'retentionExpireAfter',
+      name: 'Retention',
+      width: '150px',
+      render: (expire: string | null, item: SLMPolicyDetail) => {
+        if (!expire && item.retentionMaxCount === null) {
+          return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+        }
+        const parts: string[] = []
+        if (expire) parts.push(expire)
+        if (item.retentionMaxCount !== null) parts.push(`${item.retentionMaxCount} max`)
+        return <span style={{ fontSize: '0.85em' }}>{parts.join(' / ')}</span>
+      },
+    },
+    {
+      field: 'lastSuccessDate',
+      name: 'Last Success',
+      width: '120px',
+      render: (v: string | null) =>
+        v
+          ? <span style={{ fontSize: '0.85em' }}>{new Date(v).toLocaleDateString()}</span>
+          : <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
+    },
+    {
+      field: 'lastFailureDate',
+      name: 'Last Failure',
+      width: '120px',
+      render: (v: string | null) =>
+        v
+          ? <span style={{ fontSize: '0.85em', color: 'var(--euiColorWarningText)' }}>{new Date(v).toLocaleDateString()}</span>
+          : <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
+    },
+    {
+      field: 'snapshotsTaken',
+      name: 'Taken / Failed',
+      width: '110px',
+      align: 'right' as const,
+      render: (taken: number, item: SLMPolicyDetail) => (
+        <span style={{ fontSize: '0.85em' }}>
+          {taken} / {item.snapshotsFailed > 0
+            ? <span style={{ color: 'var(--euiColorDangerText)' }}>{item.snapshotsFailed}</span>
+            : 0}
+        </span>
+      ),
+    },
+  ]
+
+  const pagination = {
+    pageIndex,
+    pageSize,
+    totalItemCount: policies.length,
+    pageSizeOptions: [10, 20, 50],
+  }
+
+  function onTableChange({ page: newPage }: Criteria<SLMPolicyDetail>) {
+    if (newPage) {
+      setPageIndex(newPage.index)
+      setPageSize(newPage.size)
+    }
+  }
+
+  return (
+    <EuiBasicTable
+      items={displayed}
+      columns={columns}
+      pagination={pagination}
+      onChange={onTableChange}
+    />
   )
 }
 
