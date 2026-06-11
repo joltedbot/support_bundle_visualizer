@@ -26,6 +26,8 @@ interface Props {
 
 const ILM_PAGE_SIZE_OPTIONS = [10, 20, 50]
 const ILM_DEFAULT_PAGE_SIZE = 10
+const SLM_PAGE_SIZE_OPTIONS = [10, 20, 50]
+const SLM_DEFAULT_PAGE_SIZE = 10
 
 export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) {
   const [showSystem, setShowSystem] = useState(false)
@@ -177,7 +179,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
 
 export function SLMPoliciesTable({ policies }: { policies: SLMPolicyDetail[] }) {
   const [pageIndex, setPageIndex] = useState(0)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(SLM_DEFAULT_PAGE_SIZE)
 
   const displayed = useMemo(() => {
     const start = pageIndex * pageSize
@@ -210,9 +212,10 @@ export function SLMPoliciesTable({ policies }: { policies: SLMPolicyDetail[] }) 
       name: 'Repository',
       width: '150px',
       truncateText: true,
-      render: (v: string) => (
-        <span style={{ fontSize: '0.85em' }}>{v || <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>}</span>
-      ),
+      render: (v: string) =>
+        v
+          ? <span style={{ fontSize: '0.85em' }}>{v}</span>
+          : <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
     },
     {
       field: 'schedule',
@@ -274,7 +277,7 @@ export function SLMPoliciesTable({ policies }: { policies: SLMPolicyDetail[] }) 
     pageIndex,
     pageSize,
     totalItemCount: policies.length,
-    pageSizeOptions: [10, 20, 50],
+    pageSizeOptions: SLM_PAGE_SIZE_OPTIONS,
   }
 
   function onTableChange({ page: newPage }: Criteria<SLMPolicyDetail>) {
