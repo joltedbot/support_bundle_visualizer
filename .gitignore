@@ -7,7 +7,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-diagnostics/
+!diagnostics/.keep
+diagnostics/*
 docs/
 .secretlintignore
 .secretlintrc.json 
