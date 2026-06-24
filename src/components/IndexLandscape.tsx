@@ -19,7 +19,7 @@ interface Props {
   shards: ShardInfo[]
 }
 
-type SortField = 'name' | 'indexType' | 'ilmPolicy' | 'health' | 'status' | 'primaryShards' | 'replicaShards' | 'avgShardSizeBytes' | 'docCount' | 'storeSizeBytes'
+type SortField = 'name' | 'indexType' | 'ilmPolicy' | 'models' | 'health' | 'status' | 'primaryShards' | 'avgShardSizeBytes' | 'docCount' | 'storeSizeBytes'
 
 interface SortState {
   field: SortField
@@ -54,10 +54,10 @@ export default function IndexLandscape({ indices, shards }: Props) {
         case 'name': return a.name.localeCompare(b.name) * mult
         case 'indexType': return ((a.indexType ?? '').localeCompare(b.indexType ?? '')) * mult
         case 'ilmPolicy': return ((a.ilmPolicy ?? '').localeCompare(b.ilmPolicy ?? '')) * mult
+        case 'models': return ((a.models?.length ?? 0) - (b.models?.length ?? 0)) * mult
         case 'health': return a.health.localeCompare(b.health) * mult
         case 'status': return a.status.localeCompare(b.status) * mult
         case 'primaryShards': return (a.primaryShards - b.primaryShards) * mult
-        case 'replicaShards': return (a.replicaShards - b.replicaShards) * mult
         case 'avgShardSizeBytes': return (a.avgShardSizeBytes - b.avgShardSizeBytes) * mult
         case 'docCount': return (a.docCount - b.docCount) * mult
         case 'storeSizeBytes': return (a.storeSizeBytes - b.storeSizeBytes) * mult
@@ -142,6 +142,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
       field: 'models',
       name: 'Models',
       width: '250px',
+      sortable: true,
       truncateText: true,
       render: (models: string[] | undefined) => {
         if (!models || models.length === 0) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
@@ -180,17 +181,11 @@ export default function IndexLandscape({ indices, shards }: Props) {
     },
     {
       field: 'primaryShards',
-      name: 'Primaries',
-      width: '90px',
-      align: 'right' as const,
-      sortable: true,
-    },
-    {
-      field: 'replicaShards',
-      name: 'Replicas',
+      name: 'Shards',
       width: '80px',
       align: 'right' as const,
       sortable: true,
+      render: (_: number, item: IndexInfo) => `${item.primaryShards}P ${item.replicaShards}R`,
     },
     {
       field: 'avgShardSizeBytes',
@@ -237,7 +232,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<IndexInfo>) {
     if (newSort) {
-      const validSortFields: SortField[] = ['name', 'indexType', 'ilmPolicy', 'health', 'status', 'primaryShards', 'replicaShards', 'avgShardSizeBytes', 'docCount', 'storeSizeBytes']
+      const validSortFields: SortField[] = ['name', 'indexType', 'ilmPolicy', 'models', 'health', 'status', 'primaryShards', 'avgShardSizeBytes', 'docCount', 'storeSizeBytes']
       if (validSortFields.includes(newSort.field as SortField)) {
         setSort({ field: newSort.field as SortField, direction: newSort.direction })
         setPageIndex(0)
