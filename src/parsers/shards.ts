@@ -75,7 +75,7 @@ export function parseShards(files: Map<string, string>): ShardInfo[] {
       node,
       storeSizeBytes,
       oversized: storeSizeBytes > OVERSIZED_BYTES,
-      undersized: storeSizeBytes > 0 && storeSizeBytes < UNDERSIZED_BYTES,
+      undersized: prirep === 'p' && storeSizeBytes > 0 && storeSizeBytes < UNDERSIZED_BYTES,
     })
   }
 

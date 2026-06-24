@@ -16,6 +16,7 @@ import { execFileSync } from 'node:child_process'
 import { parseBundle } from '../src/parsers/index.ts'
 import { parseKibana } from '../src/parsers/kibana.ts'
 import type { BundleData } from '../src/utils/bundleReader.ts'
+import { detectDeploymentMode } from './detectDeploymentMode.ts'
 
 function getArg(flag: string): string | undefined {
   const idx = process.argv.indexOf(flag)
@@ -49,41 +50,6 @@ try {
 } catch {
   console.error(`Error: diagnostics/${customerDir} does not exist`)
   process.exit(1)
-}
-
-type DeploymentMode =
-  | { kind: 'single' }
-  | { kind: 'multi'; deployments: string[] }
-  | { kind: 'ambiguous' }
-
-function detectDeploymentMode(customerPath: string): DeploymentMode {
-  const entries = readdirSync(customerPath)
-  const isDirAt = (base: string, name: string) => {
-    try { return statSync(join(base, name)).isDirectory() } catch { return false }
-  }
-
-  const hasBundleAtTopLevel = entries.some(e =>
-    (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDirAt(customerPath, e)
-  )
-
-  if (hasBundleAtTopLevel) {
-    return { kind: 'single' }
-  }
-
-  const subdirs = entries.filter(e => !e.startsWith('.') && isDirAt(customerPath, e))
-  const deployments = subdirs.filter(sub => {
-    const subPath = join(customerPath, sub)
-    const subEntries = readdirSync(subPath)
-    return subEntries.some(e =>
-      (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDirAt(subPath, e)
-    )
-  })
-
-  if (deployments.length > 0) {
-    return { kind: 'multi', deployments: deployments.sort() }
-  }
-
-  return { kind: 'ambiguous' }
 }
 
 function runBuild(): void {

@@ -28,14 +28,14 @@ const KNOWN_ROLES: Set<NodeRole> = new Set([
   'ingest', 'coordinating', 'ml', 'transform', 'remote_cluster_client',
 ])
 
-function normalizeRole(role: string): NodeRole | null {
+export function normalizeRole(role: string): NodeRole | null {
   // ES uses 'master' for master-eligible, 'data' for generic data
   if (role === 'data') return 'data_hot' // treat generic data as hot
   if (KNOWN_ROLES.has(role as NodeRole)) return role as NodeRole
   return null
 }
 
-function determineTier(roles: NodeRole[]): NodeInfo['tier'] {
+export function determineTier(roles: NodeRole[]): NodeInfo['tier'] {
   const hasMaster = roles.includes('master')
   const hasDataHot = roles.includes('data_hot')
   const hasDataWarm = roles.includes('data_warm')

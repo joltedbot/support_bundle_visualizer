@@ -119,9 +119,9 @@ When uncertain whether a change is safe, ask.
 ## Reference Bundles
 
 When testing parser changes or UI updates, use these local gitignored bundles to verify your work:
-- **Cloud + Kibana** (Standard): `pnpm run generate -- --customer Hinge --name "Hinge" --cluster "Hinge Prod"`
-- **Self-hosted** (No Kibana): `pnpm run generate -- --customer "Presidents Choice Financial" --name "Presidents Choice Financial"`
-- **Multi-deployment**: `pnpm run generate -- --customer "ADA Support" --name "ADA Support"`
+- **Self-hosted, no Kibana**: `pnpm run generate -- --customer mrnet --name "Merlin" --cluster "Merlin"`
+- **Cloud API, with Kibana**: `pnpm run generate -- --customer PBC --name "PBC" --cluster "PBC ELK AZR2"`
+- **Multi-deployment (local diag, both with Kibana)**: `pnpm run generate -- --customer CPKC --name "CPKC"`
 
 ## Reference Documentation
 
