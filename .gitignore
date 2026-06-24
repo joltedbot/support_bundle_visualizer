@@ -11,9 +11,8 @@ CHANGES.md
 ERRORS.md
 PERMS.md
 
-diagnostics/
-!diagnostics/.keep
 diagnostics/*
+!diagnostics/.keep
 docs/
 .secretlintignore
 .secretlintrc.json 
