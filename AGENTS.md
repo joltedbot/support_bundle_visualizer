@@ -11,17 +11,17 @@
 |-------|---------|----------------|
 | Language | TypeScript | ~5.9.3 |
 | Runtime | Node.js | 18+ |
-| UI Framework | React | 19.2.4 |
-| Build | Vite | 8.0.3 |
-| Component Library | @elastic/eui | 113.3.0 |
+| UI Framework | React | 19.2.7 |
+| Build | Vite | 8.0.16 |
+| Component Library | @elastic/eui | 114.3.0 |
 | Charts | @elastic/charts | 71.3.0 |
 | CSS-in-JS | @emotion/react | 11.14.0 |
 | CSS-in-JS | @emotion/css | 11.13.5 |
 | Emotion cache | @emotion/cache | 11.14.0 |
-| Theme | @elastic/eui-theme-borealis | 6.2.0 |
+| Theme | @elastic/eui-theme-borealis | 7.0.0 |
 | Date handling | moment | 2.30.1 |
 | Date math | @elastic/datemath | 5.0.3 |
-| Test runner | Vitest | 4.1.0 |
+| Test runner | Vitest | 4.1.9 |
 | Linter | ESLint | 9.39.4 |
 | TS linting | typescript-eslint | 8.57.0 |
 | Security lint | eslint-plugin-security | 4.0.0 |

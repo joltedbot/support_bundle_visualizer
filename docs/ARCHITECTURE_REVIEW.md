@@ -556,18 +556,18 @@ These items are low-risk and can be batched into any session.
 
 | # | Task | File | Fix |
 |---|------|------|-----|
-| P5-1 | `enrichModelLabel(m)` called 3–4× per badge render | `IndexLandscape.tsx:153–155` | Store in `const label = enrichModelLabel(m)` at top of map callback |
-| P5-2 | `sortNodesByRole` and `grouped` Map rebuilt each render | `Topology.tsx:250, 269–292` | Wrap with `useMemo` |
+| ~~P5-1~~ | ~~`enrichModelLabel(m)` called 3–4× per badge render~~ | ~~`IndexLandscape.tsx:153–155`~~ | ~~Store in `const label = enrichModelLabel(m)` at top of map callback~~ |
+| ~~P5-2~~ | ~~`sortNodesByRole` and `grouped` Map rebuilt each render~~ | ~~`Topology.tsx:250, 269–292`~~ | ~~Wrap with `useMemo`~~ |
 | ~~P5-3~~ | ~~`shards` iterated twice in `parseBundle`~~ | ~~`parsers/index.ts:72–96`~~ | ~~Merge into one pass~~ — done in P3-7 (`aggregateShards` single pass) |
-| P5-4 | Toggle buttons missing `aria-label`/`aria-pressed` | `IndexLandscape.tsx:256`, `DataStreams.tsx:183`, `IngestPipelines.tsx:175`, `DataProfile.tsx:243` | Add `aria-label` prop to each `EuiButtonEmpty` |
+| ~~P5-4~~ | ~~Toggle buttons missing `aria-label`/`aria-pressed`~~ | ~~`IndexLandscape.tsx:256`, `DataStreams.tsx:183`, `IngestPipelines.tsx:175`, `DataProfile.tsx:243`~~ | ~~Add `aria-label` prop to each `EuiButtonEmpty`~~ |
 | ~~P5-5~~ | ~~`SnapshotRepositories` panel inconsistency~~ | ~~`SnapshotRepositories.tsx:81`~~ | ~~Remove `EuiPanel` wrapper~~ — done in P4-2 |
-| P5-6 | `indicator.details` renders `[object Object]` | `InternalHealthSection.tsx:74` | Guard: `typeof v === 'object' ? JSON.stringify(v) : String(v)` |
-| P5-7 | `pnpm` in `dependencies` | `package.json:16` | Move to `devDependencies` |
-| P5-8 | `CLAUDE.md` version table stale | `CLAUDE.md` | Update: EUI 114.3.0, Borealis 7.0.0, React 19.2.7, Vite 8.0.16, Vitest 4.1.9 |
-| P5-9 | `Licensing.tsx` uses `React.ReactNode` without import | `Licensing.tsx:23` | `import type { ReactNode } from 'react'` and use `ReactNode` directly |
-| P5-10 | `IngestPipelines` name cell `fontWeight: 'bold'` | `IngestPipelines.tsx:72` | Remove inline weight; match all other table name cells |
-| P5-11 | `NodeInfo.tier` union and `TIER_FALLBACK_ORDER` independent | `Topology.tsx:267` | Type `TIER_FALLBACK_ORDER` as `Array<NodeInfo['tier']>` to get exhaustiveness |
-| P5-12 | `NodeCard` IIFE in JSX | `Topology.tsx:149–165` | Extract `pct` to a `const` before the return statement |
+| ~~P5-6~~ | ~~`indicator.details` renders `[object Object]`~~ | ~~`InternalHealthSection.tsx:74`~~ | ~~Guard: `typeof v === 'object' ? JSON.stringify(v) : String(v)`~~ |
+| ~~P5-7~~ | ~~`pnpm` in `dependencies`~~ | ~~`package.json:16`~~ | ~~Move to `devDependencies`~~ |
+| ~~P5-8~~ | ~~`CLAUDE.md` version table stale~~ | ~~`CLAUDE.md`~~ | ~~Update: EUI 114.3.0, Borealis 7.0.0, React 19.2.7, Vite 8.0.16, Vitest 4.1.9~~ |
+| ~~P5-9~~ | ~~`Licensing.tsx` uses `React.ReactNode` without import~~ | ~~`Licensing.tsx:23`~~ | ~~`import type { ReactNode } from 'react'` and use `ReactNode` directly~~ |
+| ~~P5-10~~ | ~~`IngestPipelines` name cell `fontWeight: 'bold'`~~ | ~~`IngestPipelines.tsx:72`~~ | ~~Remove inline weight; match all other table name cells~~ |
+| ~~P5-11~~ | ~~`NodeInfo.tier` union and `TIER_FALLBACK_ORDER` independent~~ | ~~`Topology.tsx:267`~~ | ~~Type `TIER_FALLBACK_ORDER` as `Array<NodeInfo['tier']>` to get exhaustiveness~~ |
+| ~~P5-12~~ | ~~`NodeCard` IIFE in JSX~~ | ~~`Topology.tsx:149–165`~~ | ~~Extract `pct` to a `const` before the return statement~~ |
 
 ---
 

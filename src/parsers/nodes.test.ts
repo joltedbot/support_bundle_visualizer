@@ -72,9 +72,19 @@ describe('determineTier', () => {
     expect(determineTier(['data_hot', 'data_cold', 'data_frozen'])).toBe('mixed')
   })
 
-  it('no data or master roles → coordinating', () => {
-    expect(determineTier(['ingest'])).toBe('coordinating')
-    expect(determineTier(['ml'])).toBe('coordinating')
+  it('ingest-only → ingest tier', () => {
+    expect(determineTier(['ingest'])).toBe('ingest')
+  })
+
+  it('ml-only → ml tier', () => {
+    expect(determineTier(['ml'])).toBe('ml')
+  })
+
+  it('transform-only → transform tier', () => {
+    expect(determineTier(['transform'])).toBe('transform')
+  })
+
+  it('no recognised roles → coordinating', () => {
     expect(determineTier([])).toBe('coordinating')
   })
 })

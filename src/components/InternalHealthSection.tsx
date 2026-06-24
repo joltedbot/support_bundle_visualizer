@@ -72,7 +72,7 @@ export default function InternalHealthSection({ internalHealth }: Props) {
               <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
                 {Object.entries(indicator.details)
                   .filter(([, v]) => v !== null && v !== 0 && v !== false)
-                  .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+                  .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`)
                   .join(' · ')}
               </EuiText>
             )}

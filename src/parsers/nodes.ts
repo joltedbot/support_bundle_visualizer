@@ -40,7 +40,10 @@ export function determineTier(roles: NodeRole[]): NodeInfo['tier'] {
   if (hasDataWarm) return 'warm'
   if (hasDataCold) return 'cold'
   if (hasDataFrozen) return 'frozen'
-  // No data roles, no master
+  // Non-data specialty roles
+  if (roles.includes('ml')) return 'ml'
+  if (roles.includes('ingest')) return 'ingest'
+  if (roles.includes('transform')) return 'transform'
   return 'coordinating'
 }
 

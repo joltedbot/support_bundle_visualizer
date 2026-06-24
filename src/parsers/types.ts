@@ -38,7 +38,7 @@ export interface NodeInfo {
   name: string
   ip: string
   roles: NodeRole[]
-  tier: 'master' | 'hot' | 'warm' | 'cold' | 'frozen' | 'coordinating' | 'mixed'
+  tier: 'master' | 'hot' | 'warm' | 'cold' | 'frozen' | 'coordinating' | 'mixed' | 'ml' | 'ingest' | 'transform'
   az?: string
   instanceConfiguration?: string  // e.g. "aws.es.datahot.c6gd"
   // Resource stats (may be absent if nodes_stats not present)

@@ -184,6 +184,7 @@ export default function DataStreams({ dataStreams }: Props) {
             size="s"
             onClick={() => { setShowSystem(v => !v); setPageIndex(0) }}
             iconType={showSystem ? 'eye' : 'eyeClosed'}
+            aria-label={showSystem ? 'Hide system data streams' : 'Show system data streams'}
           >
             {showSystem ? 'Hide system data streams' : 'Show system data streams'}
           </EuiButtonEmpty>

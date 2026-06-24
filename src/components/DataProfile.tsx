@@ -244,6 +244,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
             size="s"
             onClick={() => { setShowEmpty(v => !v); setPageIndex(0) }}
             iconType={showEmpty ? 'eye' : 'eyeClosed'}
+            aria-label={showEmpty ? 'Hide unused policies' : 'Show unused policies'}
           >
             {showEmpty ? 'Hide unused policies' : 'Show unused policies'}
           </EuiButtonEmpty>
@@ -253,6 +254,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
             size="s"
             onClick={() => { setShowSystem(v => !v); setPageIndex(0) }}
             iconType={showSystem ? 'eye' : 'eyeClosed'}
+            aria-label={showSystem ? 'Hide system policies' : 'Show system policies'}
           >
             {showSystem ? 'Hide system policies' : 'Show system policies'}
           </EuiButtonEmpty>

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   EuiFlexGroup,
   EuiFlexItem,
@@ -87,6 +88,10 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
   const capacityStr = [vcpuStr, ramStr && `${ramStr} RAM`, diskStr && `${diskStr} disk`]
     .filter(Boolean).join(' · ')
 
+  const heapRamPct = node.heapMaxBytes !== undefined && node.ramTotal !== undefined && node.ramTotal > 0
+    ? Math.round((node.heapMaxBytes / node.ramTotal) * 100)
+    : null
+
   return (
     <EuiPanel paddingSize="s" style={{ minWidth: 220, maxWidth: 280 }}>
       {/* Name */}
@@ -147,23 +152,16 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
         </div>
       )}
 
-      {node.heapMaxBytes !== undefined && node.ramTotal !== undefined && node.ramTotal > 0 && (
+      {heapRamPct !== null && (
         <div style={{ marginBottom: 4 }}>
-          {(() => {
-            const pct = Math.round((node.heapMaxBytes / node.ramTotal) * 100)
-            return (
-              <>
-                <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-                  <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap / RAM</EuiText></EuiFlexItem>
-                  <EuiFlexItem grow={false}><EuiText size="xs">{pct}%</EuiText></EuiFlexItem>
-                </EuiFlexGroup>
-                <EuiProgress value={pct} max={100} size="s" color={resourceColor(pct, 51, 56)} />
-                <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
-                  {formatBytes(node.heapMaxBytes)} / {formatBytes(node.ramTotal)}
-                </EuiText>
-              </>
-            )
-          })()}
+          <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
+            <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap / RAM</EuiText></EuiFlexItem>
+            <EuiFlexItem grow={false}><EuiText size="xs">{heapRamPct}%</EuiText></EuiFlexItem>
+          </EuiFlexGroup>
+          <EuiProgress value={heapRamPct} max={100} size="s" color={resourceColor(heapRamPct, 51, 56)} />
+          <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
+            {formatBytes(node.heapMaxBytes!)} / {formatBytes(node.ramTotal!)}
+          </EuiText>
         </div>
       )}
 
@@ -250,7 +248,7 @@ function SummaryBar({ nodes }: { nodes: NodeInfo[] }) {
 // ─── Node group (AZ groups) ───────────────────────────────────────────────────
 
 function NodeGroup({ label, nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: { label: string; nodes: NodeInfo[]; maxShardsPerNode: number | null; maxShardsPerNodeFrozen: number | null }) {
-  const sorted = sortNodesByRole(nodes)
+  const sorted = useMemo(() => sortNodesByRole(nodes), [nodes])
   return (
     <div style={{ marginBottom: 16 }}>
       <AZHeader az={label} nodes={nodes} />
@@ -267,14 +265,17 @@ function NodeGroup({ label, nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: {
 
 // ─── Tier fallback grouping (when no AZ data) ────────────────────────────────
 
-const TIER_FALLBACK_ORDER = ['master', 'ml', 'ingest', 'transform', 'coordinating', 'hot', 'warm', 'cold', 'frozen', 'mixed'] as const
+const TIER_FALLBACK_ORDER: Array<NodeInfo['tier']> = ['master', 'ml', 'ingest', 'transform', 'coordinating', 'hot', 'warm', 'cold', 'frozen', 'mixed']
 
 function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: { nodes: NodeInfo[]; maxShardsPerNode: number | null; maxShardsPerNodeFrozen: number | null }) {
-  const grouped = new Map<string, NodeInfo[]>()
-  for (const tier of TIER_FALLBACK_ORDER) {
-    const group = nodes.filter((n) => n.tier === tier)
-    if (group.length > 0) grouped.set(tier, group)
-  }
+  const grouped = useMemo(() => {
+    const map = new Map<NodeInfo['tier'], NodeInfo[]>()
+    for (const tier of TIER_FALLBACK_ORDER) {
+      const group = nodes.filter((n) => n.tier === tier)
+      if (group.length > 0) map.set(tier, group)
+    }
+    return map
+  }, [nodes])
 
   return (
     <div>

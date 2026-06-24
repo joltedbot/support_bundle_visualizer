@@ -5,6 +5,7 @@ import {
   EuiText,
   EuiPanel,
 } from '@elastic/eui'
+import type { ReactNode } from 'react'
 import type { LicenseInfo } from '../parsers/types'
 import { formatDate } from '../utils/format'
 
@@ -21,7 +22,7 @@ function statusColor(status: string): string {
 
 interface StatItem {
   label: string
-  value: string | React.ReactNode
+  value: string | ReactNode
 }
 
 export default function Licensing({ license }: Props) {

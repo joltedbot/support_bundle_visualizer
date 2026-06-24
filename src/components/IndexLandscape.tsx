@@ -138,15 +138,18 @@ export default function IndexLandscape({ indices, flaggedIndices }: Props) {
         if (!models || models.length === 0) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
         return (
           <EuiFlexGroup gutterSize="xs" wrap responsive={false}>
-            {models.map((m) => (
-              <EuiFlexItem key={m} grow={false}>
-                <EuiToolTip content={enrichModelLabel(m)}>
-                  <EuiBadge color="hollow" style={{ fontSize: '0.85em' }}>
-                    {enrichModelLabel(m).length > 40 ? `${enrichModelLabel(m).substring(0, 40)}…` : enrichModelLabel(m)}
-                  </EuiBadge>
-                </EuiToolTip>
-              </EuiFlexItem>
-            ))}
+            {models.map((m) => {
+              const label = enrichModelLabel(m)
+              return (
+                <EuiFlexItem key={m} grow={false}>
+                  <EuiToolTip content={label}>
+                    <EuiBadge color="hollow" style={{ fontSize: '0.85em' }}>
+                      {label.length > 40 ? `${label.substring(0, 40)}…` : label}
+                    </EuiBadge>
+                  </EuiToolTip>
+                </EuiFlexItem>
+              )
+            })}
           </EuiFlexGroup>
         )
       },
@@ -248,6 +251,7 @@ export default function IndexLandscape({ indices, flaggedIndices }: Props) {
             size="s"
             onClick={() => { setShowSystem((v) => !v); setPageIndex(0) }}
             iconType={showSystem ? 'eye' : 'eyeClosed'}
+            aria-label={showSystem ? 'Hide system indices' : 'Show system indices'}
           >
             {showSystem ? 'Hide system indices' : 'Show system indices'}
           </EuiButtonEmpty>

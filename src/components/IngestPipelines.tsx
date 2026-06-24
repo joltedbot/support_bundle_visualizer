@@ -68,7 +68,6 @@ export default function IngestPipelines({ pipelines }: Props) {
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            fontWeight: 'bold',
           }}
         >
           {name}
@@ -177,6 +176,7 @@ export default function IngestPipelines({ pipelines }: Props) {
             size="s"
             onClick={() => { setShowManaged(v => !v); setPageIndex(0) }}
             iconType={showManaged ? 'eye' : 'eyeClosed'}
+            aria-label={showManaged ? 'Hide managed pipelines' : 'Show managed pipelines'}
           >
             {showManaged ? 'Hide managed pipelines' : 'Show managed pipelines'}
           </EuiButtonEmpty>
