@@ -96,6 +96,8 @@ export interface ILMPolicyDetail {
   hotMaxSize: string | null       // hot rollover max_primary_shard_size raw (e.g. "50gb")
   warmMinAge: string | null       // warm phase min_age raw
   coldMinAge: string | null       // cold phase min_age raw
+  frozenMinAge: string | null     // frozen phase min_age raw
+  deleteMinAge: string | null     // delete phase min_age raw
   forceMergeSegments: number | null  // forcemerge max_num_segments
   shrinkShards: number | null     // shrink number_of_shards
   indexCount: number              // number of managed indices using this policy
@@ -390,6 +392,7 @@ export interface IdentityInfo {
 export interface PipelineInfo {
   name: string
   description?: string
+  processorCount: number
   createdDate?: string
   metaPackageName?: string
   metaManaged?: boolean
