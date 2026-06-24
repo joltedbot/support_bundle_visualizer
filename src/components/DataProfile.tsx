@@ -30,18 +30,6 @@ const ILM_DEFAULT_PAGE_SIZE = 10
 const SLM_PAGE_SIZE_OPTIONS = [10, 20, 50]
 const SLM_DEFAULT_PAGE_SIZE = 10
 
-// Shifts the ordered tier min_ages up one slot so each column shows how long
-// data resides in that tier (skipping tiers that are not configured).
-function computeShiftedTiers(policy: ILMPolicyDetail): { hot: string | null; warm: string | null; cold: string | null; frozen: string | null } {
-  const available = [policy.warmMinAge, policy.coldMinAge, policy.frozenMinAge, policy.deleteMinAge]
-    .filter((v): v is string => v !== null && v !== undefined)
-  return {
-    hot: available[0] ?? null,
-    warm: available[1] ?? null,
-    cold: available[2] ?? null,
-    frozen: available[3] ?? null,
-  }
-}
 
 interface ILMPolicyRow extends ILMPolicyDetail {
   hotDisplay: string | null
@@ -69,17 +57,16 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
   const [pageSize, setPageSize] = useState(ILM_DEFAULT_PAGE_SIZE)
 
   const rows: ILMPolicyRow[] = useMemo(() => policies.map(p => {
-    const shifted = computeShiftedTiers(p)
     return {
       ...p,
-      hotDisplay: shifted.hot,
-      warmDisplay: shifted.warm,
-      coldDisplay: shifted.cold,
-      frozenDisplay: shifted.frozen,
-      hotDays: shifted.hot ? parseMinAgeDays(shifted.hot) : null,
-      warmDays: shifted.warm ? parseMinAgeDays(shifted.warm) : null,
-      coldDays: shifted.cold ? parseMinAgeDays(shifted.cold) : null,
-      frozenDays: shifted.frozen ? parseMinAgeDays(shifted.frozen) : null,
+      hotDisplay: null,
+      warmDisplay: p.warmMinAge,
+      coldDisplay: p.coldMinAge,
+      frozenDisplay: p.frozenMinAge,
+      hotDays: null,
+      warmDays: p.warmMinAge ? parseMinAgeDays(p.warmMinAge) : null,
+      coldDays: p.coldMinAge ? parseMinAgeDays(p.coldMinAge) : null,
+      frozenDays: p.frozenMinAge ? parseMinAgeDays(p.frozenMinAge) : null,
     }
   }), [policies])
 
@@ -150,6 +137,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
       name: 'Hot Rollover',
       width: '120px',
       align: 'right' as const,
+      sortable: true,
       render: (age: string | null, item: ILMPolicyRow) => {
         if (!age && !item.hotMaxSize) return nullDash
         const parts = [age, item.hotMaxSize].filter(Boolean)

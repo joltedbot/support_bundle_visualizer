@@ -95,6 +95,7 @@ export default function DataStreams({ dataStreams }: Props) {
       field: 'lifecycle',
       name: 'Lifecycle',
       width: '120px',
+      sortable: true,
       render: (_: unknown, item: DataStreamInfo) => {
         if (item.lifecycle) return <span>{item.lifecycle}</span>
         if (item.managedBy) {
