@@ -6,6 +6,7 @@ import {
   EuiSpacer,
 } from '@elastic/eui'
 import type { FeatureInfo, ILMInfo, ReplicationInfo, SnapshotInfo, KibanaInfo } from '../parsers/types'
+import { SOLUTION_COLORS } from '../utils/solutionColors'
 
 interface Props {
   features: FeatureInfo | null
@@ -13,12 +14,6 @@ interface Props {
   replication: ReplicationInfo | null
   snapshots: SnapshotInfo | null
   kibana: KibanaInfo | null
-}
-
-const SOLUTION_COLORS: Record<string, string> = {
-  search: '#0071c2',
-  observability: '#017d73',
-  security: '#bd271e',
 }
 
 const SOLUTION_LABELS: Record<string, string> = {

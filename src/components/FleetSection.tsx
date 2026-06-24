@@ -16,43 +16,15 @@ interface Props {
 }
 
 export default function FleetSection({ kibana }: Props) {
-  // Always render the section header to indicate we check for Fleet
-  return (
-    <>
-      <EuiSpacer size="l" />
-      <EuiTitle size="s"><h3>Fleet & Elastic Agents</h3></EuiTitle>
-      <EuiSpacer size="s" />
-      {renderContent(kibana)}
-    </>
-  )
-}
-
-function renderContent(kibana: KibanaInfo | null) {
-  if (!kibana) {
-    return (
-      <EuiPanel paddingSize="m">
-        <EuiText color="subdued" size="s">
-          No Kibana data available in this bundle to analyze Fleet status.
-        </EuiText>
-      </EuiPanel>
-    )
-  }
+  if (!kibana) return null
 
   const { fleet, fleetSettings, fleetPolicies, fleetInstalledPackages } = kibana
-  
+
   const hasAgents = (fleet?.total ?? 0) > 0
   const hasCustomPolicies = fleetPolicies.some(p => !p.isPreconfigured)
   const isDeployed = hasAgents || hasCustomPolicies || fleetSettings?.isConfigured
 
-  if (!isDeployed) {
-    return (
-      <EuiPanel paddingSize="m">
-        <EuiText color="subdued" size="s">
-          Fleet is not deployed or has no active agents/policies in this deployment.
-        </EuiText>
-      </EuiPanel>
-    )
-  }
+  if (!isDeployed) return null
 
   const policyColumns = [
     {
@@ -109,45 +81,50 @@ function renderContent(kibana: KibanaInfo | null) {
   ]
 
   return (
-    <EuiPanel paddingSize="m">
-      <EuiFlexGroup gutterSize="l">
-        {fleetSettings?.fleetServerHosts && fleetSettings.fleetServerHosts.length > 0 && (
-          <EuiFlexItem grow={false}>
-            <EuiText size="xs" color="subdued">Fleet Server Hosts</EuiText>
-            <EuiText size="s"><strong>{fleetSettings.fleetServerHosts.join(', ')}</strong></EuiText>
-          </EuiFlexItem>
-        )}
-        {fleet && (
-          <EuiFlexItem grow={false}>
-            <EuiText size="xs" color="subdued">Agent Summary</EuiText>
-            <EuiText size="s">
-              <strong>{fleet.total}</strong> total · <strong>{fleet.online}</strong> online
-            </EuiText>
-          </EuiFlexItem>
-        )}
-      </EuiFlexGroup>
+    <>
+      <EuiSpacer size="l" />
+      <EuiTitle size="s"><h3>Fleet & Elastic Agents</h3></EuiTitle>
+      <EuiSpacer size="s" />
+      <EuiPanel paddingSize="m">
+        <EuiFlexGroup gutterSize="l">
+          {fleetSettings?.fleetServerHosts && fleetSettings.fleetServerHosts.length > 0 && (
+            <EuiFlexItem grow={false}>
+              <EuiText size="xs" color="subdued">Fleet Server Hosts</EuiText>
+              <EuiText size="s"><strong>{fleetSettings.fleetServerHosts.join(', ')}</strong></EuiText>
+            </EuiFlexItem>
+          )}
+          {fleet && (
+            <EuiFlexItem grow={false}>
+              <EuiText size="xs" color="subdued">Agent Summary</EuiText>
+              <EuiText size="s">
+                <strong>{fleet.total}</strong> total · <strong>{fleet.online}</strong> online
+              </EuiText>
+            </EuiFlexItem>
+          )}
+        </EuiFlexGroup>
 
-      {fleetPolicies.length > 0 && (
-        <>
-          <EuiHorizontalRule margin="m" />
-          <EuiText size="s" style={{ marginBottom: 12 }}><strong>Agent Policies</strong></EuiText>
-          <EuiBasicTable
-            items={fleetPolicies}
-            columns={policyColumns}
-          />
-        </>
-      )}
+        {fleetPolicies.length > 0 && (
+          <>
+            <EuiHorizontalRule margin="m" />
+            <EuiText size="s" style={{ marginBottom: 12 }}><strong>Agent Policies</strong></EuiText>
+            <EuiBasicTable
+              items={fleetPolicies}
+              columns={policyColumns}
+            />
+          </>
+        )}
 
-      {fleetInstalledPackages.length > 0 && (
-        <>
-          <EuiSpacer size="l" />
-          <EuiText size="s" style={{ marginBottom: 12 }}><strong>Installed Integrations</strong></EuiText>
-          <EuiBasicTable
-            items={fleetInstalledPackages}
-            columns={packageColumns}
-          />
-        </>
-      )}
-    </EuiPanel>
+        {fleetInstalledPackages.length > 0 && (
+          <>
+            <EuiSpacer size="l" />
+            <EuiText size="s" style={{ marginBottom: 12 }}><strong>Installed Integrations</strong></EuiText>
+            <EuiBasicTable
+              items={fleetInstalledPackages}
+              columns={packageColumns}
+            />
+          </>
+        )}
+      </EuiPanel>
+    </>
   )
 }

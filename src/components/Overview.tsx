@@ -8,16 +8,11 @@ import {
 } from '@elastic/eui'
 import type { BundleModel, KibanaInfo } from '../parsers/types'
 import { formatBytes, formatCount, healthColor } from '../utils/format'
+import { SOLUTION_COLORS } from '../utils/solutionColors'
 
 interface Props {
   model: BundleModel
   kibana: KibanaInfo | null
-}
-
-const SOLUTION_COLORS: Record<string, string> = {
-  search:        '#0077cc',
-  observability: '#006BB4',
-  security:      '#017D73',
 }
 
 const SOLUTION_LABELS: Record<string, string> = {

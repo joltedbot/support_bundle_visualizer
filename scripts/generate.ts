@@ -10,7 +10,7 @@
  *   api-diagnostics-YYYYMMDD/         (required)
  *   kibana-api-diagnostics-YYYYMMDD/  (optional)
  */
-import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync, lstatSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, relative, resolve, sep } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { parseBundle } from '../src/parsers/index.ts'
@@ -106,7 +106,9 @@ function readDirRecursive(dir: string): Map<string, string> {
       const full = join(current, name)
       const rel = relative(dir, full)
       try {
-        if (statSync(full).isDirectory()) {
+        const lstat = lstatSync(full)
+        if (lstat.isSymbolicLink()) continue
+        if (lstat.isDirectory()) {
           recurse(full)
         } else {
           files.set(rel, readFileSync(full, 'utf-8'))

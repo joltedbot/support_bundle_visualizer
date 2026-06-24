@@ -106,7 +106,7 @@ function App() {
             </>
           )}
 
-          <FleetSection kibana={kibana ?? null} />
+          {kibana && <FleetSection kibana={kibana} />}
 
           <EuiSpacer size="l" />
           <EuiTitle size="s"><h3>Data Profile</h3></EuiTitle>
