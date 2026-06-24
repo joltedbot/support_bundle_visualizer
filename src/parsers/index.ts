@@ -68,39 +68,35 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const nodes = parseNodes(files)
   const shards = parseShards(files)
 
-  // Compute shard counts per node
+  // Pre-aggregate shard data in one pass: counts per node, tier storage, flagged indices
   const shardCountsByNode = new Map<string, number>()
-  for (const shard of shards) {
-    if (shard.node) {
-      shardCountsByNode.set(shard.node, (shardCountsByNode.get(shard.node) ?? 0) + 1)
-    }
-  }
-  const nodesWithShardCounts = nodes.map((node) => {
-    const count = shardCountsByNode.get(node.name)
-    return count !== undefined ? { ...node, shardCount: count } : node
-  })
-
-  // Compute tier storage via shard-to-node join
   const nodeTierMap = new Map<string, string>()
   for (const node of nodes) {
     nodeTierMap.set(node.name, node.tier)
   }
   const tierStorageMap: Record<string, number> = {}
+  const flaggedIndicesSet = new Set<string>()
   for (const shard of shards) {
     if (shard.node) {
+      shardCountsByNode.set(shard.node, (shardCountsByNode.get(shard.node) ?? 0) + 1)
       const tier = nodeTierMap.get(shard.node)
       if (tier) {
         tierStorageMap[tier] = (tierStorageMap[tier] ?? 0) + shard.storeSizeBytes
       }
     }
+    if (shard.oversized || shard.undersized) {
+      flaggedIndicesSet.add(shard.index)
+    }
   }
+  const flaggedIndices = Array.from(flaggedIndicesSet)
+
+  const nodesWithShardCounts = nodes.map((node) => {
+    const count = shardCountsByNode.get(node.name)
+    return count !== undefined ? { ...node, shardCount: count } : node
+  })
 
   // Fallback: for tiers where shard store reports 0 (e.g. frozen/searchable snapshots),
   // use node-level disk usage (diskTotal - diskAvail) as an approximation
-  const tiersByNode = new Map<string, string>()
-  for (const node of nodes) {
-    tiersByNode.set(node.name, node.tier)
-  }
   const nodeDiskByTier: Record<string, number> = {}
   for (const node of nodes) {
     if (node.diskTotal != null && node.diskAvail != null) {
@@ -126,7 +122,7 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     auth: parseAuth(files),
     nodes: nodesWithShardCounts,
     indices,
-    shards,
+    flaggedIndices,
     stats: parseStats(files),
     ilm: parseILM(files),
     aiMl,

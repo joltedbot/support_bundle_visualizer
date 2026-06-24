@@ -125,7 +125,7 @@ function App() {
           <EuiSpacer size="l" />
           <EuiTitle size="s"><h3>Indexes</h3></EuiTitle>
           <EuiSpacer size="s" />
-          <IndexLandscape indices={model.indices} shards={model.shards} />
+          <IndexLandscape indices={model.indices} flaggedIndices={model.flaggedIndices} />
 
           {model.dataStreams.length > 0 && (
             <>

@@ -68,18 +68,6 @@ export interface IndexInfo {
   indexType?: 'index' | 'datastream-backing' | 'alias-backing'
 }
 
-export interface ShardInfo {
-  index: string
-  shard: number
-  prirep: 'p' | 'r'
-  state: string
-  node?: string
-  storeSizeBytes: number
-  // Flags
-  oversized: boolean   // > 50GB
-  undersized: boolean  // < 1GB (and not empty)
-}
-
 export interface ClusterStats {
   totalStoreSizeBytes: number
   totalDocCount: number
@@ -422,7 +410,7 @@ export interface BundleModel {
   auth: IdentityInfo | null
   nodes: NodeInfo[]
   indices: IndexInfo[]
-  shards: ShardInfo[]
+  flaggedIndices: string[]
   stats: ClusterStats | null
   ilm: ILMInfo | null
   aiMl: AiMlInfo | null

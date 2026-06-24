@@ -1,5 +1,15 @@
 import { getTextFile } from '../utils/bundleReader'
-import type { ShardInfo } from './types'
+
+export interface ShardInfo {
+  index: string
+  shard: number
+  prirep: 'p' | 'r'
+  state: string
+  node?: string
+  storeSizeBytes: number
+  oversized: boolean   // > 50GB
+  undersized: boolean  // < 1GB (and not empty)
+}
 
 const OVERSIZED_BYTES = 50 * 1024 * 1024 * 1024   // 50 GB
 const UNDERSIZED_BYTES = 1 * 1024 * 1024 * 1024    // 1 GB

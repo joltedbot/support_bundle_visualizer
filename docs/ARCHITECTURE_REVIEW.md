@@ -236,10 +236,10 @@ clusters this adds 20–40% character overhead (whitespace) that flows directly 
 explicitly documented as not hand-editable.
 
 **Acceptance Criteria:**
-- [ ] `bundleData.ts` is generated with compact (no-whitespace) JSON
-- [ ] `pnpm run generate && pnpm run build` completes without error
-- [ ] Generated `index.html` is smaller for the same input bundle
-- [ ] App renders correctly from a compactly-serialized bundle
+- [x] `bundleData.ts` is generated with compact (no-whitespace) JSON
+- [x] `pnpm run generate && pnpm run build` completes without error
+- [x] Generated `index.html` is smaller for the same input bundle
+- [x] App renders correctly from a compactly-serialized bundle
 
 ---
 
@@ -265,12 +265,12 @@ scale. The raw array will be revisited when a suitable shard visualization appro
 - Remove `ShardInfo` from `types.ts` if no longer referenced.
 
 **Acceptance Criteria:**
-- [ ] `BundleModel` no longer contains `shards: ShardInfo[]`
-- [ ] `BundleModel` contains `flaggedIndices: string[]`
-- [ ] `IndexLandscape.tsx` warning icons still render for oversized/undersized indices
-- [ ] Generated `bundleData.ts` is measurably smaller for a large bundle
-- [ ] `pnpm run generate && pnpm run build` completes without error
-- [ ] `parseShards` tests (P1-4) still pass
+- [x] `BundleModel` no longer contains `shards: ShardInfo[]`
+- [x] `BundleModel` contains `flaggedIndices: string[]`
+- [x] `IndexLandscape.tsx` warning icons still render for oversized/undersized indices
+- [x] Generated `bundleData.ts` is measurably smaller for a large bundle
+- [x] `pnpm run generate && pnpm run build` completes without error
+- [x] `parseShards` tests (P1-4) still pass
 
 ---
 
@@ -291,11 +291,11 @@ of `@elastic/datemath`. If `datemath` functions are not called at React render t
    a lightweight alternative or inlined.
 
 **Acceptance Criteria:**
-- [ ] All usages of `moment` and `datemath` in `src/` are identified
-- [ ] If used only in `scripts/`, both are moved to `devDependencies`
-- [ ] `pnpm run build` completes without error
-- [ ] Bundle size of `index.html` decreases (verify with `ls -lh`)
-- [ ] Any date formatting in components still renders correctly
+- [x] All usages of `moment` and `datemath` in `src/` are identified
+- [x] If used only in `scripts/`, both are moved to `devDependencies`
+- [x] `pnpm run build` completes without error
+- [x] Bundle size of `index.html` decreases (verify with `ls -lh`)
+- [x] Any date formatting in components still renders correctly
 
 ---
 

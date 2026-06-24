@@ -16,9 +16,6 @@ importers:
       '@elastic/charts':
         specifier: ^71.7.0
         version: 71.7.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(moment-timezone@0.5.48)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(reselect@4.1.8)
-      '@elastic/datemath':
-        specifier: ^5.0.3
-        version: 5.0.3(moment@2.30.1)
       '@elastic/eui':
         specifier: ^114.3.0
         version: 114.3.0(@elastic/datemath@5.0.3(moment@2.30.1))(@elastic/eui-theme-borealis@7.0.0(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@emotion/css@11.13.5)(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
@@ -31,9 +28,6 @@ importers:
       '@emotion/react':
         specifier: ^11.14.0
         version: 11.14.0(@types/react@19.2.17)(react@19.2.7)
-      moment:
-        specifier: ^2.30.1
-        version: 2.30.1
       pnpm:
         specifier: ^11.8.0
         version: 11.8.0
@@ -44,6 +38,9 @@ importers:
         specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
     devDependencies:
+      '@elastic/datemath':
+        specifier: ^5.0.3
+        version: 5.0.3(moment@2.30.1)
       '@eslint/js':
         specifier: ^9.39.4
         version: 9.39.4
@@ -77,6 +74,9 @@ importers:
       globals:
         specifier: ^17.7.0
         version: 17.7.0
+      moment:
+        specifier: ^2.30.1
+        version: 2.30.1
       secretlint:
         specifier: ^11.7.1
         version: 11.7.1

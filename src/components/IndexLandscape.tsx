@@ -10,13 +10,13 @@ import {
   type EuiBasicTableColumn,
   type Criteria,
 } from '@elastic/eui'
-import type { IndexInfo, ShardInfo } from '../parsers/types'
+import type { IndexInfo } from '../parsers/types'
 import { formatBytes, formatCount, healthColor } from '../utils/format'
 import { enrichModelLabel } from '../utils/modelHints'
 
 interface Props {
   indices: IndexInfo[]
-  shards: ShardInfo[]
+  flaggedIndices: string[]
 }
 
 type SortField = 'name' | 'indexType' | 'ilmPolicy' | 'health' | 'status' | 'primaryShards' | 'replicaShards' | 'avgShardSizeBytes' | 'docCount' | 'storeSizeBytes'
@@ -29,22 +29,13 @@ interface SortState {
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const DEFAULT_PAGE_SIZE = 10
 
-export default function IndexLandscape({ indices, shards }: Props) {
+export default function IndexLandscape({ indices, flaggedIndices }: Props) {
   const [showSystem, setShowSystem] = useState(false)
   const [sort, setSort] = useState<SortState>({ field: 'storeSizeBytes', direction: 'desc' })
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
-  // Build a set of indices with shard issues
-  const flaggedIndices = useMemo(() => {
-    const flags = new Set<string>()
-    for (const shard of shards) {
-      if (shard.oversized || shard.undersized) {
-        flags.add(shard.index)
-      }
-    }
-    return flags
-  }, [shards])
+  const flaggedSet = useMemo(() => new Set(flaggedIndices), [flaggedIndices])
 
   const sorted = useMemo(() => {
     const filtered = showSystem ? indices : indices.filter((i) => !i.isSystem)
@@ -92,7 +83,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
               {name}
             </span>
           </EuiFlexItem>
-          {flaggedIndices.has(item.name) && (
+          {flaggedSet.has(item.name) && (
             <EuiFlexItem grow={false}>
               <EuiToolTip content="Shard sizing issue detected (over or undersized shard)">
                 <EuiIcon type="warning" color="warning" size="s" />
@@ -270,7 +261,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
         pagination={pagination}
         onChange={onTableChange}
         rowProps={(item) =>
-          flaggedIndices.has(item.name) ? { style: { borderLeft: '3px solid var(--euiColorWarning, #f5a700)' } } : {}
+          flaggedSet.has(item.name) ? { style: { borderLeft: '3px solid var(--euiColorWarning, #f5a700)' } } : {}
         }
       />
     </div>
