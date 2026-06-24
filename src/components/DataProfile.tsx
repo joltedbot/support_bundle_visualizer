@@ -15,6 +15,7 @@ import {
 } from '@elastic/eui'
 import type { ClusterStats, ILMInfo, ILMPolicyDetail, SLMPolicyDetail, SnapshotInfo, SizingMetrics } from '../parsers/types'
 import { formatBytes, formatCount } from '../utils/format'
+import { parseMinAgeDays } from '../parsers/ilm'
 
 interface Props {
   stats: ClusterStats | null
@@ -29,28 +30,95 @@ const ILM_DEFAULT_PAGE_SIZE = 10
 const SLM_PAGE_SIZE_OPTIONS = [10, 20, 50]
 const SLM_DEFAULT_PAGE_SIZE = 10
 
+// Shifts the ordered tier min_ages up one slot so each column shows how long
+// data resides in that tier (skipping tiers that are not configured).
+function computeShiftedTiers(policy: ILMPolicyDetail): { hot: string | null; warm: string | null; cold: string | null; frozen: string | null } {
+  const available = [policy.warmMinAge, policy.coldMinAge, policy.frozenMinAge, policy.deleteMinAge]
+    .filter((v): v is string => v !== null && v !== undefined)
+  return {
+    hot: available[0] ?? null,
+    warm: available[1] ?? null,
+    cold: available[2] ?? null,
+    frozen: available[3] ?? null,
+  }
+}
+
+interface ILMPolicyRow extends ILMPolicyDetail {
+  hotDisplay: string | null
+  warmDisplay: string | null
+  coldDisplay: string | null
+  frozenDisplay: string | null
+  hotDays: number | null
+  warmDays: number | null
+  coldDays: number | null
+  frozenDays: number | null
+}
+
+type ILMSortField = 'name' | 'indexCount' | 'forceMergeSegments' | 'shrinkShards' | 'hotDisplay' | 'warmDisplay' | 'coldDisplay' | 'frozenDisplay'
+
+interface ILMSortState {
+  field: ILMSortField
+  direction: 'asc' | 'desc'
+}
+
 export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) {
   const [showSystem, setShowSystem] = useState(false)
   const [showEmpty, setShowEmpty] = useState(false)
+  const [sort, setSort] = useState<ILMSortState>({ field: 'indexCount', direction: 'desc' })
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(ILM_DEFAULT_PAGE_SIZE)
 
+  const rows: ILMPolicyRow[] = useMemo(() => policies.map(p => {
+    const shifted = computeShiftedTiers(p)
+    return {
+      ...p,
+      hotDisplay: shifted.hot,
+      warmDisplay: shifted.warm,
+      coldDisplay: shifted.cold,
+      frozenDisplay: shifted.frozen,
+      hotDays: shifted.hot ? parseMinAgeDays(shifted.hot) : null,
+      warmDays: shifted.warm ? parseMinAgeDays(shifted.warm) : null,
+      coldDays: shifted.cold ? parseMinAgeDays(shifted.cold) : null,
+      frozenDays: shifted.frozen ? parseMinAgeDays(shifted.frozen) : null,
+    }
+  }), [policies])
+
   const filtered = useMemo(() => {
-    let result = policies
+    let result = rows
     if (!showSystem) result = result.filter(p => !p.name.startsWith('.'))
     if (!showEmpty) result = result.filter(p => p.indexCount > 0)
     return result
-  }, [policies, showSystem, showEmpty])
+  }, [rows, showSystem, showEmpty])
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const mult = sort.direction === 'asc' ? 1 : -1
+      switch (sort.field) {
+        case 'name': return a.name.localeCompare(b.name) * mult
+        case 'indexCount': return (a.indexCount - b.indexCount) * mult
+        case 'forceMergeSegments': return ((a.forceMergeSegments ?? -1) - (b.forceMergeSegments ?? -1)) * mult
+        case 'shrinkShards': return ((a.shrinkShards ?? -1) - (b.shrinkShards ?? -1)) * mult
+        case 'hotDisplay': return ((a.hotDays ?? -1) - (b.hotDays ?? -1)) * mult
+        case 'warmDisplay': return ((a.warmDays ?? -1) - (b.warmDays ?? -1)) * mult
+        case 'coldDisplay': return ((a.coldDays ?? -1) - (b.coldDays ?? -1)) * mult
+        case 'frozenDisplay': return ((a.frozenDays ?? -1) - (b.frozenDays ?? -1)) * mult
+        default: return 0
+      }
+    })
+  }, [filtered, sort])
 
   const displayed = useMemo(() => {
     const start = pageIndex * pageSize
-    return filtered.slice(start, start + pageSize)
-  }, [filtered, pageIndex, pageSize])
+    return sorted.slice(start, start + pageSize)
+  }, [sorted, pageIndex, pageSize])
 
-  const columns: EuiBasicTableColumn<ILMPolicyDetail>[] = [
+  const nullDash = <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+
+  const columns: EuiBasicTableColumn<ILMPolicyRow>[] = [
     {
       field: 'name',
       name: 'Policy',
+      sortable: true,
       truncateText: true,
       render: (name: string) => (
         <EuiToolTip content={name}>
@@ -69,76 +137,99 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
       ),
     },
     {
-      field: 'deleteDays',
-      name: 'Delete',
-      width: '80px',
+      field: 'indexCount',
+      name: 'Indices',
+      width: '90px',
       align: 'right' as const,
-      render: (v: number | null) =>
-        v !== null ? `${Math.round(v)}d` : <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
+      sortable: true,
+      render: (v: number) =>
+        v > 0 ? String(v) : <span style={{ color: 'var(--euiColorSubduedText)' }}>0</span>,
     },
     {
       field: 'hotMaxAge',
-      name: 'Hot rollover',
-      width: '110px',
+      name: 'Hot Rollover',
+      width: '120px',
       align: 'right' as const,
-      render: (age: string | null, item: ILMPolicyDetail) => {
-        if (!age && !item.hotMaxSize) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+      render: (age: string | null, item: ILMPolicyRow) => {
+        if (!age && !item.hotMaxSize) return nullDash
         const parts = [age, item.hotMaxSize].filter(Boolean)
         return <span style={{ fontSize: '0.85em' }}>{parts.join(' / ')}</span>
       },
     },
     {
-      field: 'warmMinAge',
-      name: 'Warm',
-      width: '75px',
-      align: 'right' as const,
-      render: (v: string | null) =>
-        v ?? <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
-    },
-    {
-      field: 'coldMinAge',
-      name: 'Cold',
-      width: '75px',
-      align: 'right' as const,
-      render: (v: string | null) =>
-        v ?? <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
-    },
-    {
       field: 'forceMergeSegments',
-      name: 'Force merge',
-      width: '100px',
+      name: 'Force Merge',
+      width: '125px',
       align: 'right' as const,
+      sortable: true,
       render: (v: number | null) =>
-        v !== null ? `${v} seg` : <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
+        v !== null ? `${v} seg` : nullDash,
     },
     {
       field: 'shrinkShards',
       name: 'Shrink',
-      width: '75px',
+      width: '90px',
       align: 'right' as const,
+      sortable: true,
       render: (v: number | null) =>
-        v !== null ? `${v} shards` : <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
+        v !== null ? `${v} shards` : nullDash,
     },
     {
-      field: 'indexCount',
-      name: 'Indices',
+      field: 'hotDisplay',
+      name: 'Hot',
       width: '75px',
       align: 'right' as const,
-      render: (v: number) =>
-        v > 0
-          ? String(v)
-          : <span style={{ color: 'var(--euiColorSubduedText)' }}>0</span>,
+      sortable: true,
+      render: (v: string | null) => v ?? nullDash,
+    },
+    {
+      field: 'warmDisplay',
+      name: 'Warm',
+      width: '75px',
+      align: 'right' as const,
+      sortable: true,
+      render: (v: string | null) => v ?? nullDash,
+    },
+    {
+      field: 'coldDisplay',
+      name: 'Cold',
+      width: '75px',
+      align: 'right' as const,
+      sortable: true,
+      render: (v: string | null) => v ?? nullDash,
+    },
+    {
+      field: 'frozenDisplay',
+      name: 'Frozen',
+      width: '80px',
+      align: 'right' as const,
+      sortable: true,
+      render: (v: string | null) => v ?? nullDash,
     },
   ]
+
+  const sorting = {
+    sort: {
+      field: sort.field,
+      direction: sort.direction,
+    },
+  }
 
   const pagination = {
     pageIndex,
     pageSize,
-    totalItemCount: filtered.length,
+    totalItemCount: sorted.length,
     pageSizeOptions: ILM_PAGE_SIZE_OPTIONS,
   }
 
-  function onTableChange({ page: newPage }: Criteria<ILMPolicyDetail>) {
+  function onTableChange({ sort: newSort, page: newPage }: Criteria<ILMPolicyRow>) {
+    if (newSort) {
+      const validSortFields: ILMSortField[] = ['name', 'indexCount', 'forceMergeSegments', 'shrinkShards', 'hotDisplay', 'warmDisplay', 'coldDisplay', 'frozenDisplay']
+      if (validSortFields.includes(newSort.field as ILMSortField)) {
+        setSort({ field: newSort.field as ILMSortField, direction: newSort.direction })
+        setPageIndex(0)
+      }
+    }
     if (newPage) {
       setPageIndex(newPage.index)
       setPageSize(newPage.size)
@@ -170,6 +261,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
       <EuiBasicTable
         items={displayed}
         columns={columns}
+        sorting={sorting}
         pagination={pagination}
         onChange={onTableChange}
       />

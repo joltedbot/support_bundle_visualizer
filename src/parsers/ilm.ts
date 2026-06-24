@@ -29,6 +29,7 @@ interface ILMPolicyEntry {
       hot?: ILMPhase
       warm?: ILMPhase
       cold?: ILMPhase
+      frozen?: ILMPhase
       delete?: ILMPhase
     }
   }
@@ -38,7 +39,7 @@ interface ILMPolicyEntry {
  * Convert an ILM min_age string (e.g. "30d", "180d", "6M", "24h") to days.
  * Returns null for unparseable or zero/ms values.
  */
-function parseMinAgeDays(minAge: string): number | null {
+export function parseMinAgeDays(minAge: string): number | null {
   if (!minAge) return null
   const lower = minAge.trim().toLowerCase()
   if (lower === '0ms' || lower === '0s' || lower === '0') return null
@@ -125,6 +126,7 @@ export function parseILM(files: Map<string, string>): ILMInfo | null {
       const hot = phases.hot
       const warm = phases.warm
       const cold = phases.cold
+      const frozen = phases.frozen
       const del = phases.delete
 
       const hotRollover = hot?.actions?.rollover
@@ -133,9 +135,10 @@ export function parseILM(files: Map<string, string>): ILMInfo | null {
 
       const warmMinAge = warm?.min_age ? (parseMinAgeDays(warm.min_age) !== null ? warm.min_age : null) : null
       const coldMinAge = cold?.min_age ? (parseMinAgeDays(cold.min_age) !== null ? cold.min_age : null) : null
+      const frozenMinAge = frozen?.min_age ? (parseMinAgeDays(frozen.min_age) !== null ? frozen.min_age : null) : null
 
-      const deleteMinAge = del?.min_age ?? null
-      const deleteDays = deleteMinAge ? (parseMinAgeDays(deleteMinAge) ?? null) : null
+      const rawDeleteMinAge = del?.min_age ?? null
+      const deleteDays = rawDeleteMinAge ? (parseMinAgeDays(rawDeleteMinAge) ?? null) : null
 
       // forcemerge can be in hot or warm
       const fmSegments =
@@ -153,6 +156,8 @@ export function parseILM(files: Map<string, string>): ILMInfo | null {
         hotMaxSize,
         warmMinAge,
         coldMinAge,
+        frozenMinAge,
+        deleteMinAge: rawDeleteMinAge,
         forceMergeSegments: fmSegments ?? null,
         shrinkShards: shrinkShards ?? null,
         indexCount: indexCountByPolicy.get(name) ?? 0,

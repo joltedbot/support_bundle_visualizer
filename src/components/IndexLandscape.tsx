@@ -19,7 +19,7 @@ interface Props {
   shards: ShardInfo[]
 }
 
-type SortField = 'storeSizeBytes' | 'docCount' | 'avgShardSizeBytes'
+type SortField = 'name' | 'indexType' | 'ilmPolicy' | 'health' | 'status' | 'primaryShards' | 'replicaShards' | 'avgShardSizeBytes' | 'docCount' | 'storeSizeBytes'
 
 interface SortState {
   field: SortField
@@ -50,7 +50,19 @@ export default function IndexLandscape({ indices, shards }: Props) {
     const filtered = showSystem ? indices : indices.filter((i) => !i.isSystem)
     return [...filtered].sort((a, b) => {
       const mult = sort.direction === 'asc' ? 1 : -1
-      return (a[sort.field] - b[sort.field]) * mult
+      switch (sort.field) {
+        case 'name': return a.name.localeCompare(b.name) * mult
+        case 'indexType': return ((a.indexType ?? '').localeCompare(b.indexType ?? '')) * mult
+        case 'ilmPolicy': return ((a.ilmPolicy ?? '').localeCompare(b.ilmPolicy ?? '')) * mult
+        case 'health': return a.health.localeCompare(b.health) * mult
+        case 'status': return a.status.localeCompare(b.status) * mult
+        case 'primaryShards': return (a.primaryShards - b.primaryShards) * mult
+        case 'replicaShards': return (a.replicaShards - b.replicaShards) * mult
+        case 'avgShardSizeBytes': return (a.avgShardSizeBytes - b.avgShardSizeBytes) * mult
+        case 'docCount': return (a.docCount - b.docCount) * mult
+        case 'storeSizeBytes': return (a.storeSizeBytes - b.storeSizeBytes) * mult
+        default: return 0
+      }
     })
   }, [indices, showSystem, sort])
 
@@ -63,6 +75,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
     {
       field: 'name',
       name: 'Name',
+      sortable: true,
       truncateText: true,
       render: (name: string, item: IndexInfo) => (
         <EuiFlexGroup gutterSize="xs" alignItems="center" responsive={false}>
@@ -93,6 +106,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
       field: 'indexType',
       name: 'Type',
       width: '110px',
+      sortable: true,
       render: (t: IndexInfo['indexType']) => {
         if (t === 'datastream-backing') return <EuiBadge color="accent">DS backing</EuiBadge>
         if (t === 'alias-backing') return <EuiBadge color="primary">Alias</EuiBadge>
@@ -103,6 +117,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
       field: 'ilmPolicy',
       name: 'ILM Policy',
       width: '160px',
+      sortable: true,
       truncateText: true,
       render: (policy: string | undefined) => {
         if (!policy) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
@@ -149,6 +164,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
       field: 'health',
       name: 'Health',
       width: '90px',
+      sortable: true,
       render: (health: string) => (
         <EuiBadge color={healthColor(health)}>{health}</EuiBadge>
       ),
@@ -157,6 +173,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
       field: 'status',
       name: 'Status',
       width: '80px',
+      sortable: true,
       render: (status: string) => (
         <EuiBadge color={status === 'open' ? 'default' : 'hollow'}>{status}</EuiBadge>
       ),
@@ -166,12 +183,14 @@ export default function IndexLandscape({ indices, shards }: Props) {
       name: 'Primaries',
       width: '90px',
       align: 'right' as const,
+      sortable: true,
     },
     {
       field: 'replicaShards',
       name: 'Replicas',
       width: '80px',
       align: 'right' as const,
+      sortable: true,
     },
     {
       field: 'avgShardSizeBytes',
@@ -218,7 +237,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<IndexInfo>) {
     if (newSort) {
-      const validSortFields: SortField[] = ['storeSizeBytes', 'docCount', 'avgShardSizeBytes']
+      const validSortFields: SortField[] = ['name', 'indexType', 'ilmPolicy', 'health', 'status', 'primaryShards', 'replicaShards', 'avgShardSizeBytes', 'docCount', 'storeSizeBytes']
       if (validSortFields.includes(newSort.field as SortField)) {
         setSort({ field: newSort.field as SortField, direction: newSort.direction })
         setPageIndex(0)

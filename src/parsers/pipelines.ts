@@ -4,6 +4,7 @@ import type { PipelineInfo } from './types'
 interface PipelineJson {
   description?: string
   created_date?: string
+  processors?: unknown[]
   _meta?: {
     package?: { name?: string }
     managed?: boolean
@@ -18,6 +19,7 @@ export function parsePipelines(files: Map<string, string>): PipelineInfo[] {
   return Object.entries(json).map(([name, data]) => ({
     name,
     description: data.description,
+    processorCount: Array.isArray(data.processors) ? data.processors.length : 0,
     createdDate: data.created_date,
     metaPackageName: data._meta?.package?.name,
     metaManaged: data._meta?.managed,

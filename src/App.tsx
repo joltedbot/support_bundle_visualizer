@@ -123,7 +123,7 @@ function App() {
           )}
 
           <EuiSpacer size="l" />
-          <EuiTitle size="s"><h3>Index Landscape</h3></EuiTitle>
+          <EuiTitle size="s"><h3>Indexes</h3></EuiTitle>
           <EuiSpacer size="s" />
           <IndexLandscape indices={model.indices} shards={model.shards} />
 

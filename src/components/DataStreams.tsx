@@ -16,11 +16,19 @@ interface Props {
   dataStreams: DataStreamInfo[]
 }
 
+type SortField = 'name' | 'status' | 'indexCount' | 'ilmPolicy'
+
+interface SortState {
+  field: SortField
+  direction: 'asc' | 'desc'
+}
+
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const DEFAULT_PAGE_SIZE = 10
 
 export default function DataStreams({ dataStreams }: Props) {
   const [showSystem, setShowSystem] = useState(false)
+  const [sort, setSort] = useState<SortState>({ field: 'name', direction: 'asc' })
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
@@ -29,10 +37,18 @@ export default function DataStreams({ dataStreams }: Props) {
     [dataStreams, showSystem]
   )
 
-  const sorted = useMemo(
-    () => [...filtered].sort((a, b) => a.name.localeCompare(b.name)),
-    [filtered]
-  )
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const mult = sort.direction === 'asc' ? 1 : -1
+      switch (sort.field) {
+        case 'name': return a.name.localeCompare(b.name) * mult
+        case 'status': return a.status.localeCompare(b.status) * mult
+        case 'indexCount': return (a.indexCount - b.indexCount) * mult
+        case 'ilmPolicy': return ((a.ilmPolicy ?? '').localeCompare(b.ilmPolicy ?? '')) * mult
+        default: return 0
+      }
+    })
+  }, [filtered, sort])
 
   const displayed = useMemo(() => {
     const start = pageIndex * pageSize
@@ -43,6 +59,7 @@ export default function DataStreams({ dataStreams }: Props) {
     {
       field: 'name',
       name: 'Name',
+      sortable: true,
       truncateText: true,
       render: (name: string) => (
         <span
@@ -62,6 +79,7 @@ export default function DataStreams({ dataStreams }: Props) {
       field: 'status',
       name: 'Status',
       width: '90px',
+      sortable: true,
       render: (status: string) => (
         <EuiBadge color={healthColor(status.toLowerCase())}>{status}</EuiBadge>
       ),
@@ -71,6 +89,7 @@ export default function DataStreams({ dataStreams }: Props) {
       name: 'Indices',
       width: '80px',
       align: 'right' as const,
+      sortable: true,
     },
     {
       field: 'lifecycle',
@@ -104,6 +123,7 @@ export default function DataStreams({ dataStreams }: Props) {
       field: 'ilmPolicy',
       name: 'ILM Policy',
       width: '160px',
+      sortable: true,
       truncateText: true,
       render: (policy: string | undefined) => {
         if (!policy) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
@@ -126,6 +146,13 @@ export default function DataStreams({ dataStreams }: Props) {
     },
   ]
 
+  const sorting = {
+    sort: {
+      field: sort.field,
+      direction: sort.direction,
+    },
+  }
+
   const pagination = {
     pageIndex,
     pageSize,
@@ -133,7 +160,14 @@ export default function DataStreams({ dataStreams }: Props) {
     pageSizeOptions: PAGE_SIZE_OPTIONS,
   }
 
-  function onTableChange({ page: newPage }: Criteria<DataStreamInfo>) {
+  function onTableChange({ sort: newSort, page: newPage }: Criteria<DataStreamInfo>) {
+    if (newSort) {
+      const validSortFields: SortField[] = ['name', 'status', 'indexCount', 'ilmPolicy']
+      if (validSortFields.includes(newSort.field as SortField)) {
+        setSort({ field: newSort.field as SortField, direction: newSort.direction })
+        setPageIndex(0)
+      }
+    }
     if (newPage) {
       setPageIndex(newPage.index)
       setPageSize(newPage.size)
@@ -159,6 +193,7 @@ export default function DataStreams({ dataStreams }: Props) {
       <EuiBasicTable
         items={displayed}
         columns={columns}
+        sorting={sorting}
         pagination={pagination}
         onChange={onTableChange}
       />

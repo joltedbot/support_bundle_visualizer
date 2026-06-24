@@ -16,11 +16,19 @@ interface Props {
   pipelines: PipelineInfo[]
 }
 
+type SortField = 'name' | 'processorCount' | 'createdDate'
+
+interface SortState {
+  field: SortField
+  direction: 'asc' | 'desc'
+}
+
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const DEFAULT_PAGE_SIZE = 10
 
 export default function IngestPipelines({ pipelines }: Props) {
   const [showManaged, setShowManaged] = useState(false)
+  const [sort, setSort] = useState<SortState>({ field: 'name', direction: 'asc' })
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
@@ -29,10 +37,17 @@ export default function IngestPipelines({ pipelines }: Props) {
     [pipelines, showManaged]
   )
 
-  const sorted = useMemo(
-    () => [...filtered].sort((a, b) => a.name.localeCompare(b.name)),
-    [filtered]
-  )
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const mult = sort.direction === 'asc' ? 1 : -1
+      switch (sort.field) {
+        case 'name': return a.name.localeCompare(b.name) * mult
+        case 'processorCount': return (a.processorCount - b.processorCount) * mult
+        case 'createdDate': return ((a.createdDate ?? '').localeCompare(b.createdDate ?? '')) * mult
+        default: return 0
+      }
+    })
+  }, [filtered, sort])
 
   const displayed = useMemo(() => {
     const start = pageIndex * pageSize
@@ -43,6 +58,7 @@ export default function IngestPipelines({ pipelines }: Props) {
     {
       field: 'name',
       name: 'Name',
+      sortable: true,
       truncateText: true,
       render: (name: string) => (
         <span
@@ -83,9 +99,21 @@ export default function IngestPipelines({ pipelines }: Props) {
       },
     },
     {
+      field: 'processorCount',
+      name: 'Preprocessors',
+      width: '120px',
+      align: 'right' as const,
+      sortable: true,
+      render: (count: number) =>
+        count > 0
+          ? String(count)
+          : <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>,
+    },
+    {
       field: 'createdDate',
       name: 'Created',
       width: '120px',
+      sortable: true,
       render: (date: string | undefined) => {
         if (!date) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
         return <span>{formatDate(date)}</span>
@@ -109,16 +137,14 @@ export default function IngestPipelines({ pipelines }: Props) {
         return <EuiBadge color="subdued">{managedBy}</EuiBadge>
       },
     },
-    {
-      field: 'metaPackageName',
-      name: 'Package',
-      width: '120px',
-      render: (pkg: string | undefined) => {
-        if (!pkg) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
-        return <EuiBadge color="accent">{pkg}</EuiBadge>
-      },
-    },
   ]
+
+  const sorting = {
+    sort: {
+      field: sort.field,
+      direction: sort.direction,
+    },
+  }
 
   const pagination = {
     pageIndex,
@@ -127,7 +153,14 @@ export default function IngestPipelines({ pipelines }: Props) {
     pageSizeOptions: PAGE_SIZE_OPTIONS,
   }
 
-  function onTableChange({ page: newPage }: Criteria<PipelineInfo>) {
+  function onTableChange({ sort: newSort, page: newPage }: Criteria<PipelineInfo>) {
+    if (newSort) {
+      const validSortFields: SortField[] = ['name', 'processorCount', 'createdDate']
+      if (validSortFields.includes(newSort.field as SortField)) {
+        setSort({ field: newSort.field as SortField, direction: newSort.direction })
+        setPageIndex(0)
+      }
+    }
     if (newPage) {
       setPageIndex(newPage.index)
       setPageSize(newPage.size)
@@ -153,6 +186,7 @@ export default function IngestPipelines({ pipelines }: Props) {
       <EuiBasicTable
         items={displayed}
         columns={columns}
+        sorting={sorting}
         pagination={pagination}
         onChange={onTableChange}
       />
