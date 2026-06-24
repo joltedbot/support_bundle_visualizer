@@ -1,5 +1,9 @@
 import { parseJsonFile } from '../utils/bundleReader'
+import { parseMinAgeDays } from '../utils/parseMinAgeDays'
 import type { ILMInfo, ILMPolicyDetail } from './types'
+import type { ILMPolicyEntry } from './rawTypes'
+
+export { parseMinAgeDays }
 
 interface ILMExplainIndex {
   managed?: boolean
@@ -9,55 +13,6 @@ interface ILMExplainIndex {
 
 interface ILMExplainJson {
   indices?: Record<string, ILMExplainIndex>
-}
-
-interface ILMPhaseActions {
-  rollover?: { max_age?: string; max_primary_shard_size?: string; max_size?: string; max_docs?: number }
-  forcemerge?: { max_num_segments?: number }
-  shrink?: { number_of_shards?: number }
-  delete?: unknown
-}
-
-interface ILMPhase {
-  min_age?: string
-  actions?: ILMPhaseActions
-}
-
-interface ILMPolicyEntry {
-  policy?: {
-    phases?: {
-      hot?: ILMPhase
-      warm?: ILMPhase
-      cold?: ILMPhase
-      frozen?: ILMPhase
-      delete?: ILMPhase
-    }
-  }
-}
-
-/**
- * Convert an ILM min_age string (e.g. "30d", "180d", "6M", "24h") to days.
- * Returns null for unparseable or zero/ms values.
- */
-export function parseMinAgeDays(minAge: string): number | null {
-  if (!minAge) return null
-  const trimmed = minAge.trim()
-  const lower = trimmed.toLowerCase()
-  if (lower === '0ms' || lower === '0s' || lower === '0') return null
-  // Match against original trimmed string to preserve 'm' (minutes) vs 'M' (months)
-  const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*([A-Za-z]+)$/)
-  if (!match) return null
-  const value = parseFloat(match[1])
-  const unit = match[2]
-  if (isNaN(value) || value <= 0) return null
-  switch (unit) {
-    case 'd': return value
-    case 'h': return value / 24
-    case 'm': return value / 1440
-    case 'M': return value * 30  // approximate months
-    case 'y': return value * 365
-    default: return null
-  }
 }
 
 /**

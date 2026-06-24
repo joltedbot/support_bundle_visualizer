@@ -1,56 +1,13 @@
 import { parseJsonFile } from '../utils/bundleReader'
+import { parseMinAgeDays } from '../utils/parseMinAgeDays'
 import type { IndexInfo, SizingMetrics, RetentionBucket } from './types'
-
-interface NodeStatEntry {
-  jvm?: { uptime_in_millis?: number }
-  indices?: {
-    search?: { query_total?: number }
-  }
-}
-
-interface NodesStatsJson {
-  nodes?: Record<string, NodeStatEntry>
-}
+import type { NodesStatsJson, ILMPolicyEntry } from './rawTypes'
 
 interface IndicesStatsJson {
   _all?: {
     primaries?: {
       bulk?: { total_size_in_bytes?: number }
     }
-  }
-}
-
-interface ILMPhase {
-  min_age?: string
-}
-
-interface ILMPolicyEntry {
-  policy?: {
-    phases?: {
-      delete?: ILMPhase
-    }
-  }
-}
-
-/**
- * Convert an ILM min_age string (e.g. "30d", "180d", "6M", "24h") to days.
- * Returns null for unparseable or zero values.
- */
-function parseMinAgeDays(minAge: string): number | null {
-  if (!minAge) return null
-  const lower = minAge.trim().toLowerCase()
-  const match = lower.match(/^(\d+(?:\.\d+)?)\s*([a-z]+)$/)
-  if (!match) return null
-  const value = parseFloat(match[1])
-  const unit = match[2]
-  if (isNaN(value) || value <= 0) return null
-  switch (unit) {
-    case 'd': return value
-    case 'h': return value / 24
-    case 'm': return value / 1440
-    case 'M': return value * 30  // approximate
-    case 'y': return value * 365
-    default: return null
   }
 }
 

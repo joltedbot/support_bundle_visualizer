@@ -1,14 +1,13 @@
-import { bundleData as rawBundleData } from './generated/bundleData'
-import type { GeneratedBundle } from './parsers/types'
+import { bundleData as data } from './generated/bundleData'
 import {
   EuiPage,
   EuiPageBody,
   EuiEmptyPrompt,
   EuiText,
   EuiSpacer,
-  EuiTitle,
   EuiPanel,
 } from '@elastic/eui'
+import { Section } from './components/Section'
 import ClusterHeader from './components/ClusterHeader'
 import Overview from './components/Overview'
 import InternalHealthSection from './components/InternalHealthSection'
@@ -25,8 +24,6 @@ import IngestPipelines from './components/IngestPipelines'
 import CrossCluster from './components/CrossCluster'
 import Plugins from './components/Plugins'
 import BestPractices from './components/BestPractices'
-
-const data = rawBundleData as unknown as GeneratedBundle
 
 function App() {
   if (!data.model) {
@@ -72,134 +69,84 @@ function App() {
             </>
           )}
 
-          {model.license && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Licensing</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <Licensing license={model.license} />
-            </>
-          )}
+          <Section title="Licensing" show={Boolean(model.license)}>
+            <Licensing license={model.license!} />
+          </Section>
 
-          <EuiSpacer size="l" />
-          <EuiTitle size="s"><h3>Topology</h3></EuiTitle>
-          <EuiSpacer size="s" />
-          <Topology
-            nodes={model.nodes}
-            kibana={kibana ?? null}
-            maxShardsPerNode={model.clusterSettings?.maxShardsPerNode ?? null}
-            maxShardsPerNodeFrozen={model.clusterSettings?.maxShardsPerNodeFrozen ?? null}
-          />
+          <Section title="Topology" show={true}>
+            <Topology
+              nodes={model.nodes}
+              kibana={kibana ?? null}
+              maxShardsPerNode={model.clusterSettings?.maxShardsPerNode ?? null}
+              maxShardsPerNodeFrozen={model.clusterSettings?.maxShardsPerNodeFrozen ?? null}
+            />
+          </Section>
 
-          {(model.features || kibana) && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Features & Integrations</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <FeaturesIntegrations
-                features={model.features}
-                ilm={model.ilm}
-                replication={model.replication}
-                snapshots={model.snapshots}
-                kibana={kibana ?? null}
-              />
-            </>
-          )}
+          <Section title="Features & Integrations" show={Boolean(model.features || kibana)}>
+            <FeaturesIntegrations
+              features={model.features}
+              ilm={model.ilm}
+              replication={model.replication}
+              snapshots={model.snapshots}
+              kibana={kibana ?? null}
+            />
+          </Section>
 
           {kibana && <FleetSection kibana={kibana} />}
 
-          <EuiSpacer size="l" />
-          <EuiTitle size="s"><h3>Data Profile</h3></EuiTitle>
-          <EuiSpacer size="s" />
-          <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
+          <Section title="Data Profile" show={true}>
+            <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
+          </Section>
 
-          {model.aiMl && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>AI &amp; Machine Learning</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <AiMlSection aiMl={model.aiMl} features={model.features} />
-            </>
-          )}
+          <Section title="AI &amp; Machine Learning" show={Boolean(model.aiMl)}>
+            <AiMlSection aiMl={model.aiMl!} features={model.features} />
+          </Section>
 
-          <EuiSpacer size="l" />
-          <EuiTitle size="s"><h3>Indexes</h3></EuiTitle>
-          <EuiSpacer size="s" />
-          <IndexLandscape indices={model.indices} flaggedIndices={model.flaggedIndices} />
+          <Section title="Indexes" show={true}>
+            <IndexLandscape indices={model.indices} flaggedIndices={model.flaggedIndices} />
+          </Section>
 
-          {model.dataStreams.length > 0 && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Data Streams</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <DataStreams dataStreams={model.dataStreams} />
-            </>
-          )}
+          <Section title="Data Streams" show={model.dataStreams.length > 0}>
+            <DataStreams dataStreams={model.dataStreams} />
+          </Section>
 
-          {model.ingestPipelines.length > 0 && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Ingest Pipelines</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <IngestPipelines pipelines={model.ingestPipelines} />
-            </>
-          )}
+          <Section title="Ingest Pipelines" show={model.ingestPipelines.length > 0}>
+            <IngestPipelines pipelines={model.ingestPipelines} />
+          </Section>
 
-          {model.replication && (model.replication.hasCCR || model.replication.remoteClusterCount > 0) && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Cross-Cluster</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <CrossCluster replication={model.replication} />
-            </>
-          )}
+          <Section
+            title="Cross-Cluster"
+            show={Boolean(model.replication && (model.replication.hasCCR || model.replication.remoteClusterCount > 0))}
+          >
+            <CrossCluster replication={model.replication!} />
+          </Section>
 
-          {model.plugins.length > 0 && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Plugins</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <Plugins plugins={model.plugins} />
-            </>
-          )}
+          <Section title="Plugins" show={model.plugins.length > 0}>
+            <Plugins plugins={model.plugins} />
+          </Section>
 
-          {model.ilm && model.ilm.policies.length > 0 && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>ILM Policies</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <ILMPoliciesTable policies={model.ilm.policies} />
-            </>
-          )}
+          <Section title="ILM Policies" show={Boolean(model.ilm && model.ilm.policies.length > 0)}>
+            <ILMPoliciesTable policies={model.ilm!.policies} />
+          </Section>
 
           {model.snapshots && model.snapshots.repositories.length > 0 && (
             <SnapshotRepositories repositories={model.snapshots.repositories} />
           )}
 
-          {model.snapshots && model.snapshots.slmPolicies.length > 0 && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>SLM Policies</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <SLMPoliciesTable policies={model.snapshots.slmPolicies} />
-            </>
-          )}
+          <Section title="SLM Policies" show={Boolean(model.snapshots && model.snapshots.slmPolicies.length > 0)}>
+            <SLMPoliciesTable policies={model.snapshots!.slmPolicies} />
+          </Section>
 
           <EuiSpacer size="l" />
           <BestPractices />
 
-          {notes && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Notes</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <EuiPanel paddingSize="m">
-                <EuiText>
-                  <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{notes}</p>
-                </EuiText>
-              </EuiPanel>
-            </>
-          )}
+          <Section title="Notes" show={Boolean(notes)}>
+            <EuiPanel paddingSize="m">
+              <EuiText>
+                <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{notes}</p>
+              </EuiText>
+            </EuiPanel>
+          </Section>
 
           <EuiSpacer size="xl" />
         </EuiPageBody>

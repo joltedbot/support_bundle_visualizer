@@ -5,8 +5,12 @@ export interface BundleData {
 
 /**
  * Parse a JSON file from the bundle. Returns null if missing or invalid.
+ *
+ * The cast to T is unsound — JSON.parse returns `any` and the shape is not
+ * validated. Callers must treat all field accesses as potentially undefined
+ * and use optional chaining throughout.
  */
-export function parseJsonFile<T>(files: Map<string, string>, path: string): T | null {
+export function parseJsonFile<T = unknown>(files: Map<string, string>, path: string): T | null {
   const content = files.get(path)
   if (!content) return null
   try {

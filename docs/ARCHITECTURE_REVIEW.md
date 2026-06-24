@@ -314,10 +314,10 @@ subtly less correct.
 Both parsers import from it. Remove their local copies.
 
 **Acceptance Criteria:**
-- [ ] `src/utils/parseSize.ts` exists and exports `parseSize`
-- [ ] Both `indices.ts` and `shards.ts` import from it and remove their local copies
-- [ ] All existing parser tests pass
-- [ ] The shared implementation uses the ordered `[string, number][]` approach
+- [x] `src/utils/parseSize.ts` exists and exports `parseSize`
+- [x] Both `indices.ts` and `shards.ts` import from it and remove their local copies
+- [x] All existing parser tests pass
+- [x] The shared implementation uses the ordered `[string, number][]` approach
 
 ---
 
@@ -332,10 +332,10 @@ from `ilm.ts` — a logic fix must be applied in two places.
 `src/utils/dateUtils.ts`). Both `ilm.ts` and `sizing.ts` import from there.
 
 **Acceptance Criteria:**
-- [ ] Single canonical `parseMinAgeDays` in `src/utils/`
-- [ ] Both `ilm.ts` and `sizing.ts` import from the shared location
-- [ ] All existing tests (including `sizing.test.ts`) pass
-- [ ] ILM test suite from P1-2 passes against the shared function
+- [x] Single canonical `parseMinAgeDays` in `src/utils/`
+- [x] Both `ilm.ts` and `sizing.ts` import from the shared location
+- [x] All existing tests (including `sizing.test.ts`) pass
+- [x] ILM test suite from P1-2 passes against the shared function
 
 ---
 
@@ -351,11 +351,11 @@ hunt for the canonical location.
 Move all raw ES API response interfaces there. Each parser imports what it needs.
 
 **Acceptance Criteria:**
-- [ ] `src/parsers/rawTypes.ts` contains `ILMPhase`, `ILMPolicyEntry`, `NodesStatsJson`, and any
+- [x] `src/parsers/rawTypes.ts` contains `ILMPhase`, `ILMPolicyEntry`, `NodesStatsJson`, and any
   other ES API response types currently duplicated across parsers
-- [ ] Parser files import from `rawTypes.ts` and remove their local copies
-- [ ] `tsc -b` passes with no errors
-- [ ] All existing tests pass
+- [x] Parser files import from `rawTypes.ts` and remove their local copies
+- [x] `tsc -b` passes with no errors
+- [x] All existing tests pass
 
 ---
 
@@ -375,9 +375,9 @@ no documentation creates a trap for future parser authors who may omit defensive
   explicit: `parseJsonFile<T = unknown>` with `T` defaulting to `unknown`.
 
 **Acceptance Criteria:**
-- [ ] The unsoundness of the JSON cast is documented in code (JSDoc or type default)
-- [ ] All existing parsers continue to compile with `tsc -b`
-- [ ] No new `any` types or `@ts-ignore` introduced
+- [x] The unsoundness of the JSON cast is documented in code (JSDoc or type default)
+- [x] All existing parsers continue to compile with `tsc -b`
+- [x] No new `any` types or `@ts-ignore` introduced
 
 ---
 
@@ -399,9 +399,9 @@ const typedOutput: BundleModel = output; // type error here if shape is wrong
 ```
 
 **Acceptance Criteria:**
-- [ ] `App.tsx` import no longer requires `as unknown as` double-cast
-- [ ] `generate.ts` builds `output` with an explicit `BundleModel` type annotation
-- [ ] Shape mismatches between generate.ts output and BundleModel are caught by `tsc -b`
+- [x] `App.tsx` import no longer requires `as unknown as` double-cast
+- [x] `generate.ts` builds `output` with an explicit `BundleModel` type annotation
+- [x] Shape mismatches between generate.ts output and BundleModel are caught by `tsc -b`
 
 ---
 
@@ -434,10 +434,10 @@ export function Section({ title, show, children }: SectionProps) {
 Replace all repeated blocks in `App.tsx` with `<Section title="…" show={condition}>`.
 
 **Acceptance Criteria:**
-- [ ] `src/components/Section.tsx` exists with the above interface
-- [ ] All 12+ repeated blocks in `App.tsx` replaced
-- [ ] Spacer sizes match the current implementation (no visual regression)
-- [ ] Conditional rendering behaves identically to current implementation
+- [x] `src/components/Section.tsx` exists with the above interface
+- [x] All 12+ repeated blocks in `App.tsx` replaced
+- [x] Spacer sizes match the current implementation (no visual regression)
+- [x] Conditional rendering behaves identically to current implementation
 
 ---
 
@@ -460,9 +460,9 @@ tier storage) can be merged into one pass since both only need `shard.node` and
 coordinate accordingly.
 
 **Acceptance Criteria:**
-- [ ] Each join is a named function with explicit input/output types
-- [ ] `parseBundle` orchestrator is scannable without reading join internals
-- [ ] No behaviour change (existing tests pass, generate output is identical)
+- [x] Each join is a named function with explicit input/output types
+- [x] `parseBundle` orchestrator is scannable without reading join internals
+- [x] No behaviour change (existing tests pass, generate output is identical)
 
 ---
 

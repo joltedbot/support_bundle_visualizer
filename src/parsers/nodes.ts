@@ -1,5 +1,6 @@
 import { parseJsonFile, getTextFile } from '../utils/bundleReader'
 import type { NodeInfo, NodeRole } from './types'
+import type { NodesStatsJson } from './rawTypes'
 
 interface NodesJsonNode {
   name?: string
@@ -11,16 +12,6 @@ interface NodesJsonNode {
 
 interface NodesJson {
   nodes?: Record<string, NodesJsonNode>
-}
-
-interface NodesStatsJson {
-  nodes?: Record<string, {
-    name?: string
-    jvm?: { mem?: { heap_used_percent?: number; heap_max_in_bytes?: number } }
-    process?: { cpu?: { percent?: number } }
-    fs?: { total?: { total_in_bytes?: number; free_in_bytes?: number; available_in_bytes?: number } }
-    os?: { cpu?: { percent?: number }; mem?: { total_in_bytes?: number } }
-  }>
 }
 
 const KNOWN_ROLES: Set<NodeRole> = new Set([
