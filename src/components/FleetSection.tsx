@@ -5,7 +5,6 @@ import {
   EuiText,
   EuiPanel,
   EuiSpacer,
-  EuiTitle,
   EuiBasicTable,
   EuiHorizontalRule,
 } from '@elastic/eui'
@@ -81,11 +80,7 @@ export default function FleetSection({ kibana }: Props) {
   ]
 
   return (
-    <>
-      <EuiSpacer size="l" />
-      <EuiTitle size="s"><h3>Fleet & Elastic Agents</h3></EuiTitle>
-      <EuiSpacer size="s" />
-      <EuiPanel paddingSize="m">
+    <EuiPanel paddingSize="m">
         <EuiFlexGroup gutterSize="l">
           {fleetSettings?.fleetServerHosts && fleetSettings.fleetServerHosts.length > 0 && (
             <EuiFlexItem grow={false}>
@@ -124,7 +119,6 @@ export default function FleetSection({ kibana }: Props) {
             />
           </>
         )}
-      </EuiPanel>
-    </>
+    </EuiPanel>
   )
 }

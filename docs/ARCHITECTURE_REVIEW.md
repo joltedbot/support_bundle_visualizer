@@ -484,8 +484,8 @@ coordinate accordingly.
   CSS variables for theme-awareness.
 
 **Acceptance Criteria:**
-- [ ] `KibanaCard` uses `healthColor()` from `utils/format.ts`
-- [ ] `TIER_COLORS` either uses EUI vis palette tokens or is documented as an intentional
+- [x] `KibanaCard` uses `healthColor()` from `utils/format.ts`
+- [x] `TIER_COLORS` either uses EUI vis palette tokens or is documented as an intentional
   override with a comment explaining why
 
 ---
@@ -506,9 +506,9 @@ removes the FleetSection banners; this task removes the self-owned header too.
   consistent with `DataProfile.tsx`'s sub-section pattern.
 
 **Acceptance Criteria:**
-- [ ] No component renders its own top-level section `<EuiTitle>` — all live in `App.tsx`
-- [ ] Visual output is identical (same header text, same spacing)
-- [ ] `SnapshotRepositories` panel wrapper (`EuiPanel`) inconsistency resolved: either all
+- [x] No component renders its own top-level section `<EuiTitle>` — all live in `App.tsx`
+- [x] Visual output is identical (same header text, same spacing)
+- [x] `SnapshotRepositories` panel wrapper (`EuiPanel`) inconsistency resolved: either all
   table sections use a panel or none do
 
 ---
@@ -529,8 +529,8 @@ removes the FleetSection banners; this task removes the self-owned header too.
 - `AiMlSection` index dots: add `title` attribute at minimum; better, add screen-reader text.
 
 **Acceptance Criteria:**
-- [ ] All colored status indicators have a text or ARIA label alternative
-- [ ] No information is conveyed by color alone
+- [x] All colored status indicators have a text or ARIA label alternative
+- [x] No information is conveyed by color alone
 
 ---
 
@@ -544,8 +544,8 @@ removes the FleetSection banners; this task removes the self-owned header too.
 **Fix:** Add `security.configs.recommended` to the config block covering `src/`.
 
 **Acceptance Criteria:**
-- [ ] `pnpm run lint` runs the security plugin rules against `src/` files
-- [ ] Any new security findings are triaged (fix genuine issues, disable with explanation for
+- [x] `pnpm run lint` runs the security plugin rules against `src/` files
+- [x] Any new security findings are triaged (fix genuine issues, disable with explanation for
   false positives)
 
 ---

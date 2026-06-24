@@ -92,7 +92,16 @@ function App() {
             />
           </Section>
 
-          {kibana && <FleetSection kibana={kibana} />}
+          <Section
+            title="Fleet &amp; Elastic Agents"
+            show={Boolean(kibana && (
+              (kibana.fleet?.total ?? 0) > 0 ||
+              kibana.fleetPolicies.some(p => !p.isPreconfigured) ||
+              kibana.fleetSettings?.isConfigured
+            ))}
+          >
+            <FleetSection kibana={kibana!} />
+          </Section>
 
           <Section title="Data Profile" show={true}>
             <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
@@ -129,9 +138,9 @@ function App() {
             <ILMPoliciesTable policies={model.ilm!.policies} />
           </Section>
 
-          {model.snapshots && model.snapshots.repositories.length > 0 && (
-            <SnapshotRepositories repositories={model.snapshots.repositories} />
-          )}
+          <Section title="Snapshot Repositories" show={Boolean(model.snapshots?.repositories.length)}>
+            <SnapshotRepositories repositories={model.snapshots!.repositories} />
+          </Section>
 
           <Section title="SLM Policies" show={Boolean(model.snapshots && model.snapshots.slmPolicies.length > 0)}>
             <SLMPoliciesTable policies={model.snapshots!.slmPolicies} />

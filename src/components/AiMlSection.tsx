@@ -446,18 +446,24 @@ function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
                 <div
                   style={{ width: `${adPct}%`, background: "#ffab00" }}
                   title={`Anomaly detectors: ${formatBytes(node.anomalyDetectorsBytes)}`}
+                  aria-label={`Anomaly detectors: ${Math.round(adPct)}% (${formatBytes(node.anomalyDetectorsBytes)})`}
+                  role="img"
                 />
               )}
               {infPct > 0 && (
                 <div
                   style={{ width: `${infPct}%`, background: "#4c9aff" }}
                   title={`Native inference: ${formatBytes(node.nativeInferenceBytes)}`}
+                  aria-label={`Native inference: ${Math.round(infPct)}% (${formatBytes(node.nativeInferenceBytes)})`}
+                  role="img"
                 />
               )}
               {dfaPct > 0 && (
                 <div
                   style={{ width: `${dfaPct}%`, background: "#a855f7" }}
                   title={`Data frame analytics: ${formatBytes(node.dataFrameAnalyticsBytes)}`}
+                  aria-label={`Data frame analytics: ${Math.round(dfaPct)}% (${formatBytes(node.dataFrameAnalyticsBytes)})`}
+                  role="img"
                 />
               )}
             </div>
@@ -510,6 +516,7 @@ function IndexNameList({
               }}
             >
               <span
+                aria-hidden="true"
                 style={{
                   width: 5,
                   height: 5,
@@ -551,6 +558,7 @@ function IndexNameList({
               }}
             >
               <span
+                aria-hidden="true"
                 style={{
                   width: 5,
                   height: 5,

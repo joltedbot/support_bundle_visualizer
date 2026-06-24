@@ -270,6 +270,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
 }
 
 function formatElasticDuration(value: string): string {
+  // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern; \d+ and (?:\.\d+)? are disjoint, no ReDoS risk
   const match = value.match(/^(\d+(?:\.\d+)?)([smhdwMy])$/)
   if (!match) return value
   const amount = parseFloat(match[1])

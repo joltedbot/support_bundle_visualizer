@@ -8,7 +8,7 @@ import {
   EuiSpacer,
 } from '@elastic/eui'
 import type { NodeInfo, NodeRole, KibanaInfo } from '../parsers/types'
-import { resourceColor, formatBytes } from '../utils/format'
+import { resourceColor, formatBytes, healthColor } from '../utils/format'
 import {
   buildSummaryBar,
   groupNodesByAZ,
@@ -24,6 +24,9 @@ interface Props {
 
 // ─── Colours & labels ────────────────────────────────────────────────────────
 
+// Intentional hex overrides: tier colors carry semantic temperature meaning
+// (hot→red, warm→orange, cold→blue, frozen→teal) which the EUI vis palette,
+// designed for categorical distinction, does not encode.
 const TIER_COLORS: Record<string, string> = {
   master:       '#9b59b6',
   hot:          '#e74c3c',
@@ -296,8 +299,6 @@ function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: {
 // ─── KibanaCard ───────────────────────────────────────────────────────────────
 
 function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
-  const statusColor = kibana.status === 'green' ? '#017d73' : kibana.status === 'yellow' ? '#f5a700' : kibana.status === 'red' ? '#bd271e' : '#69707d'
-
   const specs: string[] = []
   if (kibana.heapSizeLimit) specs.push(`${formatBytes(kibana.heapSizeLimit)} instance`)
   if (kibana.heapUsed != null && kibana.heapTotal != null) {
@@ -308,7 +309,9 @@ function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
     <EuiPanel paddingSize="s" style={{ minWidth: 200, maxWidth: 280 }}>
       <EuiFlexGroup gutterSize="xs" alignItems="center" responsive={false}>
         <EuiFlexItem grow={false}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, marginRight: 4 }} />
+          <EuiBadge color={healthColor(kibana.status)} style={{ fontSize: 10 }}>
+            {kibana.status}
+          </EuiBadge>
         </EuiFlexItem>
         <EuiFlexItem>
           <EuiText size="s" style={{ fontWeight: 600, lineHeight: 1.3 }}>

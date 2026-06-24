@@ -4,9 +4,6 @@ import {
   EuiText,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiPanel,
-  EuiSpacer,
-  EuiTitle,
 } from '@elastic/eui'
 import type { SnapshotRepository } from '../parsers/types'
 
@@ -74,17 +71,10 @@ export default function SnapshotRepositories({ repositories }: Props) {
   ]
 
   return (
-    <>
-      <EuiSpacer size="l" />
-      <EuiTitle size="s"><h3>Snapshot Repositories</h3></EuiTitle>
-      <EuiSpacer size="s" />
-      <EuiPanel paddingSize="m">
-        <EuiBasicTable
-          items={repositories}
-          columns={columns}
-          noItemsMessage="No snapshot repositories found"
-        />
-      </EuiPanel>
-    </>
+    <EuiBasicTable
+      items={repositories}
+      columns={columns}
+      noItemsMessage="No snapshot repositories found"
+    />
   )
 }

@@ -5,6 +5,7 @@ import {
   EuiText,
   EuiPanel,
   EuiHorizontalRule,
+  EuiTitle,
 } from '@elastic/eui'
 import type { InternalHealth } from '../parsers/types'
 
@@ -42,7 +43,7 @@ export default function InternalHealthSection({ internalHealth }: Props) {
     <EuiPanel paddingSize="m">
       <EuiFlexGroup alignItems="center" gutterSize="m">
         <EuiFlexItem grow={false}>
-          <EuiText size="s"><strong>Internal Health Indicators</strong></EuiText>
+          <EuiTitle size="xs"><h4>Internal Health Indicators</h4></EuiTitle>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiBadge color={getStatusColor(overallStatus)}>{overallStatus.toUpperCase()}</EuiBadge>
