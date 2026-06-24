@@ -132,6 +132,7 @@ export default function IngestPipelines({ pipelines }: Props) {
       field: 'metaManagedBy',
       name: 'Managed By',
       width: '120px',
+      sortable: true,
       render: (managedBy: string | undefined) => {
         if (!managedBy) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
         return <EuiBadge color="subdued">{managedBy}</EuiBadge>
