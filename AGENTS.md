@@ -92,6 +92,7 @@ Do NOT:
 - **Average Shard Size Calculation**: Use `pri.store.size` from `cat_indices.txt` to calculate average primary shard size. A naive agent might try to aggregate individual shards from `cat_shards.txt`; this is unnecessarily complex and prone to errors when shard data is incomplete.
 - **Multi-Deployment Layout**: `generate.ts` detects a nested `diagnostics/<customer>/<deployment>/` structure. A naive agent might assume a 1:1 mapping between customer and bundle; this layout is required to process multiple environment snapshots in a single build.
 - **Vitest Configuration**: In `vite.config.ts`, you must import `defineConfig` from `vitest/config` (not `vite`). A naive agent might import it from `vite`; this will cause TypeScript errors because the `test:` config block is not part of Vite's default type definitions.
+- **lang_ident Trained Model Visibility**: `lang_ident_model_1` is always present but decorative — the helper `significantModels()` filters it out for stat cards and `hasAnything()`. The `TrainedModelsPanel` guard uses `aiMl.trainedModels.length > 0` (all models) so it renders even for bundles where lang_ident is the only model; the panel renders it with a "Built-in" badge. A naive agent might restore the `nonTrivialModels.length > 0` guard, which silently hides the panel for those bundles.
 
 ## Constraints
 

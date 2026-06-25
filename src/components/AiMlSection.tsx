@@ -2,8 +2,12 @@ import React from "react";
 import {
   EuiFlexGroup,
   EuiFlexItem,
+  EuiListGroup,
+  EuiListGroupItem,
   EuiPanel,
+  EuiStat,
   EuiText,
+  EuiTitle,
   EuiSpacer,
   EuiBadge,
   EuiBasicTable,
@@ -49,7 +53,8 @@ function hasAnything(aiMl: AiMlInfo, features: FeatureInfo | null): boolean {
   );
 }
 
-type StatusInfo = { label: string; hexColor: string };
+type EuiBadgeColor = "success" | "danger" | "default";
+type StatusInfo = { label: string; color: EuiBadgeColor };
 
 function getStatus(aiMl: AiMlInfo, features: FeatureInfo | null): StatusInfo {
   const hasIssues =
@@ -59,7 +64,7 @@ function getStatus(aiMl: AiMlInfo, features: FeatureInfo | null): StatusInfo {
     significantModels(aiMl.trainedModels).some(
       (m) => m.deploymentState === "failed",
     );
-  if (hasIssues) return { label: "Issues Detected", hexColor: "#ff5630" };
+  if (hasIssues) return { label: "Issues Detected", color: "danger" };
 
   const semanticCount =
     (features?.semanticTextIndexCount ?? 0) +
@@ -72,9 +77,9 @@ function getStatus(aiMl: AiMlInfo, features: FeatureInfo | null): StatusInfo {
     aiMl.aiFeatures.hasSecurityAiAssistant ||
     aiMl.aiFeatures.hasObservabilityAiAssistant ||
     aiMl.aiFeatures.hasChatAgents;
-  if (isActive) return { label: "Active", hexColor: "#36b37e" };
+  if (isActive) return { label: "Active", color: "success" };
 
-  return { label: "Licensed", hexColor: "#69707d" };
+  return { label: "Licensed", color: "default" };
 }
 
 // ── Label helpers ─────────────────────────────────────────────────────────────
@@ -85,13 +90,15 @@ function modelClassLabel(m: TrainedModel): string {
     e5: "E5",
     dfa: "DFA Model",
     nlp: "NLP",
+    lang_ident: "Built-in",
   };
   return labels[m.modelClass] ?? "Model";
 }
 
 function modelClassColor(m: TrainedModel): string {
-  if (m.modelClass === "dfa") return "#6c4a9e";
-  return "#0071c2";
+  if (m.modelClass === "lang_ident") return "hollow";
+  if (m.modelClass === "dfa") return "hollow";
+  return "primary";
 }
 
 function stateColor(
@@ -123,17 +130,12 @@ function memoryStatusColor(
   return "default";
 }
 
+// Intentional vis-palette hex: semantic status colors used as raw CSS backgrounds for the stacked bar
 function memBarColor(pct: number): string {
   if (pct >= 90) return "#ff5630";
   if (pct >= 75) return "#ffab00";
   return "#36b37e";
 }
-
-const PANEL_LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  letterSpacing: "0.07em",
-  color: "#98a2b3",
-};
 
 // ── Sub-panels ────────────────────────────────────────────────────────────────
 
@@ -202,12 +204,9 @@ function AnomalyDetectionPanel({ jobs }: { jobs: AnomalyJob[] }) {
         justifyContent="spaceBetween"
         alignItems="center"
         gutterSize="s"
-        style={{ marginBottom: 12 }}
       >
         <EuiFlexItem grow={false}>
-          <EuiText size="xs">
-            <strong style={PANEL_LABEL_STYLE}>Anomaly Detection</strong>
-          </EuiText>
+          <EuiTitle size="xs"><h3>Anomaly Detection</h3></EuiTitle>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiBadge color="hollow">
@@ -215,6 +214,7 @@ function AnomalyDetectionPanel({ jobs }: { jobs: AnomalyJob[] }) {
           </EuiBadge>
         </EuiFlexItem>
       </EuiFlexGroup>
+      <EuiSpacer size="s" />
 
       {criticalJobs.map((job) => {
         const isDanger =
@@ -268,7 +268,7 @@ function TrainedModelsPanel({ models }: { models: TrainedModel[] }) {
         t ? (
           <EuiBadge color="hollow">{t.replace(/_/g, " ")}</EuiBadge>
         ) : (
-          <span style={{ color: "#6b7694" }}>—</span>
+          <EuiText size="s" color="subdued" component="span">—</EuiText>
         ),
     },
     {
@@ -317,22 +317,17 @@ function TrainedModelsPanel({ models }: { models: TrainedModel[] }) {
         justifyContent="spaceBetween"
         alignItems="center"
         gutterSize="s"
-        style={{ marginBottom: 12 }}
       >
         <EuiFlexItem grow={false}>
-          <EuiText size="xs">
-            <strong style={PANEL_LABEL_STYLE}>
-              Trained Models &amp; NLP Deployments
-            </strong>
-          </EuiText>
+          <EuiTitle size="xs"><h3>Trained Models &amp; NLP Deployments</h3></EuiTitle>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiBadge color="hollow">
-            {models.length} model{models.length !== 1 ? "s" : ""} · lang_ident
-            excluded
+            {models.length} model{models.length !== 1 ? "s" : ""}
           </EuiBadge>
         </EuiFlexItem>
       </EuiFlexGroup>
+      <EuiSpacer size="s" />
       <EuiBasicTable items={models} columns={columns} tableLayout="auto" />
     </EuiPanel>
   );
@@ -373,12 +368,9 @@ function DFAPanel({ jobs }: { jobs: DFAJob[] }) {
         justifyContent="spaceBetween"
         alignItems="center"
         gutterSize="s"
-        style={{ marginBottom: 12 }}
       >
         <EuiFlexItem grow={false}>
-          <EuiText size="xs">
-            <strong style={PANEL_LABEL_STYLE}>Data Frame Analytics</strong>
-          </EuiText>
+          <EuiTitle size="xs"><h3>Data Frame Analytics</h3></EuiTitle>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiBadge color="hollow">
@@ -386,6 +378,7 @@ function DFAPanel({ jobs }: { jobs: DFAJob[] }) {
           </EuiBadge>
         </EuiFlexItem>
       </EuiFlexGroup>
+      <EuiSpacer size="s" />
       <EuiBasicTable items={jobs} columns={columns} tableLayout="auto" />
     </EuiPanel>
   );
@@ -394,9 +387,8 @@ function DFAPanel({ jobs }: { jobs: DFAJob[] }) {
 function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
   return (
     <EuiPanel paddingSize="m">
-      <EuiText size="xs" style={{ marginBottom: 12 }}>
-        <strong style={PANEL_LABEL_STYLE}>ML Memory</strong>
-      </EuiText>
+      <EuiTitle size="xs"><h3>ML Memory</h3></EuiTitle>
+      <EuiSpacer size="s" />
       {nodes.map((node) => {
         const usedBytes =
           node.anomalyDetectorsBytes +
@@ -482,87 +474,43 @@ function IndexNameList({
   const userNames = names.filter((n) => !n.startsWith(".")).sort();
   const systemNames = names.filter((n) => n.startsWith(".")).sort();
   const bothGroups = userNames.length > 0 && systemNames.length > 0;
+
+  const renderItems = (items: string[], isSystem: boolean) =>
+    items.map((name) => (
+      <EuiListGroupItem
+        key={name}
+        size="xs"
+        color={isSystem ? "subdued" : "text"}
+        label={<code>{name}</code>}
+        icon={<Dot color={isSystem ? "#444c60" : dotColor} />}
+        wrapText
+      />
+    ));
+
   return (
     <div style={{ marginTop: 6 }}>
       {userNames.length > 0 && (
         <>
           {bothGroups && (
-            <div
-              style={{
-                fontSize: 10,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "#6b7694",
-                marginBottom: 4,
-              }}
-            >
+            <EuiText size="xs" color="subdued" style={{ textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>
               User
-            </div>
+            </EuiText>
           )}
-          {userNames.map((name) => (
-            <div
-              key={name}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                marginBottom: 3,
-              }}
-            >
-              <span
-                style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: "50%",
-                  background: dotColor,
-                  flexShrink: 0,
-                  display: "inline-block",
-                }}
-              />
-              <code style={{ fontSize: 12, color: "#c2c6d4" }}>{name}</code>
-            </div>
-          ))}
+          <EuiListGroup flush gutterSize="none">
+            {renderItems(userNames, false)}
+          </EuiListGroup>
         </>
       )}
       {systemNames.length > 0 && (
         <>
           {bothGroups && (
-            <div
-              style={{
-                fontSize: 10,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "#6b7694",
-                marginBottom: 4,
-                marginTop: 8,
-              }}
-            >
+            <EuiText size="xs" color="subdued" style={{ textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 8, marginBottom: 2 }}>
               System
-            </div>
+            </EuiText>
           )}
-          {systemNames.map((name) => (
-            <div
-              key={name}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                marginBottom: 3,
-              }}
-            >
-              <span
-                style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: "50%",
-                  background: "#444c60",
-                  flexShrink: 0,
-                  display: "inline-block",
-                }}
-              />
-              <code style={{ fontSize: 12, color: "#8892a4" }}>{name}</code>
-            </div>
-          ))}
+          <EuiListGroup flush gutterSize="none">
+            {renderItems(systemNames, true)}
+          </EuiListGroup>
         </>
       )}
     </div>
@@ -578,56 +526,30 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
 
   return (
     <EuiPanel paddingSize="m">
-      <EuiText size="xs" style={{ marginBottom: 12 }}>
-        <strong style={PANEL_LABEL_STYLE}>Semantic &amp; Vector Search</strong>
-      </EuiText>
+      <EuiTitle size="xs"><h3>Semantic &amp; Vector Search</h3></EuiTitle>
+      <EuiSpacer size="s" />
       <EuiFlexGroup gutterSize="m" wrap style={{ marginBottom: 12 }}>
         {[
-          {
-            label: "semantic_text indices",
-            count: features.semanticTextIndexCount,
-          },
-          {
-            label: "dense_vector indices",
-            count: features.denseVectorIndexCount,
-          },
-          {
-            label: "sparse_vector indices",
-            count: features.sparseVectorIndexCount,
-          },
+          { label: "Semantic Text", count: features.semanticTextIndexCount },
+          { label: "Dense Vector", count: features.denseVectorIndexCount },
+          { label: "Sparse Vector", count: features.sparseVectorIndexCount },
         ].map(({ label, count }) => (
           <EuiFlexItem key={label} grow={false}>
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: 22,
-                  fontWeight: 700,
-                  color: count > 0 ? "#4c9aff" : "#6b7694",
-                }}
-              >
-                {count}
-              </div>
-              <EuiText size="xs" color="subdued">
-                {label}
-              </EuiText>
-            </div>
+            <EuiStat
+              title={count}
+              description={label}
+              titleColor={count > 0 ? "primary" : "subdued"}
+              titleSize="s"
+            />
           </EuiFlexItem>
         ))}
       </EuiFlexGroup>
 
       {hasDenseGroups && (
         <div style={{ marginTop: 4 }}>
-          <div
-            style={{
-              fontSize: 10,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#6b7694",
-              marginBottom: 6,
-            }}
-          >
+          <EuiText size="xs" color="subdued" style={{ textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
             dense_vector
-          </div>
+          </EuiText>
           {features.denseVectorDimGroups.map(
             ({ dims, count, inferenceId, indexNames }) => {
               const typeLabel = inferenceId
@@ -638,32 +560,20 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
                   key={`${dims}::${inferenceId ?? ""}`}
                   style={{ marginBottom: indexNames.length > 0 ? 10 : 4 }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      fontSize: 13,
-                      color: "#c2c6d4",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: 600,
-                        color: "#4c9aff",
-                        minWidth: 36,
-                      }}
-                    >
-                      {dims}
-                    </span>
-                    <span style={{ color: "#6b7694" }}>dims</span>
-                    <span style={{ color: "#6b7694" }}>·</span>
-                    <span>
-                      {count} {count === 1 ? "index" : "indices"}
-                    </span>
-                    <span style={{ color: "#6b7694" }}>·</span>
-                    <span style={{ color: "#6b7694" }}>{typeLabel}</span>
-                  </div>
+                  <EuiFlexGroup gutterSize="xs" alignItems="center" responsive={false}>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="primary" component="span"><strong style={{ minWidth: 36, display: "inline-block" }}>{dims}</strong></EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="subdued" component="span">dims ·</EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" component="span">{count} {count === 1 ? "index" : "indices"}</EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="s" color="subdued" component="span">· {typeLabel}</EuiText>
+                    </EuiFlexItem>
+                  </EuiFlexGroup>
                   {indexNames.length > 0 && (
                     <div style={{ paddingLeft: 16 }}>
                       <IndexNameList names={indexNames} dotColor="#4c9aff" />
@@ -678,34 +588,18 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
 
       {hasSparseNames && (
         <div style={{ marginTop: hasDenseGroups ? 10 : 4 }}>
-          <div
-            style={{
-              fontSize: 10,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#6b7694",
-              marginBottom: 6,
-            }}
-          >
+          <EuiText size="xs" color="subdued" style={{ textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
             sparse_vector
-          </div>
+          </EuiText>
           <IndexNameList names={sparseNames} dotColor="#7b61ff" />
         </div>
       )}
 
       {hasSemanticNames && (
         <div style={{ marginTop: hasDenseGroups || hasSparseNames ? 10 : 4 }}>
-          <div
-            style={{
-              fontSize: 10,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#6b7694",
-              marginBottom: 6,
-            }}
-          >
+          <EuiText size="xs" color="subdued" style={{ textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
             semantic_text
-          </div>
+          </EuiText>
           <IndexNameList names={semanticNames} dotColor="#00bfb3" />
         </div>
       )}
@@ -715,6 +609,7 @@ function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
 
 const Dot = ({ color }: { color: string }) => (
   <span
+    aria-hidden="true"
     style={{
       display: "inline-block",
       width: 7,
@@ -737,25 +632,21 @@ const Pill = ({
   title: string;
   subtitle: string;
 }) => (
-  <div
-    style={{
-      display: "inline-flex",
-      alignItems: "flex-start",
-      background: "#111827",
-      border: "1px solid #2c3040",
-      borderRadius: 4,
-      padding: "5px 10px",
-      fontSize: 13,
-      color: "#c2c6d4",
-      marginBottom: 6,
-    }}
+  <EuiPanel
+    hasShadow={false}
+    paddingSize="s"
+    style={{ marginBottom: 6 }}
   >
-    <Dot color={dotColor} />
-    <div>
-      <div>{title}</div>
-      <div style={{ fontSize: 13, color: "#6b7694" }}>{subtitle}</div>
-    </div>
-  </div>
+    <EuiFlexGroup gutterSize="s" alignItems="flexStart" responsive={false}>
+      <EuiFlexItem grow={false}>
+        <Dot color={dotColor} />
+      </EuiFlexItem>
+      <EuiFlexItem>
+        <EuiText size="s">{title}</EuiText>
+        <EuiText size="xs" color="subdued">{subtitle}</EuiText>
+      </EuiFlexItem>
+    </EuiFlexGroup>
+  </EuiPanel>
 );
 
 const SubSection = ({
@@ -766,17 +657,8 @@ const SubSection = ({
   children: React.ReactNode;
 }) => (
   <EuiFlexItem style={{ minWidth: 220 }}>
-    <EuiText
-      size="xs"
-      color="subdued"
-      style={{
-        textTransform: "uppercase",
-        letterSpacing: "0.07em",
-        marginBottom: 6,
-      }}
-    >
-      <strong>{title}</strong>
-    </EuiText>
+    <EuiTitle size="xxs"><h4>{title}</h4></EuiTitle>
+    <EuiSpacer size="s" />
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {children}
     </div>
@@ -800,7 +682,7 @@ function AIFeaturesPanel({
       field: "dims" as const,
       name: "Dimensions",
       render: (d: number) => (
-        <span style={{ fontWeight: 600, color: "#4c9aff" }}>{d}</span>
+        <EuiText size="s" color="primary" component="span"><strong>{d}</strong></EuiText>
       ),
     },
     {
@@ -815,7 +697,7 @@ function AIFeaturesPanel({
         return hint ? (
           <EuiBadge color="hollow">{hint}</EuiBadge>
         ) : (
-          <span style={{ color: "#6b7694" }}>—</span>
+          <EuiText size="s" color="subdued" component="span">—</EuiText>
         );
       },
     },
@@ -823,13 +705,12 @@ function AIFeaturesPanel({
 
   return (
     <EuiPanel paddingSize="m">
-      <EuiText size="xs" style={{ marginBottom: 12 }}>
-        <strong style={PANEL_LABEL_STYLE}>AI Features Detected</strong>
-      </EuiText>
+      <EuiTitle size="xs"><h3>AI Features Detected</h3></EuiTitle>
+      <EuiSpacer size="s" />
       <EuiFlexGroup gutterSize="m" wrap>
         {(aiFeatures.hasSecurityAiAssistant ||
           aiFeatures.hasObservabilityAiAssistant) && (
-          <SubSection title="AI Assistants">
+          <SubSection title="AI Agents">
             {aiFeatures.hasSecurityAiAssistant && (
               <Pill
                 dotColor="#36b37e"
@@ -907,17 +788,8 @@ function AIFeaturesPanel({
 
       {externalGroups.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <EuiText
-            size="xs"
-            color="subdued"
-            style={{
-              textTransform: "uppercase",
-              letterSpacing: "0.07em",
-              marginBottom: 12,
-            }}
-          >
-            <strong>External Models</strong>
-          </EuiText>
+          <EuiTitle size="xxs"><h4>External Models</h4></EuiTitle>
+          <EuiSpacer size="s" />
           <EuiBasicTable
             items={externalGroups}
             columns={externalColumns}
@@ -926,56 +798,6 @@ function AIFeaturesPanel({
         </div>
       )}
     </EuiPanel>
-  );
-}
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
-
-function StatCard({
-  label,
-  value,
-  sub,
-  valueColor,
-}: {
-  label: string;
-  value: React.ReactNode;
-  sub?: React.ReactNode;
-  valueColor?: string;
-}) {
-  return (
-    <EuiFlexItem grow={false} style={{ minWidth: 130 }}>
-      <EuiPanel
-        paddingSize="m"
-        style={{ background: "#111827", border: "1px solid #2c3040" }}
-      >
-        <EuiText
-          size="xs"
-          color="subdued"
-          style={{
-            textTransform: "uppercase",
-            letterSpacing: "0.07em",
-            marginBottom: 4,
-          }}
-        >
-          {label}
-        </EuiText>
-        <div
-          style={{
-            fontSize: 22,
-            fontWeight: 700,
-            color: valueColor ?? "#f0f1f5",
-            lineHeight: 1,
-          }}
-        >
-          {value}
-        </div>
-        {sub && (
-          <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
-            {sub}
-          </EuiText>
-        )}
-      </EuiPanel>
-    </EuiFlexItem>
   );
 }
 
@@ -1030,40 +852,48 @@ export default function AiMlSection({ aiMl, features }: Props) {
     <div>
       {/* Status badge */}
       <div style={{ marginBottom: 12 }}>
-        <EuiBadge color={status.hexColor}>{status.label}</EuiBadge>
+        <EuiBadge color={status.color}>{status.label}</EuiBadge>
       </div>
 
       {/* Stat cards */}
       <EuiFlexGroup gutterSize="m" wrap style={{ marginBottom: 16 }}>
-        <StatCard
-          label="ML Status"
-          value={
-            aiMl.upgradeMode
-              ? "Upgrade Mode"
-              : aiMl.mlEnabled
-                ? "Enabled"
-                : "Disabled"
-          }
-          valueColor={
-            aiMl.upgradeMode
-              ? "#ffab00"
-              : aiMl.mlEnabled
-                ? "#36b37e"
-                : "#69707d"
-          }
-        />
+        <EuiFlexItem grow={false} style={{ minWidth: 130 }}>
+          <EuiPanel paddingSize="m">
+            <EuiStat
+              title={
+                aiMl.upgradeMode
+                  ? "Upgrade Mode"
+                  : aiMl.mlEnabled
+                    ? "Enabled"
+                    : "Disabled"
+              }
+              description="ML Status"
+              titleColor={
+                aiMl.upgradeMode
+                  ? "warning"
+                  : aiMl.mlEnabled
+                    ? "success"
+                    : "subdued"
+              }
+              titleSize="s"
+            />
+          </EuiPanel>
+        </EuiFlexItem>
         {aiMl.anomalyJobs.length > 0 && (
-          <StatCard
-            label="Anomaly Jobs"
-            value={aiMl.anomalyJobs.length}
-            sub={
-              <>
+          <EuiFlexItem grow={false} style={{ minWidth: 130 }}>
+            <EuiPanel paddingSize="m">
+              <EuiStat
+                title={aiMl.anomalyJobs.length}
+                description="Anomaly Jobs"
+                titleSize="s"
+              />
+              <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
                 {openedJobs > 0 && (
-                  <span style={{ color: "#36b37e" }}>{openedJobs} opened</span>
+                  <EuiText size="xs" color="success" component="span">{openedJobs} opened</EuiText>
                 )}
                 {openedJobs > 0 && failedJobs > 0 && " · "}
                 {failedJobs > 0 && (
-                  <span style={{ color: "#ff5630" }}>{failedJobs} failed</span>
+                  <EuiText size="xs" color="danger" component="span">{failedJobs} failed</EuiText>
                 )}
                 {closedJobs > 0 &&
                   (openedJobs > 0 || failedJobs > 0) &&
@@ -1072,41 +902,69 @@ export default function AiMlSection({ aiMl, features }: Props) {
                   openedJobs === 0 &&
                   failedJobs === 0 &&
                   `${closedJobs} closed`}
-              </>
-            }
-          />
+              </EuiText>
+            </EuiPanel>
+          </EuiFlexItem>
         )}
         {nonTrivialModels.length > 0 && (
-          <StatCard
-            label="NLP Models"
-            value={nonTrivialModels.length}
-            valueColor="#4c9aff"
-            sub={nonTrivialModels.map((m) => modelClassLabel(m)).join(" · ")}
-          />
+          <EuiFlexItem grow={false} style={{ minWidth: 130 }}>
+            <EuiPanel paddingSize="m">
+              <EuiStat
+                title={nonTrivialModels.length}
+                description="NLP Models"
+                titleColor="primary"
+                titleSize="s"
+              />
+              <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
+                {nonTrivialModels.map((m) => modelClassLabel(m)).join(" · ")}
+              </EuiText>
+            </EuiPanel>
+          </EuiFlexItem>
         )}
         {features && features.semanticTextIndexCount > 0 && (
-          <StatCard
-            label="Semantic Indices"
-            value={features.semanticTextIndexCount}
-            valueColor="#4c9aff"
-            sub="semantic_text fields"
-          />
+          <EuiFlexItem grow={false} style={{ minWidth: 130 }}>
+            <EuiPanel paddingSize="m">
+              <EuiStat
+                title={features.semanticTextIndexCount}
+                description="Semantic Indices"
+                titleColor="primary"
+                titleSize="s"
+              />
+              <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
+                semantic_text fields
+              </EuiText>
+            </EuiPanel>
+          </EuiFlexItem>
         )}
         {activeInferenceEndpoints.length > 0 && (
-          <StatCard
-            label="Inference Endpoints"
-            value={activeInferenceEndpoints.length}
-            valueColor="#4c9aff"
-            sub="referenced in mappings / pipelines"
-          />
+          <EuiFlexItem grow={false} style={{ minWidth: 130 }}>
+            <EuiPanel paddingSize="m">
+              <EuiStat
+                title={activeInferenceEndpoints.length}
+                description="Inference Endpoints"
+                titleColor="primary"
+                titleSize="s"
+              />
+              <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
+                referenced in mappings / pipelines
+              </EuiText>
+            </EuiPanel>
+          </EuiFlexItem>
         )}
         {aiAssistantLabel && (
-          <StatCard
-            label="AI Assistant"
-            value="Active"
-            valueColor="#36b37e"
-            sub={aiAssistantLabel}
-          />
+          <EuiFlexItem grow={false} style={{ minWidth: 130 }}>
+            <EuiPanel paddingSize="m">
+              <EuiStat
+                title="Active"
+                description="AI Agent"
+                titleColor="success"
+                titleSize="s"
+              />
+              <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
+                {aiAssistantLabel}
+              </EuiText>
+            </EuiPanel>
+          </EuiFlexItem>
         )}
       </EuiFlexGroup>
 
@@ -1117,9 +975,9 @@ export default function AiMlSection({ aiMl, features }: Props) {
           <EuiSpacer size="m" />
         </>
       )}
-      {nonTrivialModels.length > 0 && (
+      {aiMl.trainedModels.length > 0 && (
         <>
-          <TrainedModelsPanel models={nonTrivialModels} />
+          <TrainedModelsPanel models={aiMl.trainedModels} />
           <EuiSpacer size="m" />
         </>
       )}
