@@ -45,8 +45,14 @@ export default function Overview({ model, kibana }: Props) {
   const runner = model.identity?.runner?.toUpperCase()
   let deploymentLabel: string | null = null
   let deploymentSub: string | null = null
+  let consumedErus: number | null = null
   if (runner === 'CLI') {
     deploymentLabel = 'Self-Hosted'
+    // ERUs consumed = total RAM across all nodes / 64GB (1 ERU per 64GB).
+    // Binary GB (64 GiB) to match the byte units used elsewhere in the UI.
+    const ERU_BYTES = 64 * 1024 ** 3
+    const totalRamBytes = model.nodes.reduce((sum, n) => sum + (n.ramTotal ?? 0), 0)
+    if (totalRamBytes > 0) consumedErus = totalRamBytes / ERU_BYTES
   } else if (runner === 'ESS') {
     deploymentLabel = 'ECH'
     const parts: string[] = []
@@ -85,6 +91,11 @@ export default function Overview({ model, kibana }: Props) {
               </>
             ) : (
               <EuiText size="s"><strong>{deploymentLabel}</strong></EuiText>
+            )}
+            {consumedErus !== null && (
+              <EuiText size="s" color="subdued" style={{ marginTop: 2 }}>
+                {consumedErus.toFixed(1)} ERUs
+              </EuiText>
             )}
           </EuiPanel>
         </EuiFlexItem>
