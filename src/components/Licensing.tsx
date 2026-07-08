@@ -40,7 +40,7 @@ export default function Licensing({ license }: Props) {
     items.push({ label: 'Max nodes', value: String(license.maxNodes) })
   }
   if (license.maxResourceUnits !== null) {
-    items.push({ label: 'Max resource units', value: license.maxResourceUnits.toLocaleString() })
+    items.push({ label: 'Total ERUs', value: license.maxResourceUnits.toLocaleString() })
   }
 
   return (
