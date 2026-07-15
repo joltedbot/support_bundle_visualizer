@@ -68,16 +68,31 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const nodes = parseNodes(files)
   const shards = parseShards(files)
 
-  // Compute shard counts per node
+  // Compute shard counts and snapshot dataset totals per node
   const shardCountsByNode = new Map<string, number>()
+  const snapshotDataByNode = new Map<string, number>()
   for (const shard of shards) {
     if (shard.node) {
       shardCountsByNode.set(shard.node, (shardCountsByNode.get(shard.node) ?? 0) + 1)
+      // dataset > store means the shard lives on a searchable snapshot (remote storage)
+      if (shard.datasetSizeBytes > shard.storeSizeBytes) {
+        snapshotDataByNode.set(shard.node, (snapshotDataByNode.get(shard.node) ?? 0) + shard.datasetSizeBytes)
+      }
     }
   }
+  const DATA_TIERS = new Set(['hot', 'warm', 'cold', 'frozen'])
   const nodesWithShardCounts = nodes.map((node) => {
     const count = shardCountsByNode.get(node.name)
-    return count !== undefined ? { ...node, shardCount: count } : node
+    const snapshotData = snapshotDataByNode.get(node.name)
+    // Always set shardCount for data-tier nodes so 0-shard nodes render the bar
+    const updates: Partial<typeof node> = {}
+    if (count !== undefined || DATA_TIERS.has(node.tier)) {
+      updates.shardCount = count ?? 0
+    }
+    if (snapshotData !== undefined) {
+      updates.snapshotDataBytes = snapshotData
+    }
+    return Object.keys(updates).length > 0 ? { ...node, ...updates } : node
   })
 
   // Compute tier storage via shard-to-node join
