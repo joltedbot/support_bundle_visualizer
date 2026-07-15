@@ -51,6 +51,7 @@ export interface NodeInfo {
   ramTotal?: number         // bytes
   availableProcessors?: number
   shardCount?: number       // total shards assigned to this node
+  snapshotDataBytes?: number  // total dataset size of searchable snapshot shards on this node (frozen tier only)
 }
 
 export interface IndexInfo {
@@ -75,6 +76,7 @@ export interface ShardInfo {
   state: string
   node?: string
   storeSizeBytes: number
+  datasetSizeBytes: number  // total dataset size incl. remote (searchable snapshot); equals storeSizeBytes for regular shards
   // Flags
   oversized: boolean   // > 50GB
   undersized: boolean  // < 1GB (and not empty)

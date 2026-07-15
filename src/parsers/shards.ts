@@ -47,6 +47,7 @@ export function parseShards(files: Map<string, string>): ShardInfo[] {
   const prirepIdx = col('prirep')
   const stateIdx = col('state')
   const storeIdx = col('store')
+  const datasetIdx = col('dataset')
   const nodeIdx = col('node')
 
   if (indexIdx === -1 || shardIdx === -1) return []
@@ -66,6 +67,7 @@ export function parseShards(files: Map<string, string>): ShardInfo[] {
     const state = stateIdx !== -1 ? (parts[stateIdx] ?? 'UNKNOWN') : 'UNKNOWN'
     const node = nodeIdx !== -1 ? parts[nodeIdx] : undefined
     const storeSizeBytes = storeIdx !== -1 ? parseSize(parts[storeIdx] ?? '') : 0
+    const datasetSizeBytes = datasetIdx !== -1 ? parseSize(parts[datasetIdx] ?? '') : storeSizeBytes
 
     result.push({
       index,
@@ -74,6 +76,7 @@ export function parseShards(files: Map<string, string>): ShardInfo[] {
       state,
       node,
       storeSizeBytes,
+      datasetSizeBytes,
       oversized: storeSizeBytes > OVERSIZED_BYTES,
       undersized: storeSizeBytes > 0 && storeSizeBytes < UNDERSIZED_BYTES,
     })

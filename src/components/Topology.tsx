@@ -167,11 +167,26 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
       {node.diskUsedPercent !== undefined && (
         <div style={{ marginBottom: 4 }}>
           <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-            <EuiFlexItem><EuiText size="xs" color="subdued">Disk Used</EuiText></EuiFlexItem>
+            <EuiFlexItem>
+              <EuiText size="xs" color="subdued">
+                {node.tier === 'frozen' ? 'Snapshot Cache' : 'Disk Used'}
+              </EuiText>
+            </EuiFlexItem>
             <EuiFlexItem grow={false}><EuiText size="xs">{node.diskUsedPercent}%</EuiText></EuiFlexItem>
           </EuiFlexGroup>
-          <EuiProgress value={node.diskUsedPercent} max={100} size="s" color={diskColor} />
+          <EuiProgress
+            value={node.diskUsedPercent}
+            max={100}
+            size="s"
+            color={node.tier === 'frozen' ? 'subdued' : diskColor}
+          />
         </div>
+      )}
+
+      {node.snapshotDataBytes !== undefined && node.snapshotDataBytes > 0 && (
+        <EuiText size="xs" color="subdued" style={{ marginBottom: 4 }}>
+          Snapshot data: {formatBytes(node.snapshotDataBytes)}
+        </EuiText>
       )}
 
       {node.shardCount !== undefined && (() => {
