@@ -42,7 +42,10 @@ export default function FeaturesIntegrations({ features, ilm, replication, kiban
   }
 
   if (features?.hasCCR && replication) {
-    badges.push({ label: `CCR (${replication.followerIndexCount} followers)`, color: '#0071c2' })
+    const parts: string[] = []
+    if (replication.followerIndexCount > 0) parts.push(`${replication.followerIndexCount} follower`)
+    if (replication.leaderIndexCount > 0) parts.push(`${replication.leaderIndexCount} leader`)
+    badges.push({ label: `CCR (${parts.join(', ')})`, color: '#0071c2' })
   } else if (features?.hasCCR) {
     badges.push({ label: 'CCR', color: '#0071c2' })
   }

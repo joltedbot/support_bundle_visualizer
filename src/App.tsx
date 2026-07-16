@@ -91,6 +91,15 @@ function App() {
             maxShardsPerNodeFrozen={model.clusterSettings?.maxShardsPerNodeFrozen ?? null}
           />
 
+          {model.replication && (model.replication.hasCCR || model.replication.remoteClusterCount > 0) && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Cross-Cluster</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <CrossCluster replication={model.replication} />
+            </>
+          )}
+
           {(model.features || kibana) && (
             <>
               <EuiSpacer size="l" />
@@ -125,7 +134,7 @@ function App() {
           <EuiSpacer size="l" />
           <EuiTitle size="s"><h3>Indexes</h3></EuiTitle>
           <EuiSpacer size="s" />
-          <IndexLandscape indices={model.indices} shards={model.shards} />
+          <IndexLandscape indices={model.indices} shards={model.shards} replication={model.replication} />
 
           {model.dataStreams.length > 0 && (
             <>
@@ -142,15 +151,6 @@ function App() {
               <EuiTitle size="s"><h3>Ingest Pipelines</h3></EuiTitle>
               <EuiSpacer size="s" />
               <IngestPipelines pipelines={model.ingestPipelines} />
-            </>
-          )}
-
-          {model.replication && (model.replication.hasCCR || model.replication.remoteClusterCount > 0) && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Cross-Cluster</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <CrossCluster replication={model.replication} />
             </>
           )}
 

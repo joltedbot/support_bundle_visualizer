@@ -13,16 +13,22 @@ interface Props {
   replication: ReplicationInfo | null
 }
 
+function clusterRole(followerIndexCount: number, leaderIndexCount: number): string {
+  if (followerIndexCount > 0 && leaderIndexCount > 0) return 'Bi-Directional'
+  if (leaderIndexCount > 0) return 'Leader Cluster'
+  return 'Follower Cluster'
+}
+
 export default function CrossCluster({ replication }: Props) {
   if (!replication) return null
 
   const {
     hasCCR,
     followerIndexCount,
+    leaderIndexCount,
     remoteClusterCount,
     remoteClusterNames,
     remoteClusters,
-    followerIndices,
     autoFollowPatterns,
   } = replication
 
@@ -60,30 +66,6 @@ export default function CrossCluster({ replication }: Props) {
     },
   ]
 
-  const followerColumns = [
-    {
-      field: 'followerIndex',
-      name: 'Follower Index',
-      render: (name: string) => <strong>{name}</strong>,
-    },
-    {
-      field: 'leaderIndex',
-      name: 'Leader Index',
-    },
-    {
-      field: 'remoteCluster',
-      name: 'Remote Cluster',
-      render: (name: string) => <EuiBadge color="hollow">{name}</EuiBadge>,
-    },
-    {
-      field: 'status',
-      name: 'Status',
-      render: (status: string) => (
-        <EuiBadge color={status === 'active' ? 'success' : 'warning'}>{status}</EuiBadge>
-      ),
-    },
-  ]
-
   const autoFollowColumns = [
     {
       field: 'name',
@@ -114,11 +96,36 @@ export default function CrossCluster({ replication }: Props) {
             <EuiPanel paddingSize="m" style={{ minWidth: 200 }}>
               <EuiText size="xs" color="subdued">Cross-Cluster Replication (CCR)</EuiText>
               <EuiSpacer size="xs" />
+              {followerIndexCount > 0 && (
+                <EuiText size="s">
+                  <strong>{followerIndexCount}</strong>{' '}
+                  <span style={{ color: 'var(--euiColorSubduedText)' }}>
+                    follower {followerIndexCount === 1 ? 'index' : 'indices'}
+                  </span>
+                </EuiText>
+              )}
+              {leaderIndexCount > 0 && (
+                <>
+                  {followerIndexCount > 0 && <EuiSpacer size="xs" />}
+                  <EuiText size="s">
+                    <strong>{leaderIndexCount}</strong>{' '}
+                    <span style={{ color: 'var(--euiColorSubduedText)' }}>
+                      leader {leaderIndexCount === 1 ? 'index' : 'indices'}
+                    </span>
+                  </EuiText>
+                </>
+              )}
+            </EuiPanel>
+          </EuiFlexItem>
+        )}
+
+        {hasCCR && (
+          <EuiFlexItem grow={false}>
+            <EuiPanel paddingSize="m" style={{ minWidth: 160 }}>
+              <EuiText size="xs" color="subdued">Role</EuiText>
+              <EuiSpacer size="xs" />
               <EuiText size="s">
-                <strong>{followerIndexCount}</strong>{' '}
-                <span style={{ color: 'var(--euiColorSubduedText)' }}>
-                  follower {followerIndexCount === 1 ? 'index' : 'indices'}
-                </span>
+                <strong>{clusterRole(followerIndexCount, leaderIndexCount)}</strong>
               </EuiText>
             </EuiPanel>
           </EuiFlexItem>
@@ -151,19 +158,6 @@ export default function CrossCluster({ replication }: Props) {
             <EuiBasicTable
               items={remoteClusters}
               columns={remoteColumns}
-            />
-          </EuiPanel>
-        </>
-      )}
-
-      {followerIndices.length > 0 && (
-        <>
-          <EuiSpacer size="l" />
-          <EuiPanel paddingSize="m">
-            <EuiText size="s" style={{ marginBottom: 12 }}><strong>Follower Indices</strong></EuiText>
-            <EuiBasicTable
-              items={followerIndices}
-              columns={followerColumns}
             />
           </EuiPanel>
         </>

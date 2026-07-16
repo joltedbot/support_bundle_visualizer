@@ -244,11 +244,12 @@ export interface RemoteCluster {
   maxSocketConnections?: number
 }
 
-export interface FollowerIndex {
-  followerIndex: string
+export interface ReplicationIndex {
+  localIndex: string
+  remoteIndex: string
   remoteCluster: string
-  leaderIndex: string
-  status: string
+  role: 'Leader' | 'Follower'
+  status: string | null
 }
 
 export interface AutoFollowPattern {
@@ -261,10 +262,11 @@ export interface AutoFollowPattern {
 export interface ReplicationInfo {
   hasCCR: boolean
   followerIndexCount: number
+  leaderIndexCount: number
   remoteClusterCount: number
   remoteClusterNames: string[]
   remoteClusters: RemoteCluster[]
-  followerIndices: FollowerIndex[]
+  replicationIndices: ReplicationIndex[]
   autoFollowPatterns: AutoFollowPattern[]
 }
 
