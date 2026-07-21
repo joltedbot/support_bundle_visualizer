@@ -31,7 +31,6 @@ export default function Licensing({ license }: Props) {
     { label: 'Type', value: license.type },
     { label: 'Status', value: <EuiBadge color={statusColor(license.status)}>{license.status}</EuiBadge> },
     { label: 'Issued to', value: license.issuedTo ?? '—' },
-    { label: 'Issuer', value: license.issuer ?? '—' },
     { label: 'Issue date', value: formatDate(license.issueDate) },
     { label: 'Expiry date', value: formatDate(license.expiryDate) },
   ]
@@ -39,7 +38,8 @@ export default function Licensing({ license }: Props) {
   if (license.maxNodes !== null) {
     items.push({ label: 'Max nodes', value: String(license.maxNodes) })
   }
-  if (license.maxResourceUnits !== null) {
+  const isCloudLicense = license.issuedTo === 'Elastic Cloud'
+  if (license.maxResourceUnits !== null && !isCloudLicense) {
     items.push({ label: 'Total ERUs', value: license.maxResourceUnits.toLocaleString() })
   }
 
