@@ -10,12 +10,94 @@
  *   api-diagnostics-YYYYMMDD/         (required)
  *   kibana-api-diagnostics-YYYYMMDD/  (optional)
  */
-import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, relative, resolve, sep } from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { parseBundle } from '../src/parsers/index.ts'
 import { parseKibana } from '../src/parsers/kibana.ts'
 import type { BundleData } from '../src/utils/bundleReader.ts'
+
+function checkUnzipAvailable(): void {
+  const result = spawnSync('which', ['unzip'])
+  if (result.error || result.status !== 0) {
+    console.error('Error: unzip is required but not found — install it via your package manager (e.g. brew install unzip or apt install unzip)')
+    process.exit(1)
+  }
+}
+
+function getRootFolderFromZip(zipPath: string): string | null {
+  try {
+    const output = execFileSync('unzip', ['-l', zipPath], { encoding: 'utf-8' })
+    // Lines after the 3-line header contain entries; each ends with the archive path
+    const lines = output.split('\n')
+    for (const line of lines) {
+      // Data lines match: spaces, length, date, time, then path
+      const match = line.match(/^\s+\d+\s+\S+\s+\S+\s+(.+)$/)
+      if (match) {
+        const archivePath = match[1].trim()
+        const rootFolder = archivePath.split('/')[0]
+        if (rootFolder) return rootFolder
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function isSafeZip(zipPath: string, destDir: string): boolean {
+  try {
+    const output = execFileSync('unzip', ['-l', zipPath], { encoding: 'utf-8' })
+    const resolvedDest = resolve(destDir)
+    for (const line of output.split('\n')) {
+      const match = line.match(/^\s+\d+\s+\S+\s+\S+\s+(.+)$/)
+      if (!match) continue
+      const entryPath = match[1].trim()
+      if (entryPath.startsWith('/')) return false
+      if (entryPath.split('/').includes('..')) return false
+      if (!resolve(resolvedDest, entryPath).startsWith(resolvedDest + sep)) return false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+function extractZipsInDir(dirPath: string): number {
+  let extracted = 0
+  let entries: string[]
+  try {
+    entries = readdirSync(dirPath)
+  } catch {
+    return 0
+  }
+
+  const zips = entries.filter(e => e.toLowerCase().endsWith('.zip'))
+  for (const zipName of zips) {
+    const zipPath = join(dirPath, zipName)
+    const rootFolder = getRootFolderFromZip(zipPath)
+    if (!rootFolder) {
+      console.warn(`  ↳ warning: could not read contents of ${zipName}, skipping`)
+      continue
+    }
+    if (!isSafeZip(zipPath, dirPath)) {
+      console.warn(`  ↳ warning: ${zipName} contains unsafe paths, skipping`)
+      continue
+    }
+    if (existsSync(join(dirPath, rootFolder))) {
+      console.log(`  ↳ skipping ${zipName} (already extracted as ${rootFolder})`)
+    } else {
+      console.log(`  ↳ extracting ${zipName} → ${rootFolder}`)
+      try {
+        execFileSync('unzip', ['-q', zipPath, '-d', dirPath])
+        extracted++
+      } catch {
+        console.warn(`  ↳ warning: failed to extract ${zipName}, skipping`)
+      }
+    }
+  }
+  return extracted
+}
 
 function getArg(flag: string): string | undefined {
   const idx = process.argv.indexOf(flag)
@@ -200,6 +282,30 @@ async function generateForDeployment(config: DeploymentConfig): Promise<void> {
   console.log(`  Kibana   : ${kibanaBundleName ?? 'not found (optional)'}`)
   console.log(`  Notes    : ${config.notes ?? '(none)'}`)
   console.log(`  Output   : ${config.outputDir}`)
+}
+
+checkUnzipAvailable()
+
+console.log('Checking for zip files to extract...')
+let totalExtracted = 0
+
+totalExtracted += extractZipsInDir(customerPath)
+
+for (const entry of readdirSync(customerPath)) {
+  const sub = join(customerPath, entry)
+  try {
+    if (!entry.startsWith('.') && statSync(sub).isDirectory()) {
+      totalExtracted += extractZipsInDir(sub)
+    }
+  } catch {
+    // skip unreadable entries
+  }
+}
+
+if (totalExtracted > 0) {
+  console.log(`✓ Extracted ${totalExtracted} zip file(s)\n`)
+} else {
+  console.log('  No new zips to extract\n')
 }
 
 const mode = detectDeploymentMode(customerPath)

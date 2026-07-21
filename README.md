@@ -15,26 +15,29 @@ A local tool for Elastic SAs to quickly orient on a customer cluster from an Ela
 
 ```bash
 pnpm install
+# or with npm
+npm install --legacy-peer-deps
 ```
 
-(pnpm v10 handles the React 19 and `@elastic/charts` peer dependency conflicts automatically.)
+(pnpm handles the React 19 and `@elastic/charts` peer dependency conflicts automatically. npm requires `--legacy-peer-deps` for the same reason.)
 
 ## Generating a report
 
 ### 1. Place your diagnostic bundle
 
-Create a folder named after the customer inside `diagnostics/` and place the bundle(s) inside it:
+Create a folder named after the customer inside `diagnostics/` and place the bundle(s) inside it. You can place **zip files directly** — the tool extracts them automatically before processing. Already-extracted directories and zip files can coexist freely; a zip is skipped if its contents are already present.
 
 ```
 diagnostics/
   acme-corp/
-    api-diagnostics-20260101-120000/           ← ESS cloud bundle
-    kibana-api-diagnostics-20260101-120000/    ← optional Kibana bundle (cloud)
-    kibana-local-diagnostics-20260101-120000/  ← optional Kibana bundle (self-hosted)
+    api-diagnostics-20260101-120000.zip        ← zip accepted directly
+    kibana-api-diagnostics-20260101-120000/    ← or already-extracted directory
 
   my-self-hosted/
     local-diagnostics-20260101-120000/         ← self-hosted bundle
 ```
+
+The Elastic diagnostic tool names its zip archives differently from the folder they contain (e.g. `diagnostic-41c484-2026-Jul-21.zip` extracts to `api-diagnostics-20260721-155645/`). The tool inspects the zip contents directly so the filename does not matter.
 
 Multiple customers can coexist in `diagnostics/` — each gets their own subfolder.
 
@@ -56,14 +59,19 @@ diagnostics/
 ```bash
 pnpm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
 pnpm run build
+# or with npm
+npm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
+npm run build
 ```
 
 **Multi-deployment** (build runs automatically after each deployment):
 ```bash
 pnpm run generate -- --customer ada-support --name "ADA Support"
+# or with npm
+npm run generate -- --customer ada-support --name "ADA Support"
 ```
 
-**`pnpm run generate` flags**
+**`generate` flags**
 
 | Flag | Required | Description |
 |------|----------|-------------|
