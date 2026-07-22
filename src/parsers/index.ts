@@ -80,6 +80,20 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
       }
     }
   }
+
+  // Build shared cache size map from commercial/searchable_snapshots_cache_stats.json (keyed by node ID)
+  interface CacheStatsJson {
+    nodes?: Record<string, { shared_cache?: { size_in_bytes?: number } }>
+  }
+  const cacheStatsJson = parseJsonFile<CacheStatsJson>(files, 'commercial/searchable_snapshots_cache_stats.json')
+  const sharedCacheByNodeId = new Map<string, number>()
+  if (cacheStatsJson?.nodes) {
+    for (const [id, nodeStats] of Object.entries(cacheStatsJson.nodes)) {
+      const size = nodeStats.shared_cache?.size_in_bytes
+      if (size !== undefined) sharedCacheByNodeId.set(id, size)
+    }
+  }
+
   const DATA_TIERS = new Set(['hot', 'warm', 'cold', 'frozen'])
   const nodesWithShardCounts = nodes.map((node) => {
     const count = shardCountsByNode.get(node.name)
@@ -91,6 +105,12 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     }
     if (snapshotData !== undefined) {
       updates.snapshotDataBytes = snapshotData
+    }
+    // For frozen nodes, always record snapshot data (0 when absent) and shared cache size
+    if (node.tier === 'frozen') {
+      updates.snapshotDataBytes = snapshotData ?? 0
+      const cacheSize = sharedCacheByNodeId.get(node.id)
+      if (cacheSize !== undefined) updates.sharedCacheSizeBytes = cacheSize
     }
     return Object.keys(updates).length > 0 ? { ...node, ...updates } : node
   })

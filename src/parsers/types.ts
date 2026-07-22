@@ -52,6 +52,7 @@ export interface NodeInfo {
   availableProcessors?: number
   shardCount?: number       // total shards assigned to this node
   snapshotDataBytes?: number  // total dataset size of searchable snapshot shards on this node (frozen tier only)
+  sharedCacheSizeBytes?: number  // pre-allocated shared snapshot cache size (frozen tier only)
 }
 
 export interface IndexInfo {
