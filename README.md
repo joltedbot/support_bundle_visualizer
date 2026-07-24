@@ -77,7 +77,7 @@ npm run generate -- --customer ada-support --name "ADA Support"
 |------|----------|-------------|
 | `--customer <dirname>` | Yes | Folder name inside `diagnostics/` containing the bundle. Must match exactly — this is the directory name, not the display name. |
 | `--name <string>` | Yes | Customer display name shown in the report header. Quote if it contains spaces. |
-| `--cluster <string>` | No | Cluster name shown in the report header and browser tab title. Omit if unknown. In multi-deployment mode this is derived automatically from each subfolder name. |
+| `--cluster <string>` | No | Cluster name shown in the report header and browser tab title. Auto-detected from `cluster_name` in `cluster_health.json` — pass this only to override the detected value. In multi-deployment mode, each deployment's cluster name is read from its own `cluster_health.json` (fallback: subfolder name with hyphens replaced by spaces); `--cluster` has no effect in multi-deployment mode. |
 | `--notes <string>` | No | Free-text context added to the Notes section of the report (e.g. pre-call context, known issues). Quote if it contains spaces. |
 
 ### 3. Open the report

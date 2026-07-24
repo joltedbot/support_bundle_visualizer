@@ -168,6 +168,25 @@ function detectDeploymentMode(customerPath: string): DeploymentMode {
   return { kind: 'ambiguous' }
 }
 
+function readEsClusterName(bundleParentPath: string): string | null {
+  const isDirAt = (base: string, name: string) => {
+    try { return statSync(join(base, name)).isDirectory() } catch { return false }
+  }
+  const entries = existsSync(bundleParentPath) ? readdirSync(bundleParentPath) : []
+  const esBundleName = entries.find(e =>
+    (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDirAt(bundleParentPath, e)
+  )
+  if (!esBundleName) return null
+  const clusterHealthPath = join(bundleParentPath, esBundleName, 'cluster_health.json')
+  if (!existsSync(clusterHealthPath)) return null
+  try {
+    const data = JSON.parse(readFileSync(clusterHealthPath, 'utf-8'))
+    return typeof data.cluster_name === 'string' ? data.cluster_name : null
+  } catch {
+    return null
+  }
+}
+
 function runBuild(): void {
   console.log('\nBuilding...')
   execFileSync('pnpm', ['run', 'build'], { cwd: root, stdio: 'inherit' })
@@ -324,7 +343,7 @@ if (mode.kind === 'single') {
   await generateForDeployment({
     bundleParentPath: customerPath,
     customerName,
-    clusterName,
+    clusterName: clusterName ?? readEsClusterName(customerPath),
     notes,
     outputDir: customerDir,
   })
@@ -337,13 +356,14 @@ if (mode.kind === 'single') {
   console.log('')
 
   for (const dep of mode.deployments) {
-    const deploymentClusterName = dep.replace(/-/g, ' ')
+    const depPath = join(customerPath, dep)
+    const deploymentClusterName = readEsClusterName(depPath) ?? dep.replace(/-/g, ' ')
     console.log(`\n${'='.repeat(60)}`)
-    console.log(`Processing deployment: ${dep}`)
+    console.log(`Processing deployment: ${dep} (cluster: ${deploymentClusterName})`)
     console.log(`${'='.repeat(60)}`)
 
     await generateForDeployment({
-      bundleParentPath: join(customerPath, dep),
+      bundleParentPath: depPath,
       customerName,
       clusterName: deploymentClusterName,
       notes,
