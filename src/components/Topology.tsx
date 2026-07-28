@@ -8,7 +8,7 @@ import {
   EuiSpacer,
 } from '@elastic/eui'
 import type { NodeInfo, NodeRole, KibanaInfo } from '../parsers/types'
-import { resourceColor, formatBytes } from '../utils/format'
+import { resourceColor, formatBytes, formatUptime } from '../utils/format'
 import {
   buildSummaryBar,
   groupNodesByAZ,
@@ -309,14 +309,15 @@ function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: {
 
 // ─── KibanaCard ───────────────────────────────────────────────────────────────
 
+function eventLoopColor(ms: number): 'subdued' | 'warning' | 'danger' {
+  if (ms >= 500) return 'danger'
+  if (ms >= 100) return 'warning'
+  return 'subdued'
+}
+
 function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
   const statusColor = kibana.status === 'green' ? '#017d73' : kibana.status === 'yellow' ? '#f5a700' : kibana.status === 'red' ? '#bd271e' : '#69707d'
-
-  const specs: string[] = []
-  if (kibana.heapSizeLimit) specs.push(`${formatBytes(kibana.heapSizeLimit)} instance`)
-  if (kibana.heapUsed != null && kibana.heapTotal != null) {
-    specs.push(`${formatBytes(kibana.heapUsed)} / ${formatBytes(kibana.heapTotal)} heap`)
-  }
+  const heapColor = kibana.heapPercent !== undefined ? resourceColor(kibana.heapPercent, 75, 85) : undefined
 
   return (
     <EuiPanel paddingSize="s" style={{ minWidth: 200, maxWidth: 280 }}>
@@ -332,9 +333,42 @@ function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
       </EuiFlexGroup>
       <EuiSpacer size="xs" />
       <EuiBadge color="#2563eb" style={{ fontSize: 10 }}>Kibana v{kibana.version}</EuiBadge>
-      {specs.length > 0 && (
-        <EuiText size="xs" color="subdued" style={{ marginTop: 6 }}>
-          {specs.join(' · ')}
+      {kibana.heapSizeLimit !== undefined && (
+        <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
+          {formatBytes(kibana.heapSizeLimit)} instance
+        </EuiText>
+      )}
+
+      {kibana.heapPercent !== undefined && (
+        <div style={{ marginTop: 6 }}>
+          <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
+            <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap Used</EuiText></EuiFlexItem>
+            <EuiFlexItem grow={false}><EuiText size="xs">{kibana.heapPercent}%</EuiText></EuiFlexItem>
+          </EuiFlexGroup>
+          <EuiProgress value={kibana.heapPercent} max={100} size="s" color={heapColor} />
+          {kibana.heapUsed !== undefined && kibana.heapSizeLimit !== undefined && (
+            <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
+              {formatBytes(kibana.heapUsed)} / {formatBytes(kibana.heapSizeLimit)}
+            </EuiText>
+          )}
+        </div>
+      )}
+
+      {kibana.eventLoopDelayMs !== undefined && (
+        <EuiText size="xs" color={eventLoopColor(kibana.eventLoopDelayMs)} style={{ marginTop: 4 }}>
+          Event Loop: {Math.round(kibana.eventLoopDelayMs)} ms
+        </EuiText>
+      )}
+
+      {kibana.uptimeMs !== undefined && (
+        <EuiText size="xs" color="subdued" style={{ marginTop: 2 }}>
+          Uptime: {formatUptime(kibana.uptimeMs)}
+        </EuiText>
+      )}
+
+      {kibana.responseTimeAvgMs !== undefined && kibana.concurrentConnections !== undefined && (
+        <EuiText size="xs" color="subdued" style={{ marginTop: 2 }}>
+          Avg resp: {Math.round(kibana.responseTimeAvgMs)} ms · {kibana.concurrentConnections} connections
         </EuiText>
       )}
     </EuiPanel>

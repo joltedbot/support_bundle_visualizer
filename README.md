@@ -77,7 +77,7 @@ npm run generate -- --customer ada-support --name "ADA Support"
 |------|----------|-------------|
 | `--customer <dirname>` | Yes | Folder name inside `diagnostics/` containing the bundle. Must match exactly — this is the directory name, not the display name. |
 | `--name <string>` | Yes | Customer display name shown in the report header. Quote if it contains spaces. |
-| `--cluster <string>` | No | Cluster name shown in the report header and browser tab title. Auto-detected from `cluster_name` in `cluster_health.json` — pass this only to override the detected value. In multi-deployment mode, each deployment's cluster name is read from its own `cluster_health.json` (fallback: subfolder name with hyphens replaced by spaces); `--cluster` has no effect in multi-deployment mode. |
+| `--cluster <string>` | No | Cluster name shown in the report header and browser tab title. Auto-detected from the diagnostic bundle in priority order: `cluster_settings.json` → `cluster.metadata.display_name`, then `nodes.json` → `deploymentName` (ESS), then `cluster_health.json` → `cluster_name` (skipped if it is a raw UUID). Pass this only to override the detected value. In multi-deployment mode, each deployment's cluster name is auto-detected from its own bundle (fallback: subfolder name with hyphens replaced by spaces); `--cluster` has no effect in multi-deployment mode. |
 | `--notes <string>` | No | Free-text context added to the Notes section of the report (e.g. pre-call context, known issues). Quote if it contains spaces. |
 
 ### 3. Open the report
@@ -101,7 +101,7 @@ Sections with no data are omitted automatically — no empty panels.
 | Overview | Cluster health, deployment type (ESS/self-hosted, cloud region), solution badges (Search / Observability / Security) with ES and Kibana versions, identity/auth providers, node counts, active shards, store size, document count |
 | Internal Health | Per-indicator health status for master stability, disk, shards, ILM, and SLM — color-coded red/yellow/green |
 | Licensing | License type, status, expiry date, maximum nodes, and issuer |
-| Topology | Nodes grouped by availability zone (falling back to tier); per-node vCPU, RAM, disk, role badges, and resource gauges (JVM heap %, disk %, CPU %, shard count); frozen tier nodes show "Snapshot Cache" for the disk bar (neutral color) and a "Snapshot data: X" line reflecting object-storage footprint derived from the `dataset` column; AZ summary bar showing tier distribution; Kibana nodes shown separately when a Kibana bundle is present |
+| Topology | Nodes grouped by availability zone (falling back to tier); per-node vCPU, RAM, disk, role badges, and resource gauges (JVM heap %, disk %, CPU %, shard count); frozen tier nodes show "Snapshot Cache" for the disk bar (neutral color) and a "Snapshot data: X" line reflecting object-storage footprint derived from the `dataset` column; AZ summary bar showing tier distribution; Kibana nodes shown separately when a Kibana bundle is present, with heap %, event loop delay, uptime, response time, and concurrent connections when available |
 | Features & Integrations | Enabled features as badges: ILM, CCR, snapshots, Fleet, Logstash, installed plugins, Kibana health |
 | Fleet | Fleet Server hosts, agent status summary, Agent Policies with integration counts, and all installed integrations |
 | Data Profile | Index and document counts, average document size; ILM & tiering breakdown with per-tier shard storage; snapshot repository and SLM policy summary; sizing estimates |

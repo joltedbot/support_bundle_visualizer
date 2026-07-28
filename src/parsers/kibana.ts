@@ -34,7 +34,7 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     : level === 'unavailable' || level === 'fatal' ? 'red'
     : 'unknown'
 
-  // Process heap metrics (OS RAM is the host machine on ESS — not meaningful for instance size)
+  // Process heap metrics from kibana_status.json (fallback source)
   let heapUsed: number | undefined
   let heapTotal: number | undefined
   let heapSizeLimit: number | undefined
@@ -46,6 +46,40 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     if (typeof heap?.used_in_bytes === 'number') heapUsed = heap.used_in_bytes
     if (typeof heap?.total_in_bytes === 'number') heapTotal = heap.total_in_bytes
     if (typeof heap?.size_limit === 'number') heapSizeLimit = heap.size_limit
+  }
+
+  // kibana_stats.json — richer metrics; heap fields override kibana_status.json when present
+  let heapPercent: number | undefined
+  let eventLoopDelayMs: number | undefined
+  let uptimeMs: number | undefined
+  let concurrentConnections: number | undefined
+  let responseTimeAvgMs: number | undefined
+  const stats = parseJson(files, 'kibana_stats.json')
+  if (isObj(stats)) {
+    const proc = isObj(stats.process) ? stats.process as Record<string,unknown> : null
+    if (proc) {
+      const mem = isObj(proc.memory) ? proc.memory as Record<string,unknown> : null
+      const heap = mem && isObj(mem.heap) ? mem.heap as Record<string,unknown> : null
+      if (heap) {
+        if (typeof heap.used_bytes === 'number') heapUsed = heap.used_bytes
+        if (typeof heap.total_bytes === 'number') heapTotal = heap.total_bytes
+        if (typeof heap.size_limit === 'number') heapSizeLimit = heap.size_limit
+      }
+      if (typeof proc.event_loop_delay === 'number') {
+        eventLoopDelayMs = proc.event_loop_delay
+      } else {
+        const hist = isObj(proc.event_loop_delay_histogram) ? proc.event_loop_delay_histogram as Record<string,unknown> : null
+        if (typeof hist?.mean === 'number') eventLoopDelayMs = hist.mean
+      }
+      if (typeof proc.uptime_ms === 'number') uptimeMs = proc.uptime_ms
+    }
+    if (typeof stats.concurrent_connections === 'number') concurrentConnections = stats.concurrent_connections
+    const rt = isObj(stats.response_times) ? stats.response_times as Record<string,unknown> : null
+    if (typeof rt?.avg_ms === 'number') responseTimeAvgMs = rt.avg_ms
+  }
+
+  if (heapUsed !== undefined && heapSizeLimit !== undefined && heapSizeLimit > 0) {
+    heapPercent = Math.min(100, Math.max(0, Math.round(heapUsed / heapSizeLimit * 100)))
   }
 
   // Alerting health
@@ -185,6 +219,11 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     heapUsed,
     heapTotal,
     heapSizeLimit,
+    heapPercent,
+    eventLoopDelayMs,
+    uptimeMs,
+    concurrentConnections,
+    responseTimeAvgMs,
     alertingHealth,
     hasPermanentEncryptionKey,
     taskManagerStatus,

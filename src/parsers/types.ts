@@ -317,6 +317,11 @@ export interface KibanaInfo {
   heapUsed?: number          // bytes
   heapTotal?: number         // bytes
   heapSizeLimit?: number     // bytes — V8 heap limit, corresponds to ESS instance size
+  heapPercent?: number       // used / size_limit × 100, clamped 0–100
+  eventLoopDelayMs?: number  // process.event_loop_delay ms
+  uptimeMs?: number          // process.uptime_ms
+  concurrentConnections?: number
+  responseTimeAvgMs?: number
   alertingHealth: 'ok' | 'warn' | 'error' | null
   hasPermanentEncryptionKey: boolean | null
   taskManagerStatus: 'OK' | 'warn' | 'error' | null

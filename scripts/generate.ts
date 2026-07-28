@@ -177,14 +177,49 @@ function readEsClusterName(bundleParentPath: string): string | null {
     (e.startsWith('api-diagnostics-') || e.startsWith('local-diagnostics-')) && isDirAt(bundleParentPath, e)
   )
   if (!esBundleName) return null
-  const clusterHealthPath = join(bundleParentPath, esBundleName, 'cluster_health.json')
-  if (!existsSync(clusterHealthPath)) return null
-  try {
-    const data = JSON.parse(readFileSync(clusterHealthPath, 'utf-8'))
-    return typeof data.cluster_name === 'string' ? data.cluster_name : null
-  } catch {
-    return null
+  const bundlePath = join(bundleParentPath, esBundleName)
+
+  const tryJson = (file: string): Record<string, unknown> | null => {
+    try { return JSON.parse(readFileSync(join(bundlePath, file), 'utf-8')) } catch { return null }
   }
+
+  // cluster_settings.json → cluster.metadata.display_name (flat or nested key; transient wins)
+  const settings = tryJson('cluster_settings.json')
+  if (settings) {
+    const getDisplayName = (section: unknown): string | null => {
+      if (!section || typeof section !== 'object') return null
+      const s = section as Record<string, unknown>
+      // flat key
+      if (typeof s['cluster.metadata.display_name'] === 'string' && s['cluster.metadata.display_name']) {
+        return s['cluster.metadata.display_name'] as string
+      }
+      // nested key
+      const cluster = s['cluster']
+      if (cluster && typeof cluster === 'object') {
+        const metadata = (cluster as Record<string, unknown>)['metadata']
+        if (metadata && typeof metadata === 'object') {
+          const name = (metadata as Record<string, unknown>)['display_name']
+          if (typeof name === 'string' && name) return name
+        }
+      }
+      return null
+    }
+    const name = getDisplayName(settings.transient) ?? getDisplayName(settings.persistent)
+    if (name) return name
+  }
+
+  // nodes.json → deploymentName (ESS top-level field)
+  const nodesData = tryJson('nodes.json')
+  if (typeof nodesData?.deploymentName === 'string' && nodesData.deploymentName) {
+    return nodesData.deploymentName as string
+  }
+
+  // cluster_health.json → cluster_name (skip if it looks like a raw UUID)
+  const health = tryJson('cluster_health.json')
+  const rawName = typeof health?.cluster_name === 'string' ? health.cluster_name : null
+  if (rawName && !/^[a-f0-9]{32}$/.test(rawName)) return rawName
+
+  return null
 }
 
 function runBuild(): void {
