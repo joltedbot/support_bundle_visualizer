@@ -216,8 +216,7 @@ export function parseFeatures(
       if (result.hasDenseVector) {
         hasVectorSearch = true
         denseVectorIndexCount++
-        const dvField = result.denseVectorFields[0]
-        if (dvField) {
+        for (const dvField of result.denseVectorFields) {
           // Resolve inferenceId: field-level → ingest pipeline model → null (external)
           const resolvedId =
             dvField.inferenceId ??
@@ -226,8 +225,10 @@ export function parseFeatures(
           const key = `${dvField.dims}::${resolvedId ?? ''}`
           const existing = dimMap.get(key)
           if (existing) {
-            existing.count++
-            existing.indexNames.push(indexName)
+            if (!existing.indexNames.includes(indexName)) {
+              existing.count++
+              existing.indexNames.push(indexName)
+            }
           } else {
             dimMap.set(key, { dims: dvField.dims, count: 1, inferenceId: resolvedId, indexNames: [indexName] })
           }
