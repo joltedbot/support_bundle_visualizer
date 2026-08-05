@@ -205,6 +205,18 @@ export default function Overview({ model, kibana }: Props) {
             </EuiPanel>
           </EuiFlexItem>
 
+          {stats.deletedDocCount > 0 && (
+            <EuiFlexItem grow={false}>
+              <EuiPanel paddingSize="m" style={{ minWidth: 140 }}>
+                <EuiStat
+                  title={formatCount(stats.deletedDocCount)}
+                  description="Deleted docs"
+                  titleSize="m"
+                />
+              </EuiPanel>
+            </EuiFlexItem>
+          )}
+
           <EuiFlexItem grow={false}>
             <EuiPanel paddingSize="m" style={{ minWidth: 140 }}>
               <EuiStat
