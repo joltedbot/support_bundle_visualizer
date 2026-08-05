@@ -16,10 +16,16 @@ interface NodesJson {
 interface NodesStatsJson {
   nodes?: Record<string, {
     name?: string
-    jvm?: { mem?: { heap_used_percent?: number; heap_max_in_bytes?: number } }
+    jvm?: {
+      uptime_in_millis?: number
+      mem?: { heap_used_percent?: number; heap_max_in_bytes?: number }
+    }
     process?: { cpu?: { percent?: number } }
     fs?: { total?: { total_in_bytes?: number; free_in_bytes?: number; available_in_bytes?: number } }
-    os?: { cpu?: { percent?: number }; mem?: { total_in_bytes?: number } }
+    os?: { cpu?: { percent?: number }; mem?: { total_in_bytes?: number; used_in_bytes?: number } }
+    indices?: {
+      dense_vector?: { value_count?: number; off_heap_in_bytes?: number }
+    }
   }>
 }
 
@@ -135,6 +141,9 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
     diskTotal?: number
     diskAvail?: number
     ramTotal?: number
+    ramUsed?: number
+    offHeapBytes?: number
+    jvmUptimeMs?: number
   }>()
 
   if (nodesStatsJson?.nodes) {
@@ -145,13 +154,17 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       const fsTotalBytes = node.fs?.total?.total_in_bytes
       const fsFreeBytes = node.fs?.total?.free_in_bytes ?? node.fs?.total?.available_in_bytes
       const ramTotal = node.os?.mem?.total_in_bytes
+      const ramUsed = node.os?.mem?.used_in_bytes
+      const jvmUptimeMs = node.jvm?.uptime_in_millis
+      const offHeapRaw = node.indices?.dense_vector?.off_heap_in_bytes
+      const offHeapBytes = offHeapRaw && offHeapRaw > 0 ? offHeapRaw : undefined
 
       let diskTotal: number | undefined
       let diskAvail: number | undefined
       if (fsTotalBytes !== undefined) diskTotal = fsTotalBytes
       if (fsFreeBytes !== undefined) diskAvail = fsFreeBytes
 
-      statsById.set(id, { heapPercent, heapMaxBytes, cpuPercent, diskTotal, diskAvail, ramTotal })
+      statsById.set(id, { heapPercent, heapMaxBytes, cpuPercent, diskTotal, diskAvail, ramTotal, ramUsed, offHeapBytes, jvmUptimeMs })
     }
   }
 
@@ -210,6 +223,9 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       diskTotal: stats?.diskTotal,
       diskAvail: stats?.diskAvail,
       ramTotal: stats?.ramTotal,
+      ramUsed: stats?.ramUsed,
+      offHeapBytes: stats?.offHeapBytes,
+      jvmUptimeMs: stats?.jvmUptimeMs,
       availableProcessors: node.os?.available_processors,
     })
   }

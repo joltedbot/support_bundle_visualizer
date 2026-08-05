@@ -53,6 +53,9 @@ export interface NodeInfo {
   shardCount?: number       // total shards assigned to this node
   snapshotDataBytes?: number  // total dataset size of searchable snapshot shards on this node (frozen tier only)
   sharedCacheSizeBytes?: number  // pre-allocated shared snapshot cache size (frozen tier only)
+  offHeapBytes?: number      // bytes of off-heap vector (HNSW) memory; absent when 0 or unavailable
+  ramUsed?: number           // OS memory used in bytes (os.mem.used_in_bytes)
+  jvmUptimeMs?: number       // JVM uptime in milliseconds (jvm.uptime_in_millis)
 }
 
 export interface IndexInfo {
@@ -90,6 +93,7 @@ export interface ClusterStats {
   searchQueryTotal: number
   fieldDataSizeBytes: number
   segmentCount: number
+  deletedDocCount: number
 }
 
 export interface ILMPolicyDetail {

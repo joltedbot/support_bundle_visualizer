@@ -4,7 +4,7 @@ import type { ClusterStats } from './types'
 interface ClusterStatsJson {
   indices?: {
     store?: { size_in_bytes?: number }
-    docs?: { count?: number }
+    docs?: { count?: number; deleted?: number }
     search?: { total?: number }
     fielddata?: { memory_size_in_bytes?: number }
     segments?: { count?: number }
@@ -31,5 +31,6 @@ export function parseStats(files: Map<string, string>): ClusterStats | null {
     searchQueryTotal: idx.search?.total ?? 0,
     fieldDataSizeBytes: idx.fielddata?.memory_size_in_bytes ?? 0,
     segmentCount: idx.segments?.count ?? 0,
+    deletedDocCount: idx.docs?.deleted ?? 0,
   }
 }
