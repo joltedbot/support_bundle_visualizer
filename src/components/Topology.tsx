@@ -168,14 +168,13 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
         <div style={{ marginBottom: 4 }}>
           {(() => {
             const pct = Math.round((node.ramUsed / node.ramTotal) * 100)
-            const osMemColor = resourceColor(pct, 80, 90)
             return (
               <>
                 <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-                  <EuiFlexItem><EuiText size="xs" color="subdued">OS Memory Used</EuiText></EuiFlexItem>
+                  <EuiFlexItem><EuiText size="xs" color="subdued">Memory Used</EuiText></EuiFlexItem>
                   <EuiFlexItem grow={false}><EuiText size="xs">{pct}%</EuiText></EuiFlexItem>
                 </EuiFlexGroup>
-                <EuiProgress value={pct} max={100} size="s" color={osMemColor} />
+                <EuiProgress value={pct} max={100} size="s" color="primary" />
                 <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
                   {formatBytes(node.ramUsed)} / {formatBytes(node.ramTotal)}
                 </EuiText>

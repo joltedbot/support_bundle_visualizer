@@ -22,7 +22,11 @@ interface NodesStatsJson {
     }
     process?: { cpu?: { percent?: number } }
     fs?: { total?: { total_in_bytes?: number; free_in_bytes?: number; available_in_bytes?: number } }
-    os?: { cpu?: { percent?: number }; mem?: { total_in_bytes?: number; used_in_bytes?: number } }
+    os?: {
+      cpu?: { percent?: number }
+      mem?: { total_in_bytes?: number; used_in_bytes?: number }
+      cgroup?: { memory?: { limit_in_bytes?: string; usage_in_bytes?: string } }
+    }
     indices?: {
       dense_vector?: { value_count?: number; off_heap?: { total_size_bytes?: number } }
     }
@@ -153,8 +157,17 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       const cpuPercent = node.os?.cpu?.percent ?? node.process?.cpu?.percent
       const fsTotalBytes = node.fs?.total?.total_in_bytes
       const fsFreeBytes = node.fs?.total?.free_in_bytes ?? node.fs?.total?.available_in_bytes
-      const ramTotal = node.os?.mem?.total_in_bytes
-      const ramUsed = node.os?.mem?.used_in_bytes
+      // Prefer cgroup memory (per-container, accurate for K8s/ESS).
+      // Fall back to os.mem for bare-metal where cgroup is absent or has no limit.
+      const CGROUP_SENTINEL = 1e15 // anything above 1 PB is the "no limit" sentinel
+      const cgroupMem = node.os?.cgroup?.memory
+      const cgroupLimitRaw = cgroupMem?.limit_in_bytes
+      const cgroupUsageRaw = cgroupMem?.usage_in_bytes
+      const cgroupLimit = cgroupLimitRaw && cgroupLimitRaw !== 'max' ? parseInt(cgroupLimitRaw, 10) : NaN
+      const cgroupUsage = cgroupUsageRaw ? parseInt(cgroupUsageRaw, 10) : NaN
+      const useCgroup = !isNaN(cgroupLimit) && cgroupLimit > 0 && cgroupLimit < CGROUP_SENTINEL && !isNaN(cgroupUsage)
+      const ramTotal = useCgroup ? cgroupLimit : node.os?.mem?.total_in_bytes
+      const ramUsed = useCgroup ? cgroupUsage : node.os?.mem?.used_in_bytes
       const jvmUptimeMs = node.jvm?.uptime_in_millis
       const offHeapRaw = node.indices?.dense_vector?.off_heap?.total_size_bytes
       const offHeapBytes = offHeapRaw != null && offHeapRaw > 0 ? offHeapRaw : undefined
