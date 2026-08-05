@@ -16,7 +16,7 @@ function makeNodesStatsJson(
   return JSON.stringify({
     nodes: {
       [nodeId]: {
-        name: 'node-1',
+        name: nodeId,
         jvm: {
           uptime_in_millis: 4648905099,
           mem: { heap_used_percent: 70, heap_max_in_bytes: 17179869184 },
@@ -28,7 +28,7 @@ function makeNodesStatsJson(
           },
         },
         indices: {
-          dense_vector: { value_count: 100, off_heap_in_bytes: 524288000 },
+          dense_vector: { value_count: 100, off_heap: { total_size_bytes: 524288000 } },
         },
         ...overrides,
       },
@@ -77,38 +77,37 @@ describe('parseNodes — ramUsed', () => {
 })
 
 describe('parseNodes — offHeapBytes', () => {
-  it('parses indices.dense_vector.off_heap_in_bytes into offHeapBytes', () => {
+  it('parses indices.dense_vector.off_heap.total_size_bytes into offHeapBytes', () => {
+    const stats = makeNodesStatsJson('node-1', {
+      indices: { dense_vector: { value_count: 100, off_heap: { total_size_bytes: 524288000 } } },
+    })
     const files = new Map([
       ['nodes.json', makeNodesJson('node-1', 'node-1')],
-      ['nodes_stats.json', makeNodesStatsJson('node-1')],
+      ['nodes_stats.json', stats],
     ])
     const result = parseNodes(files)
     expect(result[0].offHeapBytes).toBe(524288000)
   })
 
-  it('leaves offHeapBytes undefined when field is absent', () => {
+  it('leaves offHeapBytes undefined when off_heap object is absent', () => {
+    const stats = makeNodesStatsJson('node-1', {
+      indices: { dense_vector: { value_count: 0 } },
+    })
     const files = new Map([
       ['nodes.json', makeNodesJson('node-1', 'node-1')],
-      [
-        'nodes_stats.json',
-        makeNodesStatsJson('node-1', {
-          indices: { dense_vector: { value_count: 0 } },
-        }),
-      ],
+      ['nodes_stats.json', stats],
     ])
     const result = parseNodes(files)
     expect(result[0].offHeapBytes).toBeUndefined()
   })
 
-  it('leaves offHeapBytes undefined when off_heap_in_bytes is 0', () => {
+  it('leaves offHeapBytes undefined when total_size_bytes is 0', () => {
+    const stats = makeNodesStatsJson('node-1', {
+      indices: { dense_vector: { value_count: 10, off_heap: { total_size_bytes: 0 } } },
+    })
     const files = new Map([
       ['nodes.json', makeNodesJson('node-1', 'node-1')],
-      [
-        'nodes_stats.json',
-        makeNodesStatsJson('node-1', {
-          indices: { dense_vector: { value_count: 10, off_heap_in_bytes: 0 } },
-        }),
-      ],
+      ['nodes_stats.json', stats],
     ])
     const result = parseNodes(files)
     expect(result[0].offHeapBytes).toBeUndefined()

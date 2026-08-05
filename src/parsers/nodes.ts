@@ -24,7 +24,7 @@ interface NodesStatsJson {
     fs?: { total?: { total_in_bytes?: number; free_in_bytes?: number; available_in_bytes?: number } }
     os?: { cpu?: { percent?: number }; mem?: { total_in_bytes?: number; used_in_bytes?: number } }
     indices?: {
-      dense_vector?: { value_count?: number; off_heap_in_bytes?: number }
+      dense_vector?: { value_count?: number; off_heap?: { total_size_bytes?: number } }
     }
   }>
 }
@@ -156,8 +156,8 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       const ramTotal = node.os?.mem?.total_in_bytes
       const ramUsed = node.os?.mem?.used_in_bytes
       const jvmUptimeMs = node.jvm?.uptime_in_millis
-      const offHeapRaw = node.indices?.dense_vector?.off_heap_in_bytes
-      const offHeapBytes = offHeapRaw && offHeapRaw > 0 ? offHeapRaw : undefined
+      const offHeapRaw = node.indices?.dense_vector?.off_heap?.total_size_bytes
+      const offHeapBytes = offHeapRaw != null && offHeapRaw > 0 ? offHeapRaw : undefined
 
       let diskTotal: number | undefined
       let diskAvail: number | undefined
