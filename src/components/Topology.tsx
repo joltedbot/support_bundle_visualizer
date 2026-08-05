@@ -164,6 +164,33 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
         </div>
       )}
 
+      {node.ramUsed !== undefined && node.ramTotal !== undefined && node.ramTotal > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          {(() => {
+            const pct = Math.round((node.ramUsed / node.ramTotal) * 100)
+            const osMemColor = resourceColor(pct, 80, 90)
+            return (
+              <>
+                <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
+                  <EuiFlexItem><EuiText size="xs" color="subdued">OS Memory Used</EuiText></EuiFlexItem>
+                  <EuiFlexItem grow={false}><EuiText size="xs">{pct}%</EuiText></EuiFlexItem>
+                </EuiFlexGroup>
+                <EuiProgress value={pct} max={100} size="s" color={osMemColor} />
+                <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
+                  {formatBytes(node.ramUsed)} / {formatBytes(node.ramTotal)}
+                </EuiText>
+              </>
+            )
+          })()}
+        </div>
+      )}
+
+      {node.offHeapBytes !== undefined && (
+        <EuiText size="xs" color="subdued" style={{ marginBottom: 4 }}>
+          Off-heap (vec): {formatBytes(node.offHeapBytes)}
+        </EuiText>
+      )}
+
       {node.diskUsedPercent !== undefined && node.tier !== 'frozen' && (
         <div style={{ marginBottom: 4 }}>
           <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
@@ -216,6 +243,12 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
           </EuiFlexGroup>
           <EuiProgress value={node.cpuPercent} max={100} size="s" color={cpuColor} />
         </div>
+      )}
+
+      {node.jvmUptimeMs !== undefined && (
+        <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
+          Uptime: {formatUptime(node.jvmUptimeMs)}
+        </EuiText>
       )}
     </EuiPanel>
   )
