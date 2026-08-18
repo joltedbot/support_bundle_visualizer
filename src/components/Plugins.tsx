@@ -1,5 +1,6 @@
 import {
   EuiBasicTable,
+  EuiText,
   type EuiBasicTableColumn,
 } from '@elastic/eui'
 import type { PluginEntry } from '../parsers/types'
@@ -22,7 +23,13 @@ const columns: EuiBasicTableColumn<PluginEntry>[] = [
 ]
 
 export default function Plugins({ plugins }: Props) {
-  if (plugins.length === 0) return null
+  if (plugins.length === 0) {
+    return (
+      <EuiText size="s" color="subdued">
+        <p>No plugins installed.</p>
+      </EuiText>
+    )
+  }
 
   return (
     <EuiBasicTable

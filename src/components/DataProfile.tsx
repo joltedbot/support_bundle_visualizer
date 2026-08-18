@@ -36,13 +36,15 @@ interface ILMPolicyRow extends ILMPolicyDetail {
   warmDisplay: string | null
   coldDisplay: string | null
   frozenDisplay: string | null
+  deleteDisplay: string | null
   hotDays: number | null
   warmDays: number | null
   coldDays: number | null
   frozenDays: number | null
+  deleteDaysSort: number | null
 }
 
-type ILMSortField = 'name' | 'indexCount' | 'forceMergeSegments' | 'shrinkShards' | 'hotDisplay' | 'warmDisplay' | 'coldDisplay' | 'frozenDisplay'
+type ILMSortField = 'name' | 'indexCount' | 'forceMergeSegments' | 'shrinkShards' | 'hotDisplay' | 'warmDisplay' | 'coldDisplay' | 'frozenDisplay' | 'deleteDisplay'
 
 interface ILMSortState {
   field: ILMSortField
@@ -63,10 +65,12 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
       warmDisplay: p.warmMinAge,
       coldDisplay: p.coldMinAge,
       frozenDisplay: p.frozenMinAge,
+      deleteDisplay: p.deleteMinAge,
       hotDays: null,
       warmDays: p.warmMinAge ? parseMinAgeDays(p.warmMinAge) : null,
       coldDays: p.coldMinAge ? parseMinAgeDays(p.coldMinAge) : null,
       frozenDays: p.frozenMinAge ? parseMinAgeDays(p.frozenMinAge) : null,
+      deleteDaysSort: p.deleteMinAge ? parseMinAgeDays(p.deleteMinAge) : null,
     }
   }), [policies])
 
@@ -89,6 +93,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
         case 'warmDisplay': return ((a.warmDays ?? -1) - (b.warmDays ?? -1)) * mult
         case 'coldDisplay': return ((a.coldDays ?? -1) - (b.coldDays ?? -1)) * mult
         case 'frozenDisplay': return ((a.frozenDays ?? -1) - (b.frozenDays ?? -1)) * mult
+        case 'deleteDisplay': return ((a.deleteDaysSort ?? -1) - (b.deleteDaysSort ?? -1)) * mult
         default: return 0
       }
     })
@@ -194,6 +199,14 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
       sortable: true,
       render: (v: string | null) => v ?? nullDash,
     },
+    {
+      field: 'deleteDisplay',
+      name: 'Delete',
+      width: '80px',
+      align: 'right' as const,
+      sortable: true,
+      render: (v: string | null) => v ?? nullDash,
+    },
   ]
 
   const sorting = {
@@ -212,7 +225,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<ILMPolicyRow>) {
     if (newSort) {
-      const validSortFields: ILMSortField[] = ['name', 'indexCount', 'forceMergeSegments', 'shrinkShards', 'hotDisplay', 'warmDisplay', 'coldDisplay', 'frozenDisplay']
+      const validSortFields: ILMSortField[] = ['name', 'indexCount', 'forceMergeSegments', 'shrinkShards', 'hotDisplay', 'warmDisplay', 'coldDisplay', 'frozenDisplay', 'deleteDisplay']
       if (validSortFields.includes(newSort.field as ILMSortField)) {
         setSort({ field: newSort.field as ILMSortField, direction: newSort.direction })
         setPageIndex(0)

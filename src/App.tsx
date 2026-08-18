@@ -154,14 +154,12 @@ function App() {
             </>
           )}
 
-          {model.plugins.length > 0 && (
-            <>
-              <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>Plugins</h3></EuiTitle>
-              <EuiSpacer size="s" />
-              <Plugins plugins={model.plugins} />
-            </>
-          )}
+          <>
+            <EuiSpacer size="l" />
+            <EuiTitle size="s"><h3>Plugins</h3></EuiTitle>
+            <EuiSpacer size="s" />
+            <Plugins plugins={model.plugins} />
+          </>
 
           {model.ilm && model.ilm.policies.length > 0 && (
             <>
