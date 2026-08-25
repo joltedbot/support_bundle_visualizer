@@ -427,6 +427,21 @@ export interface InternalHealth {
   indicators: Record<string, HealthIndicator>
 }
 
+export type ServerlessCheckState = 'blocked' | 'clear' | 'unknown'
+
+export interface ServerlessCheck {
+  key: string
+  label: string
+  category: 'core' | 'elasticsearch' | 'observability' | 'security'
+  severity: 'hard' | 'planned'
+  state: ServerlessCheckState
+  detail: string | null
+}
+
+export interface ServerlessReadinessInfo {
+  checks: ServerlessCheck[]
+}
+
 export interface BundleModel {
   identity: ClusterIdentity | null
   health: ClusterHealth | null
@@ -458,4 +473,5 @@ export interface GeneratedBundle {
   generatedAt: string | null
   hasKibanaBundle: boolean
   kibana: KibanaInfo | null
+  serverlessReadiness: ServerlessReadinessInfo
 }
