@@ -25,6 +25,7 @@ import IngestPipelines from './components/IngestPipelines'
 import CrossCluster from './components/CrossCluster'
 import Plugins from './components/Plugins'
 import BestPractices from './components/BestPractices'
+import ServerlessReadiness from './components/ServerlessReadiness'
 
 const data = rawBundleData as unknown as GeneratedBundle
 
@@ -51,7 +52,7 @@ function App() {
     )
   }
 
-  const { model, customerName, clusterName, generatedAt, notes, kibana } = data
+  const { model, customerName, clusterName, generatedAt, notes, kibana, serverlessReadiness } = data
   return (
     <>
       <ClusterHeader
@@ -185,6 +186,13 @@ function App() {
 
           <EuiSpacer size="l" />
           <BestPractices />
+
+          {serverlessReadiness && (
+            <>
+              <EuiSpacer size="l" />
+              <ServerlessReadiness readiness={serverlessReadiness} />
+            </>
+          )}
 
           {notes && (
             <>
