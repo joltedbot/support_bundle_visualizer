@@ -404,19 +404,22 @@ describe('Synonyms check', () => {
   it('blocked when component_templates has inline synonym filter', () => {
     const files = makeFiles({
       'component_templates.json': {
-        'my-template': {
-          component_template: {
-            template: {
-              settings: {
-                analysis: {
-                  filter: {
-                    my_syn: { type: 'synonym', synonyms: ['foo => bar'] },
+        component_templates: [
+          {
+            name: 'my-template',
+            component_template: {
+              template: {
+                settings: {
+                  analysis: {
+                    filter: {
+                      my_syn: { type: 'synonym', synonyms: ['foo => bar'] },
+                    },
                   },
                 },
               },
             },
           },
-        },
+        ],
       },
     })
     expect(check(parseServerlessReadiness(files, makeModel(), null), 'synonyms').state).toBe('blocked')

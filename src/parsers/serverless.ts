@@ -45,12 +45,17 @@ interface SettingsIndexEntry {
   }
 }
 
-interface ComponentTemplateEntry {
+interface ComponentTemplateItem {
+  name?: string
   component_template?: {
     template?: {
       settings?: { analysis?: { filter?: Record<string, AnalysisFilter> } }
     }
   }
+}
+
+interface ComponentTemplatesJson {
+  component_templates?: ComponentTemplateItem[]
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -199,7 +204,7 @@ function checkJoinFields(files: Map<string, string>): ServerlessCheck {
 function checkSynonyms(files: Map<string, string>): ServerlessCheck {
   const base = { key: 'synonyms', label: 'Synonyms (Index-time or File-based)', category: 'elasticsearch' as const, severity: 'hard' as const }
   const settings = parseJsonFile<Record<string, SettingsIndexEntry>>(files, 'settings.json')
-  const componentTemplates = parseJsonFile<Record<string, ComponentTemplateEntry>>(files, 'component_templates.json')
+  const componentTemplates = parseJsonFile<ComponentTemplatesJson>(files, 'component_templates.json')
   if (!settings && !componentTemplates) return { ...base, state: 'unknown', detail: null }
 
   if (settings) {
@@ -212,7 +217,7 @@ function checkSynonyms(files: Map<string, string>): ServerlessCheck {
   }
 
   if (componentTemplates) {
-    for (const entry of Object.values(componentTemplates)) {
+    for (const entry of componentTemplates.component_templates ?? []) {
       const filters = entry?.component_template?.template?.settings?.analysis?.filter
       if (filters && hasSynonymIssueInFilters(filters)) {
         return { ...base, state: 'blocked', detail: 'Index-time or file-based synonym filters in component templates (Serverless supports API-based synonyms only)' }
