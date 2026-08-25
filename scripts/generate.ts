@@ -15,6 +15,7 @@ import { join, relative, resolve, sep } from 'node:path'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { parseBundle } from '../src/parsers/index.ts'
 import { parseKibana } from '../src/parsers/kibana.ts'
+import { parseServerlessReadiness } from '../src/parsers/serverless.ts'
 import type { BundleData } from '../src/utils/bundleReader.ts'
 
 function checkUnzipAvailable(): void {
@@ -296,6 +297,8 @@ async function generateForDeployment(config: DeploymentConfig): Promise<void> {
     kibana = parseKibana(kibanaFiles)
   }
 
+  const serverlessReadiness = parseServerlessReadiness(files, model, kibana)
+
   const output = {
     model,
     customerName: config.customerName,
@@ -304,6 +307,7 @@ async function generateForDeployment(config: DeploymentConfig): Promise<void> {
     generatedAt: new Date().toISOString(),
     hasKibanaBundle: Boolean(kibanaBundleName),
     kibana,
+    serverlessReadiness,
   }
 
   const outDir = join(root, 'src', 'generated')
