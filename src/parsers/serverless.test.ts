@@ -122,13 +122,37 @@ describe('Custom plugins check', () => {
     expect(c.detail).toContain('my-custom-plugin')
   })
 
-  it('clear when only official plugins', () => {
+  it('clear when only official plugins and both analysis files available', () => {
     const model = makeModel({ plugins: [{ component: 'analysis-icu', version: '9.3.0' }, { component: 'repository-s3', version: '9.3.0' }] })
-    expect(check(parseServerlessReadiness(new Map(), model, null), 'custom-plugins').state).toBe('clear')
+    const files = makeFiles({ 'settings.json': {}, 'component_templates.json': { component_templates: [] } })
+    expect(check(parseServerlessReadiness(files, model, null), 'custom-plugins').state).toBe('clear')
   })
 
-  it('clear when plugins list is empty', () => {
-    expect(check(parseServerlessReadiness(new Map(), makeModel(), null), 'custom-plugins').state).toBe('clear')
+  it('clear when plugins list is empty and both analysis files available', () => {
+    const files = makeFiles({ 'settings.json': {}, 'component_templates.json': { component_templates: [] } })
+    expect(check(parseServerlessReadiness(files, makeModel(), null), 'custom-plugins').state).toBe('clear')
+  })
+
+  it('unknown with Partial Data when analysis files not available', () => {
+    const c = check(parseServerlessReadiness(new Map(), makeModel(), null), 'custom-plugins')
+    expect(c.state).toBe('unknown')
+    expect(c.detail).toContain('Partial Data')
+  })
+
+  it('unknown with Partial Data when only settings.json available (component_templates missing)', () => {
+    const files = makeFiles({ 'settings.json': {} })
+    const c = check(parseServerlessReadiness(files, makeModel(), null), 'custom-plugins')
+    expect(c.state).toBe('unknown')
+    expect(c.detail).toContain('Partial Data')
+    expect(c.detail).toContain('component_templates.json')
+  })
+
+  it('blocked with Partial Data prefix when custom plugin found but analysis files missing', () => {
+    const model = makeModel({ plugins: [{ component: 'my-custom-plugin', version: '1.0.0' }] })
+    const c = check(parseServerlessReadiness(new Map(), model, null), 'custom-plugins')
+    expect(c.state).toBe('blocked')
+    expect(c.detail).toContain('Partial Data')
+    expect(c.detail).toContain('my-custom-plugin')
   })
 
   it('blocked when stopwords_path in settings.json', () => {
@@ -172,7 +196,7 @@ describe('Custom plugins check', () => {
     expect(c.state).toBe('blocked')
   })
 
-  it('clear when settings only has synonyms_path (covered by checkSynonyms, not here)', () => {
+  it('clear when settings only has synonyms_path and both analysis files available', () => {
     const files = makeFiles({
       'settings.json': {
         'my-index': {
@@ -187,8 +211,9 @@ describe('Custom plugins check', () => {
           },
         },
       },
+      'component_templates.json': { component_templates: [] },
     })
-    // synonyms_path is excluded from custom-plugins check
+    // synonyms_path is excluded from custom-plugins check; both files present → clear
     const c = check(parseServerlessReadiness(files, makeModel(), null), 'custom-plugins')
     expect(c.state).toBe('clear')
   })
@@ -444,7 +469,7 @@ describe('Synonyms check', () => {
     expect(check(parseServerlessReadiness(files, makeModel(), null), 'synonyms').state).toBe('blocked')
   })
 
-  it('clear when only synonyms_set (API-based, supported in Serverless)', () => {
+  it('clear when only synonyms_set (API-based, supported in Serverless) and both files available', () => {
     const files = makeFiles({
       'settings.json': {
         'my-index': {
@@ -459,6 +484,7 @@ describe('Synonyms check', () => {
           },
         },
       },
+      'component_templates.json': { component_templates: [] },
     })
     expect(check(parseServerlessReadiness(files, makeModel(), null), 'synonyms').state).toBe('clear')
   })
@@ -487,13 +513,55 @@ describe('Synonyms check', () => {
     expect(check(parseServerlessReadiness(files, makeModel(), null), 'synonyms').state).toBe('blocked')
   })
 
-  it('clear when settings.json has no analysis block', () => {
-    const files = makeFiles({ 'settings.json': { 'my-index': { settings: { index: { number_of_shards: '1' } } } } })
+  it('clear when settings.json has no analysis block and both files available', () => {
+    const files = makeFiles({
+      'settings.json': { 'my-index': { settings: { index: { number_of_shards: '1' } } } },
+      'component_templates.json': { component_templates: [] },
+    })
     expect(check(parseServerlessReadiness(files, makeModel(), null), 'synonyms').state).toBe('clear')
   })
 
   it('unknown when both settings.json and component_templates.json absent', () => {
     expect(check(parseServerlessReadiness(new Map(), makeModel(), null), 'synonyms').state).toBe('unknown')
+  })
+
+  it('unknown with Partial Data when only settings.json available (no blocker found)', () => {
+    const files = makeFiles({ 'settings.json': { 'my-index': { settings: { index: { number_of_shards: '1' } } } } })
+    const c = check(parseServerlessReadiness(files, makeModel(), null), 'synonyms')
+    expect(c.state).toBe('unknown')
+    expect(c.detail).toContain('Partial Data')
+    expect(c.detail).toContain('component_templates.json')
+  })
+
+  it('blocked with Partial Data prefix when blocker in settings but component_templates missing', () => {
+    const files = makeFiles({
+      'settings.json': {
+        'my-index': {
+          settings: { index: { analysis: { filter: { my_syn: { type: 'synonym', synonyms: ['foo, bar'] } } } } },
+        },
+      },
+    })
+    const c = check(parseServerlessReadiness(files, makeModel(), null), 'synonyms')
+    expect(c.state).toBe('blocked')
+    expect(c.detail).toContain('Partial Data')
+    expect(c.detail).toContain('component_templates.json')
+  })
+
+  it('blocked with Partial Data prefix when blocker in component_templates but settings missing', () => {
+    const files = makeFiles({
+      'component_templates.json': {
+        component_templates: [{
+          name: 'my-template',
+          component_template: {
+            template: { settings: { analysis: { filter: { my_syn: { type: 'synonym', synonyms: ['foo => bar'] } } } } },
+          },
+        }],
+      },
+    })
+    const c = check(parseServerlessReadiness(files, makeModel(), null), 'synonyms')
+    expect(c.state).toBe('blocked')
+    expect(c.detail).toContain('Partial Data')
+    expect(c.detail).toContain('settings.json')
   })
 })
 

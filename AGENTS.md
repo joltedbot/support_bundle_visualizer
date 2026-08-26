@@ -137,7 +137,7 @@ verifying a specific API, version constraint, or behaviour you are uncertain of.
 
 | Resource | URL | When to use |
 |----------|-----|-------------|
-| `docs/BUNDLE_DATA_INDEX.md` | Local file | Authoritative index of all diagnostic bundle data. Consult first to check available ES/Kibana diagnostic data, see what the app currently parses, or plan new features. Do NOT re-scan raw bundle directories. |
+| `docs/DIAGNOSTIC_BUNDLE_REFERENCE.md` | Local file | Authoritative reference for all diagnostic bundle data: every file, key field paths, non-obvious parsing rules, cloud vs self-hosted differences. Consult first when working with bundle data or planning new features. Do NOT re-scan raw bundle directories. |
 | `docs/UI_SPECS.md` | Local file | Strict business rules and presentation logic for the React components. |
 | Node.js docs | https://nodejs.org/docs/latest-v18.x/api/ | Core API — pinned to v18 |
 | pnpm docs | https://pnpm.io/motivation | Workspace and CLI behaviour |
@@ -161,3 +161,12 @@ Add an entry to Non-Standard Patterns when:
 - You were corrected by the user on a design decision
 
 Do not add general TypeScript or Node advice. Do not paraphrase existing entries.
+
+### Updating docs/DIAGNOSTIC_BUNDLE_REFERENCE.md
+
+Update this file whenever you discover new information about the contents of diagnostic bundles:
+- A file, field, or data path not yet documented
+- A non-obvious parsing rule, edge case, or cloud/self-hosted difference
+- A correction to an existing entry based on actual bundle data
+
+Treat it as a living reference — it should reflect the most complete, accurate knowledge of what is in diagnostic bundles at all times.

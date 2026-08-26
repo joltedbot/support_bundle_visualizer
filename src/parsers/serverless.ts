@@ -131,33 +131,43 @@ function checkCustomPlugins(model: BundleModel, files: Map<string, string>): Ser
   const base = { key: 'custom-plugins', label: 'Custom Plugins & Bundles', category: 'core' as const, severity: 'hard' as const }
   const custom = model.plugins.filter(p => !OFFICIAL_ES_PLUGINS.has(p.component))
 
-  // Scan settings.json for file-based analysis resources
-  let hasBundledFiles = false
   const settings = parseJsonFile<Record<string, SettingsIndexEntry>>(files, 'settings.json')
+  const componentTemplates = parseJsonFile<ComponentTemplatesJson>(files, 'component_templates.json')
+
+  const missingFiles: string[] = []
+  if (!settings) missingFiles.push('settings.json')
+  if (!componentTemplates) missingFiles.push('component_templates.json')
+
+  let hasBundledFiles = false
   if (settings) {
     for (const entry of Object.values(settings)) {
       const analysis = entry?.settings?.index?.analysis as Record<string, unknown> | undefined
       if (hasCustomAnalysisFilePaths(analysis)) { hasBundledFiles = true; break }
     }
   }
-
-  // Scan component_templates.json for file-based analysis resources
-  if (!hasBundledFiles) {
-    const componentTemplates = parseJsonFile<ComponentTemplatesJson>(files, 'component_templates.json')
-    if (componentTemplates?.component_templates) {
-      for (const item of componentTemplates.component_templates) {
-        const analysis = item?.component_template?.template?.settings?.analysis as Record<string, unknown> | undefined
-        if (hasCustomAnalysisFilePaths(analysis)) { hasBundledFiles = true; break }
-      }
+  if (!hasBundledFiles && componentTemplates?.component_templates) {
+    for (const item of componentTemplates.component_templates) {
+      const analysis = item?.component_template?.template?.settings?.analysis as Record<string, unknown> | undefined
+      if (hasCustomAnalysisFilePaths(analysis)) { hasBundledFiles = true; break }
     }
   }
 
-  if (custom.length === 0 && !hasBundledFiles) return { ...base, state: 'clear', detail: null }
+  const isBlocked = custom.length > 0 || hasBundledFiles
+  const partialPrefix = missingFiles.length > 0 ? `Partial Data — ${missingFiles.join(', ')} not available` : null
 
-  const parts: string[] = []
-  if (custom.length > 0) parts.push(`${custom.length} custom plugin${custom.length > 1 ? 's' : ''}: ${custom.map(p => p.component).join(', ')}`)
-  if (hasBundledFiles) parts.push('file-based analysis resources (custom stopwords/dictionaries/keywords)')
-  return { ...base, state: 'blocked', detail: parts.join('; ') }
+  if (isBlocked) {
+    const parts: string[] = []
+    if (custom.length > 0) parts.push(`${custom.length} custom plugin${custom.length > 1 ? 's' : ''}: ${custom.map(p => p.component).join(', ')}`)
+    if (hasBundledFiles) parts.push('file-based analysis resources (custom stopwords/dictionaries/keywords)')
+    const detail = partialPrefix ? `${partialPrefix}; ${parts.join('; ')}` : parts.join('; ')
+    return { ...base, state: 'blocked', detail }
+  }
+
+  if (missingFiles.length > 0) {
+    return { ...base, state: 'unknown', detail: `Partial Data — ${missingFiles.join(', ')} not available` }
+  }
+
+  return { ...base, state: 'clear', detail: null }
 }
 
 function checkCCR(model: BundleModel): ServerlessCheck {
@@ -250,13 +260,20 @@ function checkSynonyms(files: Map<string, string>): ServerlessCheck {
   const base = { key: 'synonyms', label: 'Synonyms (Index-time or File-based)', category: 'elasticsearch' as const, severity: 'hard' as const }
   const settings = parseJsonFile<Record<string, SettingsIndexEntry>>(files, 'settings.json')
   const componentTemplates = parseJsonFile<ComponentTemplatesJson>(files, 'component_templates.json')
-  if (!settings && !componentTemplates) return { ...base, state: 'unknown', detail: null }
+
+  const missingFiles: string[] = []
+  if (!settings) missingFiles.push('settings.json')
+  if (!componentTemplates) missingFiles.push('component_templates.json')
+
+  const partialPrefix = missingFiles.length > 0 ? `Partial Data — ${missingFiles.join(', ')} not available` : null
+  const blockerDetail = 'Index-time or file-based synonym filters in use (Serverless supports API-based synonyms only)'
 
   if (settings) {
     for (const entry of Object.values(settings)) {
       const filters = entry?.settings?.index?.analysis?.filter
       if (filters && hasSynonymIssueInFilters(filters)) {
-        return { ...base, state: 'blocked', detail: 'Index-time or file-based synonym filters in use (Serverless supports API-based synonyms only)' }
+        const detail = partialPrefix ? `${partialPrefix}; ${blockerDetail}` : blockerDetail
+        return { ...base, state: 'blocked', detail }
       }
     }
   }
@@ -265,9 +282,14 @@ function checkSynonyms(files: Map<string, string>): ServerlessCheck {
     for (const entry of componentTemplates.component_templates ?? []) {
       const filters = entry?.component_template?.template?.settings?.analysis?.filter
       if (filters && hasSynonymIssueInFilters(filters)) {
-        return { ...base, state: 'blocked', detail: 'Index-time or file-based synonym filters in component templates (Serverless supports API-based synonyms only)' }
+        const detail = partialPrefix ? `${partialPrefix}; ${blockerDetail}` : blockerDetail
+        return { ...base, state: 'blocked', detail }
       }
     }
+  }
+
+  if (missingFiles.length > 0) {
+    return { ...base, state: 'unknown', detail: `Partial Data — ${missingFiles.join(', ')} not available` }
   }
 
   return { ...base, state: 'clear', detail: null }
