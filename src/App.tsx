@@ -184,15 +184,17 @@ function App() {
             </>
           )}
 
-          <EuiSpacer size="l" />
-          <BestPractices />
-
           {serverlessReadiness && (
             <>
               <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Serverless Readiness</h3></EuiTitle>
+              <EuiSpacer size="s" />
               <ServerlessReadiness readiness={serverlessReadiness} />
             </>
           )}
+
+          <EuiSpacer size="l" />
+          <BestPractices />
 
           {notes && (
             <>

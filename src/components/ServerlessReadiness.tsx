@@ -8,11 +8,6 @@ import {
 } from '@elastic/eui'
 import type { ServerlessCheck, ServerlessReadinessInfo } from '../parsers/types'
 
-const SEVERITY_LABEL: Record<string, string> = {
-  hard: 'Not supported',
-  planned: 'Planned gap',
-}
-
 const CATEGORY_LABEL: Record<string, string> = {
   core: 'Core Platform',
   elasticsearch: 'Elasticsearch',
@@ -20,10 +15,57 @@ const CATEGORY_LABEL: Record<string, string> = {
   security: 'Security',
 }
 
+// ── Summary row ───────────────────────────────────────────────────────────────
+
+interface SummaryRow {
+  blockers: number
+  planned: number
+  cleared: number
+  manualReview: number
+}
+
+const summaryColumns: EuiBasicTableColumn<SummaryRow>[] = [
+  {
+    field: 'blockers',
+    name: 'Blockers',
+    width: '160px',
+    render: (n: number) => (
+      <EuiBadge color={n > 0 ? 'danger' : 'default'}>{n}</EuiBadge>
+    ),
+  },
+  {
+    field: 'planned',
+    name: 'Planned (not yet available)',
+    width: '220px',
+    render: (n: number) => (
+      <EuiBadge color={n > 0 ? 'warning' : 'default'}>{n}</EuiBadge>
+    ),
+  },
+  {
+    field: 'cleared',
+    name: 'Cleared',
+    width: '140px',
+    render: (n: number) => (
+      <EuiBadge color={n > 0 ? 'success' : 'default'}>{n}</EuiBadge>
+    ),
+  },
+  {
+    field: 'manualReview',
+    name: 'Manual Review Required',
+    render: (n: number) => (
+      <EuiToolTip content="These items cannot be determined from the diagnostic bundle and must be confirmed with the customer">
+        <EuiBadge color="hollow">{n}</EuiBadge>
+      </EuiToolTip>
+    ),
+  },
+]
+
+// ── Detail table ──────────────────────────────────────────────────────────────
+
 function StatusBadge({ check }: { check: ServerlessCheck }) {
   if (check.state === 'blocked') {
     const color = check.severity === 'planned' ? 'warning' : 'danger'
-    const label = SEVERITY_LABEL[check.severity] ?? 'Blocked'
+    const label = check.severity === 'planned' ? 'Planned gap' : 'Not supported'
     return <EuiBadge color={color}>{label}</EuiBadge>
   }
   if (check.state === 'clear') {
@@ -36,7 +78,7 @@ function StatusBadge({ check }: { check: ServerlessCheck }) {
   )
 }
 
-const columns: EuiBasicTableColumn<ServerlessCheck>[] = [
+const detailColumns: EuiBasicTableColumn<ServerlessCheck>[] = [
   {
     field: 'category',
     name: 'Area',
@@ -70,34 +112,38 @@ const columns: EuiBasicTableColumn<ServerlessCheck>[] = [
   },
 ]
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function ServerlessReadiness({ readiness }: { readiness: ServerlessReadinessInfo }) {
-  const blockedCount = readiness.checks.filter(c => c.state === 'blocked').length
-  const buttonContent = blockedCount > 0
-    ? `Serverless Readiness — ${blockedCount} blocker${blockedCount > 1 ? 's' : ''} detected`
-    : 'Serverless Readiness'
+  const blockers = readiness.checks.filter(c => c.state === 'blocked' && c.severity === 'hard').length
+  const planned = readiness.checks.filter(c => c.state === 'blocked' && c.severity === 'planned').length
+  const cleared = readiness.checks.filter(c => c.state === 'clear').length
+  const manualReview = readiness.checks.filter(c => c.state === 'unknown').length
+
+  const summaryRow: SummaryRow[] = [{ blockers, planned, cleared, manualReview }]
 
   return (
-    <EuiAccordion
-      id="serverless-readiness-accordion"
-      buttonContent={buttonContent}
-      initialIsOpen={false}
-      paddingSize="m"
-    >
-      <div style={{ marginTop: 16 }}>
-        <EuiText size="s" color="subdued" style={{ marginBottom: 12 }}>
-          <p>
-            Features not available or not yet available in Elastic Serverless, based on this diagnostic bundle.
-            Items marked <strong>Manual review</strong> cannot be determined from the bundle and should be confirmed with the customer.
-          </p>
-        </EuiText>
-        <EuiBasicTable
-          items={readiness.checks}
-          columns={columns}
-          rowProps={(check: ServerlessCheck) => ({
-            style: check.state === 'blocked' ? { background: 'rgba(189, 39, 30, 0.15)' } : {},
-          })}
-        />
+    <>
+      <EuiBasicTable
+        items={summaryRow}
+        columns={summaryColumns}
+      />
+      <div style={{ marginTop: 12 }}>
+        <EuiAccordion
+          id="serverless-readiness-details"
+          buttonContent="Full Details"
+          initialIsOpen={false}
+          paddingSize="m"
+        >
+          <EuiBasicTable
+            items={readiness.checks}
+            columns={detailColumns}
+            rowProps={(check: ServerlessCheck) => ({
+              style: check.state === 'blocked' ? { background: 'rgba(189, 39, 30, 0.15)' } : {},
+            })}
+          />
+        </EuiAccordion>
       </div>
-    </EuiAccordion>
+    </>
   )
 }
