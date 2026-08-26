@@ -83,12 +83,31 @@ function hasSynonymIssueInFilters(filters: Record<string, AnalysisFilter>): bool
   return false
 }
 
+const SYNONYM_PATH_KEYS = new Set(['synonyms_path', 'synonyms_set', 'synonyms'])
+
+function hasCustomAnalysisFilePaths(analysis: Record<string, unknown> | undefined): boolean {
+  if (!analysis) return false
+  for (const section of ['filter', 'tokenizer', 'char_filter'] as const) {
+    const entries = analysis[section]
+    if (!entries || typeof entries !== 'object') continue
+    for (const entry of Object.values(entries as Record<string, unknown>)) {
+      if (!entry || typeof entry !== 'object') continue
+      for (const key of Object.keys(entry as Record<string, unknown>)) {
+        if (SYNONYM_PATH_KEYS.has(key)) continue // covered by checkSynonyms
+        if (key.endsWith('_path') || key === 'user_dictionary') return true
+      }
+    }
+  }
+  return false
+}
+
 // ── Tier A checks (BundleModel only) ─────────────────────────────────────────
 
 function checkILM(model: BundleModel): ServerlessCheck {
   const base = { key: 'ilm', label: 'Index Lifecycle Management (ILM)', category: 'observability' as const, severity: 'hard' as const }
   const ilm = model.ilm
-  if (!ilm || ilm.managedIndexCount === 0) return { ...base, state: 'clear', detail: null }
+  if (!ilm) return { ...base, state: 'unknown', detail: null }
+  if (ilm.managedIndexCount === 0) return { ...base, state: 'clear', detail: null }
   return { ...base, state: 'blocked', detail: `${ilm.managedIndexCount} managed indices across ${ilm.policyCount} ILM policies` }
 }
 
@@ -108,11 +127,37 @@ function checkNativeRealm(model: BundleModel): ServerlessCheck {
   return { ...base, state: 'clear', detail: null }
 }
 
-function checkCustomPlugins(model: BundleModel): ServerlessCheck {
+function checkCustomPlugins(model: BundleModel, files: Map<string, string>): ServerlessCheck {
   const base = { key: 'custom-plugins', label: 'Custom Plugins & Bundles', category: 'core' as const, severity: 'hard' as const }
   const custom = model.plugins.filter(p => !OFFICIAL_ES_PLUGINS.has(p.component))
-  if (custom.length === 0) return { ...base, state: 'clear', detail: null }
-  return { ...base, state: 'blocked', detail: custom.map(p => p.component).join(', ') }
+
+  // Scan settings.json for file-based analysis resources
+  let hasBundledFiles = false
+  const settings = parseJsonFile<Record<string, SettingsIndexEntry>>(files, 'settings.json')
+  if (settings) {
+    for (const entry of Object.values(settings)) {
+      const analysis = entry?.settings?.index?.analysis as Record<string, unknown> | undefined
+      if (hasCustomAnalysisFilePaths(analysis)) { hasBundledFiles = true; break }
+    }
+  }
+
+  // Scan component_templates.json for file-based analysis resources
+  if (!hasBundledFiles) {
+    const componentTemplates = parseJsonFile<ComponentTemplatesJson>(files, 'component_templates.json')
+    if (componentTemplates?.component_templates) {
+      for (const item of componentTemplates.component_templates) {
+        const analysis = item?.component_template?.template?.settings?.analysis as Record<string, unknown> | undefined
+        if (hasCustomAnalysisFilePaths(analysis)) { hasBundledFiles = true; break }
+      }
+    }
+  }
+
+  if (custom.length === 0 && !hasBundledFiles) return { ...base, state: 'clear', detail: null }
+
+  const parts: string[] = []
+  if (custom.length > 0) parts.push(`${custom.length} custom plugin${custom.length > 1 ? 's' : ''}: ${custom.map(p => p.component).join(', ')}`)
+  if (hasBundledFiles) parts.push('file-based analysis resources (custom stopwords/dictionaries/keywords)')
+  return { ...base, state: 'blocked', detail: parts.join('; ') }
 }
 
 function checkCCR(model: BundleModel): ServerlessCheck {
@@ -252,7 +297,7 @@ export function parseServerlessReadiness(
   const checks: ServerlessCheck[] = [
     // Core (4)
     checkNativeRealm(model),
-    checkCustomPlugins(model),
+    checkCustomPlugins(model, files),
     checkSnapshots(model),
     checkAuditLogging(files),
     // Elasticsearch (7)

@@ -94,7 +94,7 @@ export default function ServerlessReadiness({ readiness }: { readiness: Serverle
           items={readiness.checks}
           columns={columns}
           rowProps={(check: ServerlessCheck) => ({
-            style: check.state === 'blocked' ? { background: 'rgba(189, 39, 30, 0.04)' } : {},
+            style: check.state === 'blocked' ? { background: 'rgba(189, 39, 30, 0.15)' } : {},
           })}
         />
       </div>

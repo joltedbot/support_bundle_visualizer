@@ -61,9 +61,9 @@ describe('ILM check', () => {
     expect(check(r, 'ilm').state).toBe('clear')
   })
 
-  it('clear when ilm is null', () => {
+  it('unknown when ilm is null', () => {
     const r = parseServerlessReadiness(new Map(), makeModel(), null)
-    expect(check(r, 'ilm').state).toBe('clear')
+    expect(check(r, 'ilm').state).toBe('unknown')
   })
 })
 
@@ -129,6 +129,68 @@ describe('Custom plugins check', () => {
 
   it('clear when plugins list is empty', () => {
     expect(check(parseServerlessReadiness(new Map(), makeModel(), null), 'custom-plugins').state).toBe('clear')
+  })
+
+  it('blocked when stopwords_path in settings.json', () => {
+    const files = makeFiles({
+      'settings.json': {
+        'my-index': {
+          settings: {
+            index: {
+              analysis: {
+                filter: {
+                  my_stop: { type: 'stop', stopwords_path: 'analysis/stopwords.txt' },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const c = check(parseServerlessReadiness(files, makeModel(), null), 'custom-plugins')
+    expect(c.state).toBe('blocked')
+    expect(c.detail).toContain('file-based')
+  })
+
+  it('blocked when user_dictionary in settings.json', () => {
+    const files = makeFiles({
+      'settings.json': {
+        'my-index': {
+          settings: {
+            index: {
+              analysis: {
+                tokenizer: {
+                  my_kuromoji: { type: 'kuromoji_tokenizer', user_dictionary: 'userdict_ja.txt' },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const c = check(parseServerlessReadiness(files, makeModel(), null), 'custom-plugins')
+    expect(c.state).toBe('blocked')
+  })
+
+  it('clear when settings only has synonyms_path (covered by checkSynonyms, not here)', () => {
+    const files = makeFiles({
+      'settings.json': {
+        'my-index': {
+          settings: {
+            index: {
+              analysis: {
+                filter: {
+                  syn: { type: 'synonym', synonyms_path: 'analysis/synonyms.txt' },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    // synonyms_path is excluded from custom-plugins check
+    const c = check(parseServerlessReadiness(files, makeModel(), null), 'custom-plugins')
+    expect(c.state).toBe('clear')
   })
 })
 
