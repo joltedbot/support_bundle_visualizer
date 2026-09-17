@@ -133,10 +133,10 @@ export function parseSizing(files: Map<string, string>, indices: IndexInfo[]): S
     }
   }
 
-  // --- Bulk ingest rate (raw pre-segment, uptime-based) ---
-  // _all.primaries.bulk.total_size_in_bytes is the cumulative raw _source byte
-  // volume submitted via _bulk (pre-compression, pre-segment). Use primaries to
-  // exclude replica write amplification. Divide by node uptime for an avg rate.
+  // --- Indexed rate (primary _source bytes, uptime-based) ---
+  // _all.primaries.bulk.total_size_in_bytes is cumulative _source bytes written
+  // to primary shards via _bulk. Not raw HTTP payload — excludes action metadata
+  // and replica writes. Divide by node uptime for an avg rate.
   let bulkIngestRateBytesPerDay: number | null = null
   const primariesBulkBytes = indicesStatsRaw?._all?.primaries?.bulk?.total_size_in_bytes ?? 0
   if (primariesBulkBytes > 0 && nodeUptimeDays !== null && nodeUptimeDays > 0) {

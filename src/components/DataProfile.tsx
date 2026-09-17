@@ -556,8 +556,8 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
                     description: `~${sizing.ingestRateGBPerDay.toFixed(1)} GB/day (compressed primary, retention-based avg — not peak)`,
                   }] : []),
                   ...(sizing.bulkIngestRateBytesPerDay !== null ? [{
-                    title: 'Est. avg bulk ingest rate',
-                    description: `~${formatBytes(sizing.bulkIngestRateBytesPerDay)}/day (raw pre-segment, avg over node uptime${sizing.nodeUptimeDays !== null ? ` — ${sizing.nodeUptimeDays.toFixed(1)}d` : ''})`,
+                    title: 'Est. avg indexed rate',
+                    description: `~${formatBytes(sizing.bulkIngestRateBytesPerDay)}/day — cumulative _source bytes written to primary shards via bulk API ÷ node uptime${sizing.nodeUptimeDays !== null ? ` (${sizing.nodeUptimeDays.toFixed(1)}d)` : ''}. After ingest pipelines; excludes replicas and raw HTTP overhead.`,
                   }] : []),
                 ]}
               />
