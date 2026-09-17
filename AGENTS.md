@@ -139,34 +139,6 @@ verifying a specific API, version constraint, or behaviour you are uncertain of.
 |----------|-----|-------------|
 | `docs/DIAGNOSTIC_BUNDLE_REFERENCE.md` | Local file | Authoritative reference for all diagnostic bundle data: every file, key field paths, non-obvious parsing rules, cloud vs self-hosted differences. Consult first when working with bundle data or planning new features. Do NOT re-scan raw bundle directories. |
 | `docs/UI_SPECS.md` | Local file | Strict business rules and presentation logic for the React components. |
-| Node.js docs | https://nodejs.org/docs/latest-v18.x/api/ | Core API — pinned to v18 |
-| pnpm docs | https://pnpm.io/motivation | Workspace and CLI behaviour |
-| TypeScript docs | https://www.typescriptlang.org/docs/ | Compiler options, type system edge cases |
-| Vite docs | https://vite.dev/guide/ | Build config, plugin API |
-| Vitest docs | https://vitest.dev/guide/ | Test runner API |
 | EUI docs | https://eui.elastic.co | Component API — verify against 113.x |
 | Elastic Charts | https://elastic.github.io/elastic-charts | Chart component API |
-| Emotion docs | https://emotion.sh/docs/introduction | CSS-in-JS API |
 | elastic-docs MCP | (via MCP server) | Elastic product docs — use MCP, not elastic.co/docs |
-
-## Context File Maintenance
-
-### Updating this file
-
-Updating AGENTS.md is part of task completion, not optional cleanup.
-
-Add an entry to Non-Standard Patterns when:
-- You made an incorrect assumption that caused a wrong edit or broken build
-- A pattern in the codebase surprised you and the reason was not obvious
-- You were corrected by the user on a design decision
-
-Do not add general TypeScript or Node advice. Do not paraphrase existing entries.
-
-### Updating docs/DIAGNOSTIC_BUNDLE_REFERENCE.md
-
-Update this file whenever you discover new information about the contents of diagnostic bundles:
-- A file, field, or data path not yet documented
-- A non-obvious parsing rule, edge case, or cloud/self-hosted difference
-- A correction to an existing entry based on actual bundle data
-
-Treat it as a living reference — it should reflect the most complete, accurate knowledge of what is in diagnostic bundles at all times.

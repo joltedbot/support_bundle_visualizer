@@ -552,18 +552,6 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
               <EuiDescriptionList
                 compressed
                 listItems={[
-                  ...(sizing.avgQueryRateQPS !== null ? [{
-                    title: 'Avg query rate',
-                    description: `~${Math.round(sizing.avgQueryRateQPS).toLocaleString()} QPS${sizing.nodeUptimeDays !== null ? ` (avg since last restart, ${sizing.nodeUptimeDays.toFixed(1)}d ago)` : ''}`,
-                  }] : []),
-                  ...(sizing.ingestRateGBPerDay !== null ? [{
-                    title: 'Est. avg ingest rate',
-                    description: `~${sizing.ingestRateGBPerDay.toFixed(1)} GB/day (compressed primary, retention-based avg — not peak)`,
-                  }] : []),
-                  ...(sizing.bulkIngestRateBytesPerDay !== null ? [{
-                    title: 'Est. avg indexed rate',
-                    description: `~${formatBytes(sizing.bulkIngestRateBytesPerDay)}/day — cumulative _source bytes written to primary shards via bulk API ÷ node uptime${sizing.nodeUptimeDays !== null ? ` (${sizing.nodeUptimeDays.toFixed(1)}d)` : ''}. After ingest pipelines; excludes replicas and raw HTTP overhead.`,
-                  }] : []),
                   ...(sizing.ilmWindowRates !== null && sizing.ilmWindowRates.bulkBytesPerDay > 0 ? [{
                     title: 'Est. bulk ingest rate (ILM window)',
                     description: `~${formatBytes(sizing.ilmWindowRates.bulkBytesPerDay)}/day — raw pre-compression bytes through the Bulk API, measured over each write index's own ILM write window (${sizing.ilmWindowRates.writeIndexCount} write ${sizing.ilmWindowRates.writeIndexCount === 1 ? 'index' : 'indices'}).`,
@@ -575,6 +563,22 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
                   ...(sizing.ilmWindowRates?.compressionRatio != null ? [{
                     title: 'Effective compression ratio',
                     description: `${sizing.ilmWindowRates.compressionRatio.toFixed(1)}:1 (logsdb typically 10:1–20:1, standard 2:1–5:1; near 1:1 means compression is not working).`,
+                  }] : []),
+                  ...(sizing.primaryRetentionDays !== null ? [{
+                    title: 'Est. data retention',
+                    description: `~${sizing.primaryRetentionDays} days (modal ILM delete phase across all managed policies)`,
+                  }] : []),
+                  ...(sizing.avgQueryRateQPS !== null ? [{
+                    title: 'Avg query rate',
+                    description: `~${Math.round(sizing.avgQueryRateQPS).toLocaleString()} QPS${sizing.nodeUptimeDays !== null ? ` (avg since last restart, ${sizing.nodeUptimeDays.toFixed(1)}d ago)` : ''}`,
+                  }] : []),
+                  ...(sizing.ingestRateGBPerDay !== null ? [{
+                    title: 'Est. avg ingest rate',
+                    description: `~${sizing.ingestRateGBPerDay.toFixed(1)} GB/day (compressed primary, retention-based avg — not peak)`,
+                  }] : []),
+                  ...(sizing.bulkIngestRateBytesPerDay !== null ? [{
+                    title: 'Est. avg indexed rate',
+                    description: `~${formatBytes(sizing.bulkIngestRateBytesPerDay)}/day — cumulative _source bytes written to primary shards via bulk API ÷ node uptime${sizing.nodeUptimeDays !== null ? ` (${sizing.nodeUptimeDays.toFixed(1)}d)` : ''}. After ingest pipelines; excludes replicas and raw HTTP overhead.`,
                   }] : []),
                 ]}
               />

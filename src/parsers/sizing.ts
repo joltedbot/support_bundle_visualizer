@@ -1,6 +1,7 @@
 import { parseJsonFile } from '../utils/bundleReader'
 import type { IndexInfo, SizingMetrics, RetentionBucket } from './types'
 import { parseBulkIngestRate } from './bulkIngestRate'
+import { parseMinAgeDays } from './ilm'
 
 interface NodeStatEntry {
   jvm?: { uptime_in_millis?: number }
@@ -30,30 +31,6 @@ interface ILMPolicyEntry {
     phases?: {
       delete?: ILMPhase
     }
-  }
-}
-
-/**
- * Convert an ILM min_age string (e.g. "30d", "180d", "6M", "24h") to days.
- * Returns null for unparseable or zero values.
- * Unit matching is case-sensitive: 'm' = minutes, 'M' = months.
- */
-function parseMinAgeDays(minAge: string): number | null {
-  if (!minAge) return null
-  const trimmed = minAge.trim()
-  // Use [a-zA-Z]+ to preserve case so 'M' (months) and 'm' (minutes) resolve correctly
-  const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)$/)
-  if (!match) return null
-  const value = parseFloat(match[1])
-  const unit = match[2]
-  if (isNaN(value) || value <= 0) return null
-  switch (unit) {
-    case 'd': return value
-    case 'h': return value / 24
-    case 'm': return value / 1440
-    case 'M': return value * 30  // approximate
-    case 'y': return value * 365
-    default: return null
   }
 }
 
