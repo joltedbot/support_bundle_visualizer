@@ -11,12 +11,13 @@ CHANGES.md
 ERRORS.md
 PERMS.md
 
+references/
 diagnostics/
 !diagnostics/.keep
 diagnostics/*
 docs/
 .secretlintignore
-.secretlintrc.json 
+.secretlintrc.json
 .claude/
 .gemini
 .pnpm-store

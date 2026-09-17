@@ -1,5 +1,6 @@
 import { parseJsonFile } from '../utils/bundleReader'
 import type { IndexInfo, SizingMetrics, RetentionBucket } from './types'
+import { parseBulkIngestRate } from './bulkIngestRate'
 
 interface NodeStatEntry {
   jvm?: { uptime_in_millis?: number }
@@ -35,11 +36,13 @@ interface ILMPolicyEntry {
 /**
  * Convert an ILM min_age string (e.g. "30d", "180d", "6M", "24h") to days.
  * Returns null for unparseable or zero values.
+ * Unit matching is case-sensitive: 'm' = minutes, 'M' = months.
  */
 function parseMinAgeDays(minAge: string): number | null {
   if (!minAge) return null
-  const lower = minAge.trim().toLowerCase()
-  const match = lower.match(/^(\d+(?:\.\d+)?)\s*([a-z]+)$/)
+  const trimmed = minAge.trim()
+  // Use [a-zA-Z]+ to preserve case so 'M' (months) and 'm' (minutes) resolve correctly
+  const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)$/)
   if (!match) return null
   const value = parseFloat(match[1])
   const unit = match[2]
@@ -60,10 +63,12 @@ function parseMinAgeDays(minAge: string): number | null {
  * Returns null if neither nodes_stats nor ILM policy data is available.
  */
 export function parseSizing(files: Map<string, string>, indices: IndexInfo[]): SizingMetrics | null {
+  const ilmWindowRates = parseBulkIngestRate(files)
+
   const nodesStatsRaw = parseJsonFile<NodesStatsJson>(files, 'nodes_stats.json')
   const ilmPoliciesRaw = parseJsonFile<Record<string, ILMPolicyEntry>>(files, 'commercial/ilm_policies.json')
 
-  if (!nodesStatsRaw && !ilmPoliciesRaw) return null
+  if (!nodesStatsRaw && !ilmPoliciesRaw && ilmWindowRates === null) return null
 
   const indicesStatsRaw = parseJsonFile<IndicesStatsJson>(files, 'indices_stats.json')
 
@@ -150,5 +155,6 @@ export function parseSizing(files: Map<string, string>, indices: IndexInfo[]): S
     bulkIngestRateBytesPerDay,
     retentionDistribution,
     primaryRetentionDays,
+    ilmWindowRates,
   }
 }

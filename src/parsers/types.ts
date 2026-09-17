@@ -354,13 +354,21 @@ export interface RetentionBucket {
   policyCount: number
 }
 
+export interface IlmWindowRates {
+  bulkBytesPerDay: number          // Σ write indices, raw pre-compression bytes through Bulk API
+  indexingBytesPerDay: number      // Σ write indices, primary on-disk growth after compression
+  compressionRatio: number | null  // bulk ÷ indexing; null when indexingBytesPerDay is 0
+  writeIndexCount: number          // number of write indices that contributed a rate > 0
+}
+
 export interface SizingMetrics {
   avgQueryRateQPS: number | null     // avg QPS since last node restart
   nodeUptimeDays: number | null      // max uptime across nodes (context for QPS label)
   ingestRateGBPerDay: number | null  // estimated compressed primary GB/day (retention-based)
-  bulkIngestRateBytesPerDay: number | null  // raw pre-segment bulk bytes/day (primaries bulk total_size ÷ node uptime)
+  bulkIngestRateBytesPerDay: number | null  // cumulative _source bytes written via bulk ÷ node uptime
   retentionDistribution: RetentionBucket[]  // sorted ascending by days
   primaryRetentionDays: number | null       // modal bucket's day value
+  ilmWindowRates: IlmWindowRates | null     // esdiag ILM-window ingest and on-disk rates
 }
 
 export interface LicenseInfo {

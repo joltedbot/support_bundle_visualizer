@@ -41,9 +41,11 @@ interface ILMPolicyEntry {
  */
 export function parseMinAgeDays(minAge: string): number | null {
   if (!minAge) return null
-  const lower = minAge.trim().toLowerCase()
+  const trimmed = minAge.trim()
+  const lower = trimmed.toLowerCase()
   if (lower === '0ms' || lower === '0s' || lower === '0') return null
-  const match = lower.match(/^(\d+(?:\.\d+)?)\s*([a-z]+)$/)
+  // Use [a-zA-Z]+ to preserve case so 'M' (months) and 'm' (minutes) resolve correctly
+  const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)$/)
   if (!match) return null
   const value = parseFloat(match[1])
   const unit = match[2]

@@ -420,7 +420,12 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
   const hasSizing = sizing !== null && (
     sizing.avgQueryRateQPS !== null ||
     sizing.ingestRateGBPerDay !== null ||
-    sizing.bulkIngestRateBytesPerDay !== null
+    sizing.bulkIngestRateBytesPerDay !== null ||
+    (sizing.ilmWindowRates !== null && (
+      sizing.ilmWindowRates.bulkBytesPerDay > 0 ||
+      sizing.ilmWindowRates.indexingBytesPerDay > 0 ||
+      sizing.ilmWindowRates.compressionRatio !== null
+    ))
   )
   if (!hasStats && !hasIlm && !hasSnapshots && !hasSizing) return null
 
@@ -558,6 +563,18 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
                   ...(sizing.bulkIngestRateBytesPerDay !== null ? [{
                     title: 'Est. avg indexed rate',
                     description: `~${formatBytes(sizing.bulkIngestRateBytesPerDay)}/day — cumulative _source bytes written to primary shards via bulk API ÷ node uptime${sizing.nodeUptimeDays !== null ? ` (${sizing.nodeUptimeDays.toFixed(1)}d)` : ''}. After ingest pipelines; excludes replicas and raw HTTP overhead.`,
+                  }] : []),
+                  ...(sizing.ilmWindowRates !== null && sizing.ilmWindowRates.bulkBytesPerDay > 0 ? [{
+                    title: 'Est. bulk ingest rate (ILM window)',
+                    description: `~${formatBytes(sizing.ilmWindowRates.bulkBytesPerDay)}/day — raw pre-compression bytes through the Bulk API, measured over each write index's own ILM write window (${sizing.ilmWindowRates.writeIndexCount} write ${sizing.ilmWindowRates.writeIndexCount === 1 ? 'index' : 'indices'}).`,
+                  }] : []),
+                  ...(sizing.ilmWindowRates !== null && sizing.ilmWindowRates.indexingBytesPerDay > 0 ? [{
+                    title: 'Est. on-disk growth (ILM window)',
+                    description: `~${formatBytes(sizing.ilmWindowRates.indexingBytesPerDay)}/day — primary shard growth after compression; use for storage and retention planning.`,
+                  }] : []),
+                  ...(sizing.ilmWindowRates?.compressionRatio != null ? [{
+                    title: 'Effective compression ratio',
+                    description: `${sizing.ilmWindowRates.compressionRatio.toFixed(1)}:1 (logsdb typically 10:1–20:1, standard 2:1–5:1; near 1:1 means compression is not working).`,
                   }] : []),
                 ]}
               />
