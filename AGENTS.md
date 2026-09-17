@@ -138,7 +138,7 @@ verifying a specific API, version constraint, or behaviour you are uncertain of.
 | Resource | URL | When to use |
 |----------|-----|-------------|
 | `docs/DIAGNOSTIC_BUNDLE_REFERENCE.md` | Local file | Authoritative reference for all diagnostic bundle data: every file, key field paths, non-obvious parsing rules, cloud vs self-hosted differences. Consult first when working with bundle data or planning new features. Do NOT re-scan raw bundle directories. |
-| `docs/UI_SPECS.md` | Local file | Strict business rules and presentation logic for the React components. |
+| `docs/DIAGNOSTIC_THRESHOLDS.md` | Local file | Thresholds and interpretation — what a metric value means and when to act. Consult when assessing cluster health or adding a health/severity judgement to parsers or UI. |
 | EUI docs | https://eui.elastic.co | Component API — verify against 113.x |
 | Elastic Charts | https://elastic.github.io/elastic-charts | Chart component API |
 | elastic-docs MCP | (via MCP server) | Elastic product docs — use MCP, not elastic.co/docs |
