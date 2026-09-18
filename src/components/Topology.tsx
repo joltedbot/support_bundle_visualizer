@@ -318,7 +318,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
                   <EuiText size="xs" color="subdued" style={{ marginLeft: 8 }}>
                     Routine (young): {signals.gc!.youngCollectionCount} runs{youngPct !== null ? ` · ${youngPct}% of uptime` : ''}
                   </EuiText>
-                  <EuiText size="xs" color={signals.gc!.oldCollectionCount > 0 ? 'warning' : 'subdued'} style={{ marginLeft: 8 }}>
+                  <EuiText size="xs" color={oldPct !== null && oldPct > 0 ? 'warning' : 'subdued'} style={{ marginLeft: 8 }}>
                     Full (old): {signals.gc!.oldCollectionCount} runs{oldPct !== null ? ` · ${oldPct}% of uptime` : ''}
                   </EuiText>
                 </div>

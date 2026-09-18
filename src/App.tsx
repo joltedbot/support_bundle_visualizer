@@ -15,6 +15,7 @@ import Overview from './components/Overview'
 import InternalHealthSection from './components/InternalHealthSection'
 import Licensing from './components/Licensing'
 import Topology from './components/Topology'
+import PendingTasksSection from './components/PendingTasksSection'
 import FeaturesIntegrations from './components/FeaturesIntegrations'
 import FleetSection from './components/FleetSection'
 import DataProfile, { ILMPoliciesTable, SLMPoliciesTable } from './components/DataProfile'
@@ -93,6 +94,15 @@ function App() {
             maxShardsPerNodeFrozen={model.clusterSettings?.maxShardsPerNodeFrozen ?? null}
             nodeHealthSignals={model.nodeHealthSignals}
           />
+
+          {model.pendingTasks && model.pendingTasks.taskCount > 0 && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Pending Cluster Tasks</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <PendingTasksSection pendingTasks={model.pendingTasks} />
+            </>
+          )}
 
           {(model.features || kibana) && (
             <>
