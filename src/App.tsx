@@ -8,6 +8,7 @@ import {
   EuiSpacer,
   EuiTitle,
   EuiPanel,
+  EuiBadge,
 } from '@elastic/eui'
 import ClusterHeader from './components/ClusterHeader'
 import Overview from './components/Overview'
@@ -90,6 +91,7 @@ function App() {
             kibana={kibana ?? null}
             maxShardsPerNode={model.clusterSettings?.maxShardsPerNode ?? null}
             maxShardsPerNodeFrozen={model.clusterSettings?.maxShardsPerNodeFrozen ?? null}
+            nodeHealthSignals={model.nodeHealthSignals}
           />
 
           {(model.features || kibana) && (
@@ -155,17 +157,26 @@ function App() {
             </>
           )}
 
-          <>
-            <EuiSpacer size="l" />
-            <EuiTitle size="s"><h3>Plugins</h3></EuiTitle>
-            <EuiSpacer size="s" />
-            <Plugins plugins={model.plugins} />
-          </>
+          {model.plugins.length > 0 && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Plugins</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <Plugins plugins={model.plugins} />
+            </>
+          )}
 
           {model.ilm && model.ilm.policies.length > 0 && (
             <>
               <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>ILM Policies</h3></EuiTitle>
+              <EuiTitle size="s">
+                <h3>
+                  ILM Policies
+                  {model.snapshots?.ilmOperationMode === 'STOPPED' && (
+                    <EuiBadge color="danger" style={{ marginLeft: 8 }}>STOPPED</EuiBadge>
+                  )}
+                </h3>
+              </EuiTitle>
               <EuiSpacer size="s" />
               <ILMPoliciesTable policies={model.ilm.policies} />
             </>
@@ -178,7 +189,14 @@ function App() {
           {model.snapshots && model.snapshots.slmPolicies.length > 0 && (
             <>
               <EuiSpacer size="l" />
-              <EuiTitle size="s"><h3>SLM Policies</h3></EuiTitle>
+              <EuiTitle size="s">
+                <h3>
+                  SLM Policies
+                  {model.snapshots?.slmOperationMode === 'STOPPED' && (
+                    <EuiBadge color="danger" style={{ marginLeft: 8 }}>STOPPED</EuiBadge>
+                  )}
+                </h3>
+              </EuiTitle>
               <EuiSpacer size="s" />
               <SLMPoliciesTable policies={model.snapshots.slmPolicies} />
             </>

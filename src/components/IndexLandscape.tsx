@@ -105,12 +105,24 @@ export default function IndexLandscape({ indices, shards }: Props) {
     {
       field: 'indexType',
       name: 'Type',
-      width: '110px',
+      width: '150px',
       sortable: true,
-      render: (t: IndexInfo['indexType']) => {
-        if (t === 'datastream-backing') return <EuiBadge color="accent">DS backing</EuiBadge>
-        if (t === 'alias-backing') return <EuiBadge color="primary">Alias</EuiBadge>
-        return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+      render: (_t: IndexInfo['indexType'], item: IndexInfo) => {
+        const typeBadge = item.indexType === 'datastream-backing'
+          ? <EuiBadge color="accent">DS backing</EuiBadge>
+          : item.indexType === 'alias-backing'
+          ? <EuiBadge color="primary">Alias</EuiBadge>
+          : null
+        const logsDbBadge = item.isLogsDb
+          ? <EuiBadge color="warning">LogsDB</EuiBadge>
+          : null
+        if (!typeBadge && !logsDbBadge) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+        return (
+          <EuiFlexGroup gutterSize="xs" responsive={false}>
+            {typeBadge && <EuiFlexItem grow={false}>{typeBadge}</EuiFlexItem>}
+            {logsDbBadge && <EuiFlexItem grow={false}>{logsDbBadge}</EuiFlexItem>}
+          </EuiFlexGroup>
+        )
       },
     },
     {

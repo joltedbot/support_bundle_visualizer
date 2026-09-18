@@ -1,36 +1,97 @@
 import { parseJsonFile, getTextFile } from '../utils/bundleReader'
-import type { NodeInfo, NodeRole } from './types'
+import { DISK_HIGH, DISK_ALLOC_BLOCKED, DISK_FLOOD, LOAD_PERCENT_MIN_RAM_BYTES } from '../utils/thresholds'
+import type {
+  NodeInfo, NodeRole, NodeHealthSignals, NodeWorkload, ThreadPoolStats,
+  IndexingPressureStats, CircuitBreakerStats, GCStats,
+} from './types'
 
 interface NodesJsonNode {
   name?: string
   ip?: string
   roles?: string[]
   attributes?: Record<string, string>
-  os?: { available_processors?: number }
+  os?: { available_processors?: number; allocated_processors?: number }
 }
 
 interface NodesJson {
   nodes?: Record<string, NodesJsonNode>
 }
 
-interface NodesStatsJson {
-  nodes?: Record<string, {
-    name?: string
-    jvm?: {
-      uptime_in_millis?: number
-      mem?: { heap_used_percent?: number; heap_max_in_bytes?: number }
+interface NodesStatsNodeEntry {
+  name?: string
+  jvm?: {
+    uptime_in_millis?: number
+    mem?: { heap_used_percent?: number; heap_max_in_bytes?: number }
+    gc?: {
+      collectors?: {
+        young?: { collection_count?: number; collection_time_in_millis?: number }
+        old?: { collection_count?: number; collection_time_in_millis?: number }
+      }
     }
-    process?: { cpu?: { percent?: number } }
-    fs?: { total?: { total_in_bytes?: number; free_in_bytes?: number; available_in_bytes?: number } }
-    os?: {
-      cpu?: { percent?: number }
-      mem?: { total_in_bytes?: number; used_in_bytes?: number }
-      cgroup?: { memory?: { limit_in_bytes?: string; usage_in_bytes?: string } }
+  }
+  process?: { cpu?: { percent?: number } }
+  fs?: { total?: { total_in_bytes?: number; free_in_bytes?: number; available_in_bytes?: number } }
+  os?: {
+    cpu?: {
+      percent?: number
+      load_average?: { '1m'?: number; '5m'?: number; '15m'?: number }
     }
-    indices?: {
-      dense_vector?: { value_count?: number; off_heap?: { total_size_bytes?: number } }
+    mem?: { total_in_bytes?: number; used_in_bytes?: number }
+    cgroup?: { memory?: { limit_in_bytes?: string; usage_in_bytes?: string } }
+  }
+  indices?: {
+    dense_vector?: { value_count?: number; off_heap?: { total_size_bytes?: number } }
+    search?: { query_total?: number; query_time_in_millis?: number }
+    indexing?: {
+      index_time_in_millis?: number
+      delete_time_in_millis?: number
+      throttle_time_in_millis?: number
     }
+    merges?: { total_time_in_millis?: number }
+    fielddata?: { evictions?: number; memory_size_in_bytes?: number }
+    ingest?: { total?: { time_in_millis?: number } }
+  }
+  indexing_pressure?: {
+    memory?: {
+      limit_in_bytes?: number
+      current?: {
+        coordinating_and_primary_in_bytes?: number
+        replica_in_bytes?: number
+      }
+      total?: {
+        rejections?: {
+          coordinating?: number
+          primary?: number
+          replica?: number
+        }
+        coordinating_rejections?: number
+        primary_rejections?: number
+        replica_rejections?: number
+      }
+    }
+  }
+  thread_pool?: Record<string, {
+    threads?: number
+    active?: number
+    queue?: number
+    rejected?: number
+    largest?: number
+    completed?: number
   }>
+  breakers?: Record<string, {
+    tripped?: number
+    estimated_size_in_bytes?: number
+    limit_size_in_bytes?: number
+  }>
+  allocations?: {
+    undesired_shards?: number
+    forecasted_disk_usage_in_bytes?: number
+    forecasted_ingest_load?: number
+  }
+}
+
+interface NodesStatsJson {
+  nodes?: Record<string, NodesStatsNodeEntry>
 }
 
 const KNOWN_ROLES: Set<NodeRole> = new Set([
@@ -61,6 +122,156 @@ function determineTier(roles: NodeRole[]): NodeInfo['tier'] {
   if (hasDataFrozen) return 'frozen'
   // No data roles, no master
   return 'coordinating'
+}
+
+const INTERESTING_THREAD_POOLS = new Set([
+  'write', 'search', 'get', 'analyze', 'warmer', 'listener',
+  'generic', 'management', 'force_merge', 'fetch_shard_started',
+  'fetch_shard_store', 'flush', 'refresh', 'snapshot', 'snapshot_meta',
+])
+
+/**
+ * Build per-node health signals from nodes_stats.json and node metadata.
+ * Returns one entry per node. Called after parseNodes so nodeId is stable.
+ */
+export function buildNodeHealthSignals(
+  files: Map<string, string>,
+  nodes: NodeInfo[],
+): NodeHealthSignals[] {
+  const nodesStatsJson = parseJsonFile<NodesStatsJson>(files, 'nodes_stats.json')
+  if (!nodesStatsJson?.nodes) return []
+
+  const result: NodeHealthSignals[] = []
+
+  for (const node of nodes) {
+    const statsEntry = nodesStatsJson.nodes[node.id]
+    if (!statsEntry) continue
+
+    const uptimeMs = statsEntry.jvm?.uptime_in_millis ?? 0
+
+    // ── Workload ─────────────────────────────────────────────────────────────
+    let workload: NodeWorkload | null = null
+    const indexingMs = statsEntry.indices?.indexing?.index_time_in_millis
+    const mergeMs = statsEntry.indices?.merges?.total_time_in_millis
+    const searchMs = statsEntry.indices?.search?.query_time_in_millis
+    const ingestMs = statsEntry.indices?.ingest?.total?.time_in_millis
+    if (uptimeMs > 0 && (indexingMs !== undefined || mergeMs !== undefined || searchMs !== undefined || ingestMs !== undefined)) {
+      workload = {
+        indexingPercent: indexingMs !== undefined ? Math.round(indexingMs / uptimeMs * 1000) / 10 : null,
+        queryPercent: searchMs !== undefined ? Math.round(searchMs / uptimeMs * 1000) / 10 : null,
+        mergePercent: mergeMs !== undefined ? Math.round(mergeMs / uptimeMs * 1000) / 10 : null,
+        ingestPercent: ingestMs !== undefined ? Math.round(ingestMs / uptimeMs * 1000) / 10 : null,
+      }
+    }
+
+    // ── Load percent ─────────────────────────────────────────────────────────
+    const load1m = statsEntry.os?.cpu?.load_average?.['1m']
+    const allocProcs = node.allocatedProcessors ?? node.availableProcessors
+    const ramTotal = node.ramTotal
+    const loadPercentReliable = ramTotal !== undefined && ramTotal >= LOAD_PERCENT_MIN_RAM_BYTES
+    let loadPercent: number | null = null
+    if (load1m !== undefined && allocProcs !== undefined && allocProcs > 0) {
+      loadPercent = Math.round(load1m / allocProcs * 1000) / 10
+    }
+
+    // ── GC ───────────────────────────────────────────────────────────────────
+    let gc: GCStats | null = null
+    const gcCollectors = statsEntry.jvm?.gc?.collectors
+    if (gcCollectors) {
+      gc = {
+        youngCollectionCount: gcCollectors.young?.collection_count ?? 0,
+        youngCollectionTimeMs: gcCollectors.young?.collection_time_in_millis ?? 0,
+        oldCollectionCount: gcCollectors.old?.collection_count ?? 0,
+        oldCollectionTimeMs: gcCollectors.old?.collection_time_in_millis ?? 0,
+      }
+    }
+
+    // ── Fielddata evictions ───────────────────────────────────────────────────
+    const fielddataEvictions = statsEntry.indices?.fielddata?.evictions ?? null
+
+    // ── Indexing pressure ─────────────────────────────────────────────────────
+    let indexingPressure: IndexingPressureStats | null = null
+    const ipMem = statsEntry.indexing_pressure?.memory
+    if (ipMem) {
+      const coordAndPrimary = ipMem.current?.coordinating_and_primary_in_bytes ?? 0
+      const replica = ipMem.current?.replica_in_bytes ?? 0
+      // Support both on-wire shapes for total rejections
+      const rejCoord = ipMem.total?.rejections?.coordinating ?? ipMem.total?.coordinating_rejections ?? 0
+      const rejPrimary = ipMem.total?.rejections?.primary ?? ipMem.total?.primary_rejections ?? 0
+      const rejReplica = ipMem.total?.rejections?.replica ?? ipMem.total?.replica_rejections ?? 0
+      indexingPressure = {
+        limitInBytes: ipMem.limit_in_bytes ?? 0,
+        currentCoordinatingAndPrimaryInBytes: coordAndPrimary,
+        currentReplicaInBytes: replica,
+        totalRejectionsCoordinating: rejCoord,
+        totalRejectionsPrimary: rejPrimary,
+        totalRejectionsReplica: rejReplica,
+        hasRejections: rejCoord > 0 || rejPrimary > 0 || rejReplica > 0,
+      }
+    }
+
+    // ── Thread pools ──────────────────────────────────────────────────────────
+    const threadPools: ThreadPoolStats[] = []
+    if (statsEntry.thread_pool) {
+      for (const [pool, tp] of Object.entries(statsEntry.thread_pool)) {
+        if (!INTERESTING_THREAD_POOLS.has(pool)) continue
+        const threads = tp.threads ?? 0
+        const active = tp.active ?? 0
+        const queue = tp.queue ?? 0
+        const rejected = tp.rejected ?? 0
+        const largest = tp.largest ?? 0
+        // Include only pools that have any activity worth showing
+        if (threads > 0 || active > 0 || queue > 0 || rejected > 0) {
+          threadPools.push({ pool, threads, active, queue, rejected, largest })
+        }
+      }
+    }
+
+    // ── Circuit breakers ──────────────────────────────────────────────────────
+    const circuitBreakers: CircuitBreakerStats[] = []
+    if (statsEntry.breakers) {
+      for (const [name, br] of Object.entries(statsEntry.breakers)) {
+        circuitBreakers.push({
+          name,
+          tripped: br.tripped ?? 0,
+          estimatedSizeInBytes: br.estimated_size_in_bytes ?? 0,
+          limitSizeInBytes: br.limit_size_in_bytes ?? 0,
+        })
+      }
+    }
+
+    // ── Allocations forecast (ES 8.17+, data nodes only) ─────────────────────
+    let allocations: NodeHealthSignals['allocations']
+    const rawAlloc = statsEntry.allocations
+    const isDataNode = node.roles.some(r => r.startsWith('data'))
+    if (!isDataNode) {
+      allocations = { unavailable: 'NOT_APPLICABLE' }
+    } else if (rawAlloc) {
+      allocations = {
+        undesiredShards: rawAlloc.undesired_shards ?? 0,
+        forecastedDiskUsageInBytes: rawAlloc.forecasted_disk_usage_in_bytes ?? 0,
+        forecastedIngestLoad: rawAlloc.forecasted_ingest_load ?? 0,
+      }
+    } else {
+      allocations = { unavailable: 'REQUIRES_ES_8_17' }
+    }
+
+    result.push({
+      nodeId: node.id,
+      nodeName: node.name,
+      workload,
+      loadPercent,
+      loadPercentReliable,
+      indexingPressure,
+      threadPools,
+      circuitBreakers,
+      fielddataEvictions,
+      gc,
+      allocations,
+    })
+  }
+
+  return result
 }
 
 /**
@@ -219,7 +430,25 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       diskUsedPercent = Math.round(((stats.diskTotal - stats.diskAvail) / stats.diskTotal) * 1000) / 10
     }
 
+    // Disk watermark band (null for frozen tier — disk is pre-allocated cache, not real usage)
+    let diskWatermark: NodeInfo['diskWatermark'] = undefined
+    if (tier !== 'frozen') {
+      if (diskUsedPercent === undefined) {
+        diskWatermark = null
+      } else if (diskUsedPercent >= DISK_FLOOD) {
+        diskWatermark = 'flood'
+      } else if (diskUsedPercent >= DISK_ALLOC_BLOCKED) {
+        diskWatermark = 'high'
+      } else if (diskUsedPercent >= DISK_HIGH) {
+        diskWatermark = 'low'
+      } else {
+        diskWatermark = 'healthy'
+      }
+    }
+
     const instanceConfiguration = node.attributes?.instance_configuration
+    // allocated_processors is cgroup-aware (correct on Cloud); fall back to available_processors
+    const allocatedProcessors = node.os?.allocated_processors ?? node.os?.available_processors
 
     result.push({
       id,
@@ -235,11 +464,13 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
       diskUsedPercent,
       diskTotal: stats?.diskTotal,
       diskAvail: stats?.diskAvail,
+      diskWatermark,
       ramTotal: stats?.ramTotal,
       ramUsed: stats?.ramUsed,
       offHeapBytes: stats?.offHeapBytes,
       jvmUptimeMs: stats?.jvmUptimeMs,
       availableProcessors: node.os?.available_processors,
+      allocatedProcessors,
     })
   }
 

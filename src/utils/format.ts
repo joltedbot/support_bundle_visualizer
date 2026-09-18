@@ -53,3 +53,23 @@ export function resourceColor(
   if (percent >= warn) return 'warning'
   return 'success'
 }
+
+export function diskUsageColor(pct: number): 'success' | 'warning' | 'danger' {
+  if (pct >= 85) return 'danger'
+  if (pct >= 70) return 'warning'
+  return 'success'
+}
+
+// Returns a label for disk watermark bands above 90%; null below that.
+export function diskUsageLabel(pct: number): string | null {
+  if (pct >= 95) return 'Flood-stage'
+  if (pct >= 90) return 'Shard move'
+  return null
+}
+
+// Display strings for absent fields — use these instead of ad-hoc "N/A" or "—"
+export const UNAVAILABLE = {
+  notAvailable: 'Not available',   // data was expected but is absent (file missing, field not emitted)
+  notApplicable: 'Not applicable', // metric does not apply to this node/index type
+  notComputed: 'Not computed',     // inputs present but computation guard triggered (e.g. uptime = 0)
+} as const

@@ -22,8 +22,8 @@ const thresholds: Threshold[] = [
   {
     metric: 'Disk Used',
     healthy: '< 70%',
-    warning: '70–85%',
-    critical: '> 85%',
+    warning: '70–85% (low watermark)',
+    critical: '> 85% (high watermark / flood-stage at 95%)',
   },
   {
     metric: 'CPU',
@@ -33,15 +33,15 @@ const thresholds: Threshold[] = [
   },
   {
     metric: 'Shard Size',
-    healthy: '10–50 GB',
-    warning: '< 10 GB or > 50 GB',
+    healthy: '10 GB – 50 GiB',
+    warning: '< 10 GB or > 50 GiB',
     critical: '—',
   },
   {
     metric: 'Shard Count',
-    healthy: '≤ 20 per GB heap',
-    warning: '—',
-    critical: '> 30 per GB heap',
+    healthy: '≤ max_shards_per_node',
+    warning: '> 80% of limit',
+    critical: '≥ max_shards_per_node',
   },
 ]
 

@@ -54,6 +54,16 @@ export default function SnapshotRepositories({ repositories }: Props) {
       },
     },
     {
+      name: 'Last Success',
+      render: (repo: SnapshotRepository) => {
+        const ms = repo.lastSuccessfulSnapshotAgeMs
+        if (ms === null) return <EuiText size="xs" color="subdued">—</EuiText>
+        if (ms < 86_400_000) return <EuiText size="xs">{'< 1 day ago'}</EuiText>
+        const days = Math.floor(ms / 86_400_000)
+        return <EuiText size="xs">{days} day{days !== 1 ? 's' : ''} ago</EuiText>
+      },
+    },
+    {
       name: 'Key Settings',
       render: (repo: SnapshotRepository) => {
         const keySettings = []

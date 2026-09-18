@@ -6,9 +6,13 @@ import {
   EuiText,
   EuiProgress,
   EuiSpacer,
+  EuiAccordion,
+  EuiToolTip,
+  EuiIcon,
 } from '@elastic/eui'
-import type { NodeInfo, NodeRole, KibanaInfo } from '../parsers/types'
-import { resourceColor, formatBytes, formatUptime } from '../utils/format'
+import type { NodeInfo, NodeRole, KibanaInfo, NodeHealthSignals } from '../parsers/types'
+import { resourceColor, formatBytes, formatUptime, diskUsageColor, diskUsageLabel } from '../utils/format'
+import { HEAP_RAM_WARN_PCT, HEAP_RAM_MAX_BYTES } from '../utils/thresholds'
 import {
   buildSummaryBar,
   groupNodesByAZ,
@@ -20,6 +24,32 @@ interface Props {
   kibana: KibanaInfo | null
   maxShardsPerNode: number | null
   maxShardsPerNodeFrozen: number | null
+  nodeHealthSignals: NodeHealthSignals[]
+}
+
+// ─── Circuit breaker helpers ──────────────────────────────────────────────────
+
+const CB_NAMES: Record<string, string> = {
+  parent:              'Total Heap Guard',
+  fielddata:           'Field Data',
+  request:             'Request',
+  inflight_requests:   'In-Flight Requests',
+  in_flight_requests:  'In-Flight Requests',
+  model_inference:     'Model Inference',
+  eql_sequence:        'EQL Sequence',
+  accounting:          'Accounting',
+}
+
+function cbFriendlyName(name: string): string {
+  return CB_NAMES[name] ?? name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function InfoTip({ content }: { content: string }) {
+  return (
+    <EuiToolTip content={content}>
+      <EuiIcon type="iInCircle" size="s" color="subdued" style={{ marginLeft: 4, verticalAlign: 'middle', cursor: 'help' }} />
+    </EuiToolTip>
+  )
 }
 
 // ─── Colours & labels ────────────────────────────────────────────────────────
@@ -59,34 +89,46 @@ const DATA_ROLE_TO_TIER: Partial<Record<NodeRole, string>> = {
 
 // ─── NodeCard ─────────────────────────────────────────────────────────────────
 
-function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: NodeInfo; maxShardsPerNode: number | null; maxShardsPerNodeFrozen: number | null }) {
-  // Primary badge: data tier role wins; fall back to first non-rcc management role
+function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
+  node: NodeInfo
+  maxShardsPerNode: number | null
+  maxShardsPerNodeFrozen: number | null
+  signals?: NodeHealthSignals
+}) {
   const primaryRole: NodeRole =
     node.roles.find(r => DATA_ROLE_TO_TIER[r]) ??
     node.roles.find(r => r !== 'remote_cluster_client') ??
     node.roles[0]
   const secondaryRoles = node.roles.filter(r => r !== primaryRole)
 
-  // Derive color from the primary role's tier name
   const primaryTier = DATA_ROLE_TO_TIER[primaryRole] ?? primaryRole
   const primaryColor = TIER_COLORS[primaryTier] ?? '#7f8c8d'
 
   const heapColor = node.heapPercent !== undefined
     ? resourceColor(node.heapPercent, 75, 85) : undefined
-  const diskColor = node.diskUsedPercent !== undefined
-    ? resourceColor(node.diskUsedPercent, 70, 85) : undefined
   const cpuColor = node.cpuPercent !== undefined
     ? resourceColor(node.cpuPercent, 50, 80) : undefined
 
-  const vcpuStr = node.availableProcessors !== undefined ? `${node.availableProcessors} vCPU` : null
+  const vcpuStr = (node.allocatedProcessors ?? node.availableProcessors) !== undefined
+    ? `${node.allocatedProcessors ?? node.availableProcessors} vCPU` : null
   const ramStr = node.ramTotal !== undefined ? formatBytes(node.ramTotal) : null
   const diskStr = node.diskTotal !== undefined ? formatBytes(node.diskTotal) : null
   const capacityStr = [vcpuStr, ramStr && `${ramStr} RAM`, diskStr && `${diskStr} disk`]
     .filter(Boolean).join(' · ')
 
+  const heapRamColor = (node.heapMaxBytes !== undefined && node.ramTotal !== undefined && node.ramTotal > 0)
+    ? (() => {
+        const pct = Math.round((node.heapMaxBytes / node.ramTotal) * 100)
+        if (node.heapMaxBytes >= HEAP_RAM_MAX_BYTES) return 'danger' as const
+        return resourceColor(pct, HEAP_RAM_WARN_PCT, HEAP_RAM_WARN_PCT + 1)
+      })()
+    : undefined
+
+  const rejectedPools = signals?.threadPools.filter(tp => tp.rejected > 0) ?? []
+  const hasDetailContent = signals !== undefined
+
   return (
     <EuiPanel paddingSize="s" style={{ minWidth: 220, maxWidth: 280 }}>
-      {/* Name */}
       <EuiText size="s">
         <strong
           title={node.name}
@@ -101,7 +143,6 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
         </strong>
       </EuiText>
 
-      {/* Role badges */}
       <EuiFlexGroup gutterSize="xs" responsive={false} alignItems="center" wrap style={{ marginTop: 4 }}>
         <EuiFlexItem grow={false}>
           <EuiBadge color={primaryColor} style={{ fontSize: 10 }}>
@@ -117,14 +158,12 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
         ))}
       </EuiFlexGroup>
 
-      {/* Capacity line */}
       {capacityStr && (
         <EuiText size="xs" color="subdued" style={{ marginTop: 2 }}>
           {capacityStr}
         </EuiText>
       )}
 
-      {/* Instance configuration */}
       {node.instanceConfiguration && (
         <EuiText size="xs" color="subdued" style={{ marginTop: 1, fontFamily: 'monospace' }}>
           {node.instanceConfiguration}
@@ -133,7 +172,6 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
 
       <EuiSpacer size="xs" />
 
-      {/* Progress bars */}
       {node.heapPercent !== undefined && (
         <div style={{ marginBottom: 4 }}>
           <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
@@ -154,7 +192,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
                   <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap / RAM</EuiText></EuiFlexItem>
                   <EuiFlexItem grow={false}><EuiText size="xs">{pct}%</EuiText></EuiFlexItem>
                 </EuiFlexGroup>
-                <EuiProgress value={pct} max={100} size="s" color={resourceColor(pct, 51, 56)} />
+                <EuiProgress value={pct} max={100} size="s" color={heapRamColor} />
                 <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
                   {formatBytes(node.heapMaxBytes)} / {formatBytes(node.ramTotal)}
                 </EuiText>
@@ -198,7 +236,12 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
             </EuiFlexItem>
             <EuiFlexItem grow={false}><EuiText size="xs">{node.diskUsedPercent}%</EuiText></EuiFlexItem>
           </EuiFlexGroup>
-          <EuiProgress value={node.diskUsedPercent} max={100} size="s" color={diskColor} />
+          <EuiProgress value={node.diskUsedPercent} max={100} size="s" color={diskUsageColor(node.diskUsedPercent)} />
+          {diskUsageLabel(node.diskUsedPercent) && (
+            <EuiText size="xs" color="warning" style={{ marginTop: 1 }}>
+              ⚠ {diskUsageLabel(node.diskUsedPercent)}
+            </EuiText>
+          )}
         </div>
       )}
 
@@ -242,6 +285,175 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen }: { node: No
           </EuiFlexGroup>
           <EuiProgress value={node.cpuPercent} max={100} size="s" color={cpuColor} />
         </div>
+      )}
+
+      {hasDetailContent && (
+        <EuiAccordion
+          id={`node-detail-${node.id}`}
+          buttonContent="Node detail"
+          initialIsOpen={false}
+          paddingSize="none"
+          style={{ marginTop: 6 }}
+        >
+          <div style={{ paddingTop: 4 }}>
+
+            {/* ── Garbage Collection ── */}
+            {signals.gc && (() => {
+              const youngPct = node.jvmUptimeMs
+                ? Math.round(signals.gc!.youngCollectionTimeMs / node.jvmUptimeMs * 1000) / 10
+                : null
+              const oldPct = node.jvmUptimeMs
+                ? Math.round(signals.gc!.oldCollectionTimeMs / node.jvmUptimeMs * 1000) / 10
+                : null
+              return (
+                <div style={{ marginBottom: 4 }}>
+                  <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false}>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="xs" color="subdued"><strong>Garbage Collection</strong></EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>
+                      <InfoTip content="The JVM periodically reclaims unused heap memory. Routine (young) GC is expected and cheap. Full (old) GC is a stop-the-world pause that briefly freezes the node — high counts or long total duration indicate heap pressure." />
+                    </EuiFlexItem>
+                  </EuiFlexGroup>
+                  <EuiText size="xs" color="subdued" style={{ marginLeft: 8 }}>
+                    Routine (young): {signals.gc!.youngCollectionCount} runs{youngPct !== null ? ` · ${youngPct}% of uptime` : ''}
+                  </EuiText>
+                  <EuiText size="xs" color={signals.gc!.oldCollectionCount > 0 ? 'warning' : 'subdued'} style={{ marginLeft: 8 }}>
+                    Full (old): {signals.gc!.oldCollectionCount} runs{oldPct !== null ? ` · ${oldPct}% of uptime` : ''}
+                  </EuiText>
+                </div>
+              )
+            })()}
+
+            {/* ── Fielddata evictions ── */}
+            {signals.fielddataEvictions !== null && signals.fielddataEvictions > 0 && (
+              <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false} style={{ marginBottom: 2 }}>
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs" color="subdued">
+                    Fielddata evictions: {signals.fielddataEvictions}
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <InfoTip content="Fielddata was evicted from the heap cache and must be reloaded from disk on next use. Any evictions mean the fielddata cache is undersized for this node's query patterns." />
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            )}
+
+            {/* ── Thread pool rejections ── */}
+            {rejectedPools.length > 0 && (
+              <div style={{ marginBottom: 2 }}>
+                <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false}>
+                  <EuiFlexItem grow={false}>
+                    <EuiText size="xs" color="subdued"><strong>Thread pool rejections</strong></EuiText>
+                  </EuiFlexItem>
+                  <EuiFlexItem grow={false}>
+                    <InfoTip content="Requests were discarded when a thread pool's queue was full. Rejections cause HTTP 429 errors for callers. Each pool handles a specific category of work (search, write, etc.)." />
+                  </EuiFlexItem>
+                </EuiFlexGroup>
+                {rejectedPools.map(tp => (
+                  <EuiText key={tp.pool} size="xs" color="subdued" style={{ marginLeft: 8 }}>
+                    {tp.pool}: {tp.rejected} rejected
+                  </EuiText>
+                ))}
+              </div>
+            )}
+
+            {/* ── Indexing backpressure ── */}
+            {signals.indexingPressure?.hasRejections && (
+              <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false} style={{ marginBottom: 2 }}>
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs" color="subdued">
+                    Indexing backpressure: Coord {signals.indexingPressure.totalRejectionsCoordinating} / Primary {signals.indexingPressure.totalRejectionsPrimary} / Replica {signals.indexingPressure.totalRejectionsReplica} rejections
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <InfoTip content="Elasticsearch rejected indexing requests because memory used by in-flight bulk operations exceeded the indexing pressure limit. Indicates the node cannot keep up with ingest load." />
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            )}
+
+            {/* ── System load ── */}
+            {signals.loadPercent !== null && (
+              <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false} style={{ marginBottom: 2 }}>
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs" color="subdued">
+                    System load: {signals.loadPercent}%{signals.loadPercentReliable ? '' : ' (unreliable — small VM)'}
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <InfoTip content="1-minute CPU load average as a percentage of allocated vCPUs. Above 100% means the node is CPU-saturated. On small VMs the load reflects the host machine, not this node's container — treat as unreliable in that case." />
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            )}
+
+            {/* ── Thread-load workload ── */}
+            {signals.workload && (
+              <div style={{ marginBottom: 2 }}>
+                <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false}>
+                  <EuiFlexItem grow={false}>
+                    <EuiText size="xs" color="subdued"><strong>Thread load vs uptime</strong></EuiText>
+                  </EuiFlexItem>
+                  <EuiFlexItem grow={false}>
+                    <InfoTip content="Cumulative thread-time for each activity divided by node uptime. Values above 100% are normal on multi-core nodes — 16 threads all indexing simultaneously produce 1600% for one second of wall time. High merge % means the node is spending significant CPU compacting Lucene segments, which competes with indexing and search." />
+                  </EuiFlexItem>
+                </EuiFlexGroup>
+                <EuiText size="xs" color="subdued" style={{ marginLeft: 8 }}>
+                  Indexing {signals.workload.indexingPercent ?? '—'}% · Query {signals.workload.queryPercent ?? '—'}% · Merge {signals.workload.mergePercent ?? '—'}%
+                </EuiText>
+              </div>
+            )}
+
+            {/* ── Circuit breakers ── */}
+            {(() => {
+              const cbs = signals.circuitBreakers
+              if (cbs.length === 0) return null
+              const tripped = cbs.filter(cb => cb.tripped > 0)
+              const notable = cbs.filter(cb =>
+                cb.tripped > 0 ||
+                (cb.limitSizeInBytes > 0 && (cb.estimatedSizeInBytes / cb.limitSizeInBytes) > 0.2)
+              )
+              if (notable.length === 0) return null
+              return (
+                <div style={{ marginTop: 4 }}>
+                  <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false}>
+                    <EuiFlexItem grow={false}>
+                      <EuiText size="xs" color={tripped.length > 0 ? 'danger' : 'subdued'}>
+                        <strong>Circuit Breakers{tripped.length > 0 ? ` — tripped: ${tripped.map(cb => cbFriendlyName(cb.name)).join(', ')}` : ''}</strong>
+                      </EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>
+                      <InfoTip content="Safety limits that reject requests before they exhaust JVM heap. 'Tripped' means a request was rejected with HTTP 429. Total Heap Guard fires when overall heap approaches 95% — more serious than individual breaker trips." />
+                    </EuiFlexItem>
+                  </EuiFlexGroup>
+                  {notable.map(cb => {
+                    const pct = cb.limitSizeInBytes > 0
+                      ? Math.round((cb.estimatedSizeInBytes / cb.limitSizeInBytes) * 100)
+                      : 0
+                    const barColor = cb.tripped > 0 ? 'danger' : resourceColor(pct, 70, 90)
+                    return (
+                      <div key={cb.name} style={{ marginBottom: 3, marginLeft: 8 }}>
+                        <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
+                          <EuiFlexItem>
+                            <EuiText size="xs" color="subdued">
+                              {cbFriendlyName(cb.name)}{cb.tripped > 0 ? ` (${cb.tripped} trip${cb.tripped !== 1 ? 's' : ''})` : ''}
+                            </EuiText>
+                          </EuiFlexItem>
+                          <EuiFlexItem grow={false}>
+                            <EuiText size="xs">{pct}%</EuiText>
+                          </EuiFlexItem>
+                        </EuiFlexGroup>
+                        <EuiProgress value={pct} max={100} size="xs" color={barColor} />
+                        <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
+                          {formatBytes(cb.estimatedSizeInBytes)} / {formatBytes(cb.limitSizeInBytes)}
+                        </EuiText>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </div>
+        </EuiAccordion>
       )}
 
       {node.jvmUptimeMs !== undefined && (
@@ -292,7 +504,13 @@ function SummaryBar({ nodes }: { nodes: NodeInfo[] }) {
 
 // ─── Node group (AZ groups) ───────────────────────────────────────────────────
 
-function NodeGroup({ label, nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: { label: string; nodes: NodeInfo[]; maxShardsPerNode: number | null; maxShardsPerNodeFrozen: number | null }) {
+function NodeGroup({ label, nodes, maxShardsPerNode, maxShardsPerNodeFrozen, signalsMap }: {
+  label: string
+  nodes: NodeInfo[]
+  maxShardsPerNode: number | null
+  maxShardsPerNodeFrozen: number | null
+  signalsMap: Map<string, NodeHealthSignals>
+}) {
   const sorted = sortNodesByRole(nodes)
   return (
     <div style={{ marginBottom: 16 }}>
@@ -300,7 +518,12 @@ function NodeGroup({ label, nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: {
       <EuiFlexGroup wrap gutterSize="s" responsive={false}>
         {sorted.map((node) => (
           <EuiFlexItem key={node.id} grow={false}>
-            <NodeCard node={node} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} />
+            <NodeCard
+              node={node}
+              maxShardsPerNode={maxShardsPerNode}
+              maxShardsPerNodeFrozen={maxShardsPerNodeFrozen}
+              signals={signalsMap.get(node.id)}
+            />
           </EuiFlexItem>
         ))}
       </EuiFlexGroup>
@@ -312,7 +535,12 @@ function NodeGroup({ label, nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: {
 
 const TIER_FALLBACK_ORDER = ['master', 'ml', 'ingest', 'transform', 'coordinating', 'hot', 'warm', 'cold', 'frozen', 'mixed'] as const
 
-function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: { nodes: NodeInfo[]; maxShardsPerNode: number | null; maxShardsPerNodeFrozen: number | null }) {
+function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen, signalsMap }: {
+  nodes: NodeInfo[]
+  maxShardsPerNode: number | null
+  maxShardsPerNodeFrozen: number | null
+  signalsMap: Map<string, NodeHealthSignals>
+}) {
   const grouped = new Map<string, NodeInfo[]>()
   for (const tier of TIER_FALLBACK_ORDER) {
     const group = nodes.filter((n) => n.tier === tier)
@@ -329,7 +557,12 @@ function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen }: {
           <EuiFlexGroup wrap gutterSize="s" responsive={false}>
             {sortNodesByRole(tierNodes).map((node) => (
               <EuiFlexItem key={node.id} grow={false}>
-                <NodeCard node={node} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} />
+                <NodeCard
+                  node={node}
+                  maxShardsPerNode={maxShardsPerNode}
+                  maxShardsPerNodeFrozen={maxShardsPerNodeFrozen}
+                  signals={signalsMap.get(node.id)}
+                />
               </EuiFlexItem>
             ))}
           </EuiFlexGroup>
@@ -409,8 +642,13 @@ function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function Topology({ nodes, kibana, maxShardsPerNode, maxShardsPerNodeFrozen }: Props) {
+export default function Topology({ nodes, kibana, maxShardsPerNode, maxShardsPerNodeFrozen, nodeHealthSignals }: Props) {
   if (nodes.length === 0 && !kibana) return null
+
+  const signalsMap = new Map<string, NodeHealthSignals>()
+  for (const sig of nodeHealthSignals) {
+    signalsMap.set(sig.nodeId, sig)
+  }
 
   const azGroups = nodes.length > 0 ? groupNodesByAZ(nodes) : null
 
@@ -420,10 +658,10 @@ export default function Topology({ nodes, kibana, maxShardsPerNode, maxShardsPer
 
       {nodes.length > 0 && (azGroups ? (
         Array.from(azGroups.entries()).map(([az, azNodes]) => (
-          <NodeGroup key={az} label={az} nodes={azNodes} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} />
+          <NodeGroup key={az} label={az} nodes={azNodes} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} signalsMap={signalsMap} />
         ))
       ) : (
-        <TierFallbackView nodes={nodes} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} />
+        <TierFallbackView nodes={nodes} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} signalsMap={signalsMap} />
       ))}
 
       {kibana && (

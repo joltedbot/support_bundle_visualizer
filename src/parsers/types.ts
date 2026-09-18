@@ -1,3 +1,95 @@
+// ── Metric availability vocabulary ───────────────────────────────────────────
+
+export type UnavailableReason =
+  | 'DATA_NOT_AVAILABLE'   // file missing or field not emitted
+  | 'NOT_APPLICABLE'       // metric does not apply to this node/index type
+  | 'REQUIRES_ES_8_17'     // allocations API only present in ES 8.17+
+  | 'JOIN_FAILED'          // cross-entity join produced no match
+  | 'COMPUTATION_GUARD'    // inputs present but guard triggered (e.g. uptime = 0)
+
+export type Metric<T> = T | { unavailable: UnavailableReason }
+
+export function isUnavailable<T>(m: Metric<T>): m is { unavailable: UnavailableReason } {
+  return typeof m === 'object' && m !== null && 'unavailable' in (m as object)
+}
+
+// ── Per-node health signals (from nodes_stats.json) ───────────────────────────
+
+export interface NodeWorkload {
+  indexingPercent: number | null   // index_time_in_millis / uptime * 100; null = COMPUTATION_GUARD
+  queryPercent: number | null
+  mergePercent: number | null
+  ingestPercent: number | null
+}
+
+export interface ThreadPoolStats {
+  pool: string
+  threads: number
+  active: number
+  queue: number
+  rejected: number
+  largest: number
+}
+
+export interface IndexingPressureStats {
+  limitInBytes: number
+  currentCoordinatingAndPrimaryInBytes: number
+  currentReplicaInBytes: number
+  totalRejectionsCoordinating: number
+  totalRejectionsPrimary: number
+  totalRejectionsReplica: number
+  hasRejections: boolean
+}
+
+export interface CircuitBreakerStats {
+  name: string
+  tripped: number
+  estimatedSizeInBytes: number
+  limitSizeInBytes: number
+}
+
+export interface GCStats {
+  youngCollectionCount: number
+  youngCollectionTimeMs: number
+  oldCollectionCount: number
+  oldCollectionTimeMs: number
+}
+
+export interface AllocationForecast {
+  undesiredShards: number
+  forecastedDiskUsageInBytes: number
+  forecastedIngestLoad: number
+}
+
+export interface NodeHealthSignals {
+  nodeId: string
+  nodeName: string
+  workload: NodeWorkload | null                               // null for non-data nodes or uptime=0
+  loadPercent: number | null                                  // load1m * 100 / allocatedProcessors; null when unreliable or unavailable
+  loadPercentReliable: boolean                               // false on < 60 GB RAM (host-level metric unreliable on small VMs)
+  indexingPressure: IndexingPressureStats | null
+  threadPools: ThreadPoolStats[]                             // only pools with any data
+  circuitBreakers: CircuitBreakerStats[]
+  fielddataEvictions: number | null
+  gc: GCStats | null
+  allocations: AllocationForecast | Metric<null>             // Metric wraps NOT_APPLICABLE / REQUIRES_ES_8_17
+}
+
+// ── Pending tasks ─────────────────────────────────────────────────────────────
+
+export interface PendingTask {
+  insertOrder: number
+  priority: string
+  source: string
+  timeInQueueMs: number  // negative values clamped to 0
+}
+
+export interface PendingTasksInfo {
+  taskCount: number
+  maxWaitMs: number
+  tasks: PendingTask[]
+}
+
 export interface ClusterIdentity {
   clusterName: string
   clusterUUID: string
@@ -50,6 +142,8 @@ export interface NodeInfo {
   diskAvail?: number        // bytes
   ramTotal?: number         // bytes
   availableProcessors?: number
+  allocatedProcessors?: number  // os.allocated_processors — cgroup-aware vCPU count (Cloud); falls back to availableProcessors
+  diskWatermark?: 'healthy' | 'low' | 'high' | 'flood' | null  // derived from diskUsedPercent; null for frozen nodes
   shardCount?: number       // total shards assigned to this node
   snapshotDataBytes?: number  // total dataset size of searchable snapshot shards on this node (frozen tier only)
   sharedCacheSizeBytes?: number  // pre-allocated shared snapshot cache size (frozen tier only)
@@ -71,6 +165,7 @@ export interface IndexInfo {
   ilmPolicy?: string  // policy name from ilm_explain.json, if managed
   models?: string[]   // names of embedding/reranking models used
   indexType?: 'index' | 'datastream-backing' | 'alias-backing'
+  isLogsDb?: boolean  // true when index.mode=logsdb or mapping.source.mode=synthetic
 }
 
 export interface ShardInfo {
@@ -79,11 +174,12 @@ export interface ShardInfo {
   prirep: 'p' | 'r'
   state: string
   node?: string
+  nodeId?: string       // resolved node ID from shard→node join; undefined when join fails
   storeSizeBytes: number
   datasetSizeBytes: number  // total dataset size incl. remote (searchable snapshot); equals storeSizeBytes for regular shards
-  // Flags
-  oversized: boolean   // > 50GB
-  undersized: boolean  // < 1GB (and not empty)
+  // Flags (primaries only — never set on replicas)
+  oversized: boolean   // primary > 50 GiB
+  undersized: boolean  // primary < 1 GiB (and not empty)
 }
 
 export interface ClusterStats {
@@ -128,6 +224,8 @@ export interface SLMPolicyDetail {
   lastFailureDate: string | null        // ISO string
   snapshotsTaken: number
   snapshotsFailed: number
+  nextExecutionMillis: number | null    // when the next run is scheduled (epoch ms); null when absent
+  overdue: boolean                      // true when nextExecutionMillis is in the past relative to collection time
 }
 
 // ── AI / ML types ────────────────────────────────────────────────────────────
@@ -282,6 +380,7 @@ export interface SnapshotRepository {
   successCount: number
   failedCount: number
   settings: Record<string, string>
+  lastSuccessfulSnapshotAgeMs: number | null  // ms since most recent SUCCESS snapshot; null when no successful snapshots
 }
 
 export interface SnapshotInfo {
@@ -291,6 +390,8 @@ export interface SnapshotInfo {
   hasSLM: boolean
   slmPolicyCount: number
   slmPolicies: SLMPolicyDetail[]
+  ilmOperationMode: string | null  // from commercial/ilm_status.json → operation_mode; null if file absent
+  slmOperationMode: string | null  // from commercial/slm_status.json → operation_mode; null if file absent
 }
 
 export interface FleetAgentPolicy {
@@ -471,6 +572,8 @@ export interface BundleModel {
   ingestPipelines: PipelineInfo[]
   clusterSettings: ClusterSettings | null
   tierStorage: Record<string, number> | null
+  nodeHealthSignals: NodeHealthSignals[]
+  pendingTasks: PendingTasksInfo | null
 }
 
 export interface GeneratedBundle {

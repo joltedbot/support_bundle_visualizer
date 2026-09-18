@@ -27,6 +27,85 @@ const SLM_JSON = JSON.stringify({
   },
 })
 
+const COLLECTION_DATE_MS = new Date('2026-07-01T00:00:00.000Z').getTime()
+
+describe('parseSnapshots — lastSuccessfulSnapshotAgeMs', () => {
+  it('computes age from the most recent successful snapshot end_time_in_millis', () => {
+    const snapshotMs = new Date('2026-06-29T12:00:00.000Z').getTime()
+    const files = new Map([
+      ['repositories.json', JSON.stringify({ myrepo: { type: 's3', settings: {} } })],
+      ['snapshot.json', JSON.stringify({
+        snapshots: [
+          { snapshot: 'snap-1', repository: 'myrepo', state: 'SUCCESS', end_time_in_millis: snapshotMs },
+          { snapshot: 'snap-2', repository: 'myrepo', state: 'FAILED', end_time_in_millis: COLLECTION_DATE_MS - 1000 },
+        ],
+      })],
+    ])
+    const result = parseSnapshots(files, COLLECTION_DATE_MS)!
+    expect(result.repositories[0].lastSuccessfulSnapshotAgeMs).toBe(COLLECTION_DATE_MS - snapshotMs)
+  })
+
+  it('returns null when no successful snapshots exist for a repo', () => {
+    const files = new Map([
+      ['repositories.json', JSON.stringify({ myrepo: { type: 's3', settings: {} } })],
+      ['snapshot.json', JSON.stringify({
+        snapshots: [
+          { snapshot: 'snap-1', repository: 'myrepo', state: 'FAILED', end_time_in_millis: 1000 },
+        ],
+      })],
+    ])
+    const result = parseSnapshots(files, COLLECTION_DATE_MS)!
+    expect(result.repositories[0].lastSuccessfulSnapshotAgeMs).toBeNull()
+  })
+
+  it('returns null when collectionDateMs is not provided', () => {
+    const snapshotMs = new Date('2026-06-29T12:00:00.000Z').getTime()
+    const files = new Map([
+      ['repositories.json', JSON.stringify({ myrepo: { type: 's3', settings: {} } })],
+      ['snapshot.json', JSON.stringify({
+        snapshots: [{ snapshot: 'snap-1', repository: 'myrepo', state: 'SUCCESS', end_time_in_millis: snapshotMs }],
+      })],
+    ])
+    const result = parseSnapshots(files)!
+    expect(result.repositories[0].lastSuccessfulSnapshotAgeMs).toBeNull()
+  })
+
+  it('marks an SLM policy as overdue when next_execution_millis is in the past', () => {
+    const overdueMs = COLLECTION_DATE_MS - 3600_000  // 1 hour ago
+    const files = new Map([
+      ['repositories.json', JSON.stringify({ myrepo: { type: 's3', settings: {} } })],
+      ['commercial/slm_policies.json', JSON.stringify({
+        'my-policy': {
+          policy: { repository: 'myrepo', schedule: '0 0 * * * ?' },
+          stats: { snapshots_taken: 10, snapshots_failed: 0 },
+          next_execution_millis: overdueMs,
+        },
+      })],
+    ])
+    const result = parseSnapshots(files, COLLECTION_DATE_MS)!
+    expect(result.slmPolicies[0].overdue).toBe(true)
+    expect(result.slmPolicies[0].nextExecutionMillis).toBe(overdueMs)
+  })
+})
+
+describe('parseSnapshots — ILM/SLM operation mode', () => {
+  it('parses ilmOperationMode from commercial/ilm_status.json', () => {
+    const files = new Map([
+      ['repositories.json', REPO_JSON],
+      ['commercial/ilm_status.json', JSON.stringify({ operation_mode: 'STOPPED' })],
+    ])
+    const result = parseSnapshots(files)!
+    expect(result.ilmOperationMode).toBe('STOPPED')
+  })
+
+  it('returns null for ilmOperationMode when file is absent', () => {
+    const files = new Map([['repositories.json', REPO_JSON]])
+    const result = parseSnapshots(files)!
+    expect(result.ilmOperationMode).toBeNull()
+    expect(result.slmOperationMode).toBeNull()
+  })
+})
+
 describe('parseSnapshots — slmPolicies', () => {
   it('parses SLM policies into slmPolicies array', () => {
     const files = new Map([

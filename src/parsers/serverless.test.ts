@@ -25,6 +25,8 @@ function makeModel(overrides: Partial<BundleModel> = {}): BundleModel {
     ingestPipelines: [],
     clusterSettings: null,
     tierStorage: null,
+    nodeHealthSignals: [],
+    pendingTasks: null,
     ...overrides,
   }
 }
@@ -246,9 +248,10 @@ describe('Snapshots check', () => {
     const model = makeModel({
       snapshots: {
         repositoryCount: 1, repositoryNames: ['found-snapshots'],
-        repositories: [{ name: 'found-snapshots', type: 'gcs', snapshotCount: 30, successCount: 30, failedCount: 0, settings: {} }],
+        repositories: [{ name: 'found-snapshots', type: 'gcs', snapshotCount: 30, successCount: 30, failedCount: 0, settings: {}, lastSuccessfulSnapshotAgeMs: null }],
         hasSLM: true, slmPolicyCount: 1,
-        slmPolicies: [{ name: 'cloud-snapshot-policy', repository: 'found-snapshots', schedule: '0 30 * * * ?', retentionExpireAfter: null, retentionMaxCount: null, retentionMinCount: null, lastSuccessDate: null, lastFailureDate: null, snapshotsTaken: 100, snapshotsFailed: 0 }],
+        slmPolicies: [{ name: 'cloud-snapshot-policy', repository: 'found-snapshots', schedule: '0 30 * * * ?', retentionExpireAfter: null, retentionMaxCount: null, retentionMinCount: null, lastSuccessDate: null, lastFailureDate: null, snapshotsTaken: 100, snapshotsFailed: 0, nextExecutionMillis: null, overdue: false }],
+        ilmOperationMode: null, slmOperationMode: null,
       }
     })
     expect(check(parseServerlessReadiness(new Map(), model, null), 'snapshots').state).toBe('clear')
@@ -259,11 +262,12 @@ describe('Snapshots check', () => {
       snapshots: {
         repositoryCount: 2, repositoryNames: ['found-snapshots', 'my-backup'],
         repositories: [
-          { name: 'found-snapshots', type: 'gcs', snapshotCount: 30, successCount: 30, failedCount: 0, settings: {} },
-          { name: 'my-backup', type: 's3', snapshotCount: 5, successCount: 5, failedCount: 0, settings: {} },
+          { name: 'found-snapshots', type: 'gcs', snapshotCount: 30, successCount: 30, failedCount: 0, settings: {}, lastSuccessfulSnapshotAgeMs: null },
+          { name: 'my-backup', type: 's3', snapshotCount: 5, successCount: 5, failedCount: 0, settings: {}, lastSuccessfulSnapshotAgeMs: null },
         ],
         hasSLM: true, slmPolicyCount: 1,
-        slmPolicies: [{ name: 'cloud-snapshot-policy', repository: 'found-snapshots', schedule: '0 30 * * * ?', retentionExpireAfter: null, retentionMaxCount: null, retentionMinCount: null, lastSuccessDate: null, lastFailureDate: null, snapshotsTaken: 100, snapshotsFailed: 0 }],
+        slmPolicies: [{ name: 'cloud-snapshot-policy', repository: 'found-snapshots', schedule: '0 30 * * * ?', retentionExpireAfter: null, retentionMaxCount: null, retentionMinCount: null, lastSuccessDate: null, lastFailureDate: null, snapshotsTaken: 100, snapshotsFailed: 0, nextExecutionMillis: null, overdue: false }],
+        ilmOperationMode: null, slmOperationMode: null,
       }
     })
     const c = check(parseServerlessReadiness(new Map(), model, null), 'snapshots')
@@ -275,12 +279,13 @@ describe('Snapshots check', () => {
     const model = makeModel({
       snapshots: {
         repositoryCount: 1, repositoryNames: ['found-snapshots'],
-        repositories: [{ name: 'found-snapshots', type: 'gcs', snapshotCount: 30, successCount: 30, failedCount: 0, settings: {} }],
+        repositories: [{ name: 'found-snapshots', type: 'gcs', snapshotCount: 30, successCount: 30, failedCount: 0, settings: {}, lastSuccessfulSnapshotAgeMs: null }],
         hasSLM: true, slmPolicyCount: 2,
         slmPolicies: [
-          { name: 'cloud-snapshot-policy', repository: 'found-snapshots', schedule: '0 30 * * * ?', retentionExpireAfter: null, retentionMaxCount: null, retentionMinCount: null, lastSuccessDate: null, lastFailureDate: null, snapshotsTaken: 100, snapshotsFailed: 0 },
-          { name: 'my-hourly-snapshots', repository: 'found-snapshots', schedule: '0 0 * * * ?', retentionExpireAfter: '30d', retentionMaxCount: null, retentionMinCount: null, lastSuccessDate: null, lastFailureDate: null, snapshotsTaken: 48, snapshotsFailed: 0 },
+          { name: 'cloud-snapshot-policy', repository: 'found-snapshots', schedule: '0 30 * * * ?', retentionExpireAfter: null, retentionMaxCount: null, retentionMinCount: null, lastSuccessDate: null, lastFailureDate: null, snapshotsTaken: 100, snapshotsFailed: 0, nextExecutionMillis: null, overdue: false },
+          { name: 'my-hourly-snapshots', repository: 'found-snapshots', schedule: '0 0 * * * ?', retentionExpireAfter: '30d', retentionMaxCount: null, retentionMinCount: null, lastSuccessDate: null, lastFailureDate: null, snapshotsTaken: 48, snapshotsFailed: 0, nextExecutionMillis: null, overdue: false },
         ],
+        ilmOperationMode: null, slmOperationMode: null,
       }
     })
     const c = check(parseServerlessReadiness(new Map(), model, null), 'snapshots')

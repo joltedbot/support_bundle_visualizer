@@ -11,6 +11,7 @@ interface SnapshotJson {
     snapshot?: string
     repository?: string
     state?: string
+    end_time_in_millis?: number | null
   }>
 }
 
@@ -27,12 +28,15 @@ interface SLMPolicyJson {
   last_success?: { start_time_string?: string }
   last_failure?: { time_string?: string }
   stats?: { snapshots_taken?: number; snapshots_failed?: number }
+  next_execution_millis?: number | null
 }
 
-export function parseSnapshots(files: Map<string, string>): SnapshotInfo | null {
+export function parseSnapshots(files: Map<string, string>, collectionDateMs: number | null = null): SnapshotInfo | null {
   const repositoriesRaw = parseJsonFile<Record<string, RepositoryJson>>(files, 'repositories.json')
   const snapshotsRaw = parseJsonFile<SnapshotJson>(files, 'snapshot.json')
   const slmRaw = parseJsonFile<Record<string, SLMPolicyJson>>(files, 'commercial/slm_policies.json')
+  const ilmStatusRaw = parseJsonFile<{ operation_mode?: string }>(files, 'commercial/ilm_status.json')
+  const slmStatusRaw = parseJsonFile<{ operation_mode?: string }>(files, 'commercial/slm_status.json')
 
   if (!repositoriesRaw && !slmRaw) return null
 
@@ -42,6 +46,11 @@ export function parseSnapshots(files: Map<string, string>): SnapshotInfo | null 
   const slmPolicies: SLMPolicyDetail[] = []
   if (slmRaw) {
     for (const [name, entry] of Object.entries(slmRaw)) {
+      const nextExecutionMillis = entry.next_execution_millis ?? null
+      const overdue =
+        nextExecutionMillis !== null &&
+        collectionDateMs !== null &&
+        nextExecutionMillis < collectionDateMs
       slmPolicies.push({
         name,
         repository: entry.policy?.repository ?? '',
@@ -53,6 +62,8 @@ export function parseSnapshots(files: Map<string, string>): SnapshotInfo | null 
         lastFailureDate: entry.last_failure?.time_string ?? null,
         snapshotsTaken: entry.stats?.snapshots_taken ?? 0,
         snapshotsFailed: entry.stats?.snapshots_failed ?? 0,
+        nextExecutionMillis,
+        overdue,
       })
     }
   }
@@ -72,6 +83,19 @@ export function parseSnapshots(files: Map<string, string>): SnapshotInfo | null 
         }
       }
 
+      // Find the latest successful snapshot end time for age calculation
+      const successEndTimes = repoSnapshots
+        .filter(s => s.state === 'SUCCESS' && s.end_time_in_millis != null)
+        .map(s => s.end_time_in_millis as number)
+      const latestSuccessMs = successEndTimes.length > 0
+        ? successEndTimes.reduce((acc, t) => Math.max(acc, t), -Infinity)
+        : null
+      const rawAgeMs =
+        latestSuccessMs !== null && collectionDateMs !== null
+          ? collectionDateMs - latestSuccessMs
+          : null
+      const lastSuccessfulSnapshotAgeMs = rawAgeMs !== null && rawAgeMs >= 0 ? rawAgeMs : null
+
       repositories.push({
         name,
         type: repo.type || 'unknown',
@@ -79,6 +103,7 @@ export function parseSnapshots(files: Map<string, string>): SnapshotInfo | null 
         successCount: repoSnapshots.filter(s => s.state === 'SUCCESS').length,
         failedCount: repoSnapshots.filter(s => s.state === 'FAILED' || s.state === 'PARTIAL').length,
         settings,
+        lastSuccessfulSnapshotAgeMs,
       })
     }
   }
@@ -90,5 +115,7 @@ export function parseSnapshots(files: Map<string, string>): SnapshotInfo | null 
     hasSLM,
     slmPolicyCount,
     slmPolicies,
+    ilmOperationMode: ilmStatusRaw?.operation_mode ?? null,
+    slmOperationMode: slmStatusRaw?.operation_mode ?? null,
   }
 }
