@@ -30,14 +30,14 @@ interface Props {
 // ─── Circuit breaker helpers ──────────────────────────────────────────────────
 
 const CB_NAMES: Record<string, string> = {
-  parent:              'Total Heap Guard',
-  fielddata:           'Field Data',
-  request:             'Request',
-  inflight_requests:   'In-Flight Requests',
-  in_flight_requests:  'In-Flight Requests',
-  model_inference:     'Model Inference',
-  eql_sequence:        'EQL Sequence',
-  accounting:          'Accounting',
+  parent:              'Parent (Total Heap Memory)',
+  fielddata:           'Field Data (Heap for Field Data)',
+  request:             'Request (Memory-heavy Requests)',
+  inflight_requests:   'In-Flight Requests (Incoming Request Memory)',
+  in_flight_requests:  'In-Flight Requests (Incoming Request Memory)',
+  model_inference:     'Model Inference (ML Model Memory)',
+  eql_sequence:        'EQL Sequence (EQL Query Memory)',
+  accounting:          'Accounting (Untracked Memory)',
 }
 
 function cbFriendlyName(name: string): string {
@@ -410,7 +410,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
               const tripped = cbs.filter(cb => cb.tripped > 0)
               const notable = cbs.filter(cb =>
                 cb.tripped > 0 ||
-                (cb.limitSizeInBytes > 0 && (cb.estimatedSizeInBytes / cb.limitSizeInBytes) > 0.2)
+                (cb.limitSizeInBytes > 0 && (cb.estimatedSizeInBytes / cb.limitSizeInBytes) >= 0.6)
               )
               if (notable.length === 0) return null
               return (
