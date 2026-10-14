@@ -39,7 +39,9 @@ export function parseClusterSettings(
           current = undefined
           break
         }
-        current = (current as Record<string, unknown>)[part]
+        // Own keys only: the walk is read-only, but never follow inherited keys such as __proto__
+        const node = current as Record<string, unknown>
+        current = Object.hasOwn(node, part) ? node[part] : undefined
       }
       if (current !== undefined && current !== null) return String(current)
     }

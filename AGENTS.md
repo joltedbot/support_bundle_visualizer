@@ -5,30 +5,6 @@
 > Do not duplicate those here.
 > Note: CLAUDE.md is a symlink to this file. They are the same file.
 
-## Tech Stack
-
-| Layer | Package | Pinned Version |
-|-------|---------|----------------|
-| Language | TypeScript | ~5.9.3 |
-| Runtime | Node.js | 18+ |
-| UI Framework | React | 19.2.4 |
-| Build | Vite | 8.0.3 |
-| Component Library | @elastic/eui | 113.3.0 |
-| Charts | @elastic/charts | 71.3.0 |
-| CSS-in-JS | @emotion/react | 11.14.0 |
-| CSS-in-JS | @emotion/css | 11.13.5 |
-| Emotion cache | @emotion/cache | 11.14.0 |
-| Theme | @elastic/eui-theme-borealis | 6.2.0 |
-| Date handling | moment | 2.30.1 |
-| Date math | @elastic/datemath | 5.0.3 |
-| Test runner | Vitest | 4.1.0 |
-| Linter | ESLint | 9.39.4 |
-| TS linting | typescript-eslint | 8.57.0 |
-| Security lint | eslint-plugin-security | 4.0.0 |
-| Secret scanning | secretlint | 11.4.0 |
-| Single-file bundler | vite-plugin-singlefile | 2.3.2 |
-| Script runner | tsx | 4.21.0 |
-
 ## Commands
 
 ```
@@ -141,6 +117,6 @@ verifying a specific API, version constraint, or behaviour you are uncertain of.
 |----------|-----|-------------|
 | `docs/DIAGNOSTIC_BUNDLE_REFERENCE.md` | Local file | Authoritative reference for all diagnostic bundle data: every file, key field paths, non-obvious parsing rules, cloud vs self-hosted differences. Consult first when working with bundle data or planning new features. Do NOT re-scan raw bundle directories. |
 | `docs/DIAGNOSTIC_THRESHOLDS.md` | Local file | Thresholds and interpretation — what a metric value means and when to act. Consult when assessing cluster health or adding a health/severity judgement to parsers or UI. |
-| EUI docs | https://eui.elastic.co | Component API — verify against 113.x |
+| EUI docs | https://eui.elastic.co | Component API — verify against the version in package.json |
 | Elastic Charts | https://elastic.github.io/elastic-charts | Chart component API |
 | elastic-docs MCP | (via MCP server) | Elastic product docs — use MCP, not elastic.co/docs |
