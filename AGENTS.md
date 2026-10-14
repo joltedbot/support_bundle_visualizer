@@ -99,6 +99,8 @@ Do NOT:
   Do NOT restore a disk bar for frozen nodes, treat high disk utilisation as a bug, or join cache stats by node name instead of `NodeInfo.id`.
 - **ESS Cluster Name Sources — `cluster_health.json` Returns a UUID on Cloud**: On ESS/Cloud, `cluster_health.json` → `cluster_name` is the deployment UUID (32 lowercase hex chars), not a human-readable name. `readEsClusterName()` in `generate.ts` tries three sources in priority order: (1) `cluster_settings.json` → `cluster.metadata.display_name` (transient wins over persistent), (2) `nodes.json` → `deploymentName` (ESS-specific top-level field; value includes a short hex suffix in parentheses, e.g. `terentiauksouthes (24721c)` — this is verbatim from ESS, not appended by the app), (3) `cluster_health.json` → `cluster_name` only if it does not match `/^[a-f0-9]{32}$/`.
   Do NOT simplify `readEsClusterName()` to read only `cluster_health.json` — this returns a raw UUID on every ESS/Cloud deployment and would surface as the report title.
+- **Uniform Keys on Per-Index Fields**: `generate.ts` emits `src/generated/bundleData.ts` as an untyped object literal, so TypeScript infers a union over every distinct index object shape. Optional per-index fields (e.g. on `IndexInfo`) make shapes diverge, and `tsc` fails with TS2590 "union type too complex" only on very large bundles (Mengo, ~6k indices) while small bundles pass.
+  Do NOT add an optional or conditionally-present field to `IndexInfo` (or other per-item arrays in `BundleModel`); always populate it with a default (`null`/`false`) so every object has identical keys.
 
 ## Constraints
 

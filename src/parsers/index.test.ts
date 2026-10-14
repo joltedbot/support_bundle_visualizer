@@ -66,48 +66,88 @@ describe('parseBundle — shard→node join by ID', () => {
   })
 })
 
-describe('parseBundle — LogsDB detection', () => {
+describe('parseBundle — index mode', () => {
   const CAT_HEADER = 'health status index pri rep docs.count store.size pri.store.size'
+  const catFor = (name: string) => [CAT_HEADER, `green open ${name} 1 1 1000 50mb 25mb`].join('\n')
 
-  it('sets isLogsDb=true when index.mode=logsdb', async () => {
+  it('sets indexMode=logsdb when index.mode=logsdb', async () => {
     const files = makeFiles({
-      'cat/cat_indices.txt': [CAT_HEADER, 'green open my-logsdb-index 1 1 1000 50mb 25mb'].join('\n'),
-      'settings.json': {
-        'my-logsdb-index': {
-          settings: { index: { mode: 'logsdb' } },
-        },
-      },
+      'cat/cat_indices.txt': catFor('my-logsdb-index'),
+      'settings.json': { 'my-logsdb-index': { settings: { index: { mode: 'logsdb' } } } },
     })
     const model = await parseBundle({ files, rootName: 'test' })
-    const idx = model.indices.find(i => i.name === 'my-logsdb-index')
-    expect(idx?.isLogsDb).toBe(true)
+    expect(model.indices.find(i => i.name === 'my-logsdb-index')?.indexMode).toBe('logsdb')
   })
 
-  it('sets isLogsDb=true when mapping.source.mode=synthetic', async () => {
+  it('flags syntheticSource without calling the index LogsDB', async () => {
     const files = makeFiles({
-      'cat/cat_indices.txt': [CAT_HEADER, 'green open my-synthetic-index 1 1 1000 50mb 25mb'].join('\n'),
+      'cat/cat_indices.txt': catFor('my-synthetic-index'),
       'settings.json': {
-        'my-synthetic-index': {
-          settings: { index: { mapping: { source: { mode: 'synthetic' } } } },
-        },
+        'my-synthetic-index': { settings: { index: { mapping: { source: { mode: 'synthetic' } } } } },
       },
     })
     const model = await parseBundle({ files, rootName: 'test' })
     const idx = model.indices.find(i => i.name === 'my-synthetic-index')
-    expect(idx?.isLogsDb).toBe(true)
+    expect(idx?.syntheticSource).toBe(true)
+    expect(idx?.indexMode).toBe('standard')
   })
 
-  it('does not set isLogsDb for standard indices', async () => {
+  it('reports standard for indices with no mode and no synthetic flag', async () => {
     const files = makeFiles({
-      'cat/cat_indices.txt': [CAT_HEADER, 'green open my-standard-index 1 1 1000 50mb 25mb'].join('\n'),
-      'settings.json': {
-        'my-standard-index': {
-          settings: { index: { mode: 'standard' } },
-        },
-      },
+      'cat/cat_indices.txt': catFor('my-standard-index'),
+      'settings.json': { 'my-standard-index': { settings: { index: {} } } },
     })
     const model = await parseBundle({ files, rootName: 'test' })
     const idx = model.indices.find(i => i.name === 'my-standard-index')
-    expect(idx?.isLogsDb).toBeUndefined()
+    expect(idx?.indexMode).toBe('standard')
+    expect(idx?.syntheticSource).toBe(false)
+    expect(idx?.vector).toBeNull()
+  })
+})
+
+describe('parseBundle — index traits propagation', () => {
+  const CAT_HEADER = 'health status index pri rep docs.count store.size pri.store.size'
+
+  it('leaves indexMode and vector null for an index with no settings or mapping entry', async () => {
+    const files = makeFiles({ 'cat/cat_indices.txt': [CAT_HEADER, 'green open bare-index 1 1 10 1mb 1mb'].join('\n') })
+    const idx = (await parseBundle({ files, rootName: 'test' })).indices.find(i => i.name === 'bare-index')
+    expect(idx?.indexMode).toBeNull()
+    expect(idx?.vector).toBeNull()
+    expect(idx?.syntheticSource).toBe(false)
+  })
+
+  it('propagates vector traits from mapping.json onto the index', async () => {
+    const files = makeFiles({
+      'cat/cat_indices.txt': [CAT_HEADER, 'green open vec-index 1 1 10 1mb 1mb'].join('\n'),
+      'mapping.json': { 'vec-index': { mappings: { properties: { v: { type: 'dense_vector', index_options: { type: 'bbq_hnsw' } } } } } },
+    })
+    const idx = (await parseBundle({ files, rootName: 'test' })).indices.find(i => i.name === 'vec-index')
+    expect(idx?.vector).toEqual({ dense: true, sparse: false, semantic: false, denseTypes: ['bbq_hnsw'] })
+  })
+})
+
+describe('parseBundle — data adoption', () => {
+  const CAT_HEADER = 'health status index pri rep docs.count store.size pri.store.size'
+
+  it('builds adoption rows from primary docs and storage', async () => {
+    const files = makeFiles({
+      'cat/cat_indices.txt': [
+        CAT_HEADER,
+        'green open .ds-logs-app-default-2026.01.01-000001 1 1 1000 50mb 25mb',
+        'green open products 1 1 10 1mb 512kb',
+        'green open .kibana_1 1 0 5 1mb 1mb',
+      ].join('\n'),
+    })
+    const model = await parseBundle({ files, rootName: 'test' })
+    expect(model.dataAdoption?.rows.map(r => [r.kind, r.indexCount, r.docCount])).toEqual([
+      ['logs', 1, 1000],
+      ['other', 1, 10],
+    ])
+    expect(model.dataAdoption?.rows[0].primaryStoreSizeBytes).toBe(25 * 1024 * 1024)
+  })
+
+  it('is null when no indices qualify', async () => {
+    const model = await parseBundle({ files: makeFiles(), rootName: 'test' })
+    expect(model.dataAdoption).toBeNull()
   })
 })

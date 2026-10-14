@@ -19,11 +19,32 @@ interface Props {
   shards: ShardInfo[]
 }
 
-type SortField = 'name' | 'indexType' | 'ilmPolicy' | 'models' | 'health' | 'status' | 'primaryShards' | 'avgShardSizeBytes' | 'docCount' | 'storeSizeBytes'
+type SortField = 'name' | 'indexType' | 'indexMode' | 'ilmPolicy' | 'models' | 'health' | 'status' | 'primaryShards' | 'avgShardSizeBytes' | 'docCount' | 'storeSizeBytes'
 
 interface SortState {
   field: SortField
   direction: 'asc' | 'desc'
+}
+
+const MODE_LABELS: Record<string, { label: string; color: string }> = {
+  standard: { label: 'Standard', color: 'hollow' },
+  logsdb: { label: 'LogsDB', color: 'warning' },
+  time_series: { label: 'TSDS', color: 'accent' },
+  lookup: { label: 'Lookup', color: 'default' },
+}
+
+// Unknown future modes are shown verbatim rather than dropped
+function modeInfo(mode: string): { label: string; color: string } {
+  return Object.hasOwn(MODE_LABELS, mode) ? MODE_LABELS[mode] : { label: mode, color: 'default' }
+}
+
+function modeLabel(mode: string | null | undefined): string {
+  return mode ? modeInfo(mode).label : ''
+}
+
+function vectorLabel(v: NonNullable<IndexInfo['vector']>): string {
+  const kinds = [v.dense && 'dense', v.sparse && 'sparse', v.semantic && 'semantic'].filter(Boolean).join(', ')
+  return v.denseTypes.length > 0 ? `${kinds} (${v.denseTypes.join(', ')})` : kinds
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
@@ -53,6 +74,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
       switch (sort.field) {
         case 'name': return a.name.localeCompare(b.name) * mult
         case 'indexType': return ((a.indexType ?? '').localeCompare(b.indexType ?? '')) * mult
+        case 'indexMode': return (modeLabel(a.indexMode).localeCompare(modeLabel(b.indexMode))) * mult
         case 'ilmPolicy': return ((a.ilmPolicy ?? '').localeCompare(b.ilmPolicy ?? '')) * mult
         case 'models': return ((a.models?.length ?? 0) - (b.models?.length ?? 0)) * mult
         case 'health': return a.health.localeCompare(b.health) * mult
@@ -113,14 +135,38 @@ export default function IndexLandscape({ indices, shards }: Props) {
           : item.indexType === 'alias-backing'
           ? <EuiBadge color="primary">Alias</EuiBadge>
           : null
-        const logsDbBadge = item.isLogsDb
-          ? <EuiBadge color="warning">LogsDB</EuiBadge>
-          : null
-        if (!typeBadge && !logsDbBadge) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+        return typeBadge ?? <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+      },
+    },
+    {
+      field: 'indexMode',
+      name: 'Mode',
+      width: '190px',
+      sortable: true,
+      render: (_m: string | null | undefined, item: IndexInfo) => {
+        const mode = item.indexMode
+        // No settings entry for this index: show nothing rather than guess Standard
+        if (!mode) return <span style={{ color: 'var(--euiColorSubduedText)' }}>—</span>
+        const { label, color } = modeInfo(mode)
         return (
-          <EuiFlexGroup gutterSize="xs" responsive={false}>
-            {typeBadge && <EuiFlexItem grow={false}>{typeBadge}</EuiFlexItem>}
-            {logsDbBadge && <EuiFlexItem grow={false}>{logsDbBadge}</EuiFlexItem>}
+          <EuiFlexGroup gutterSize="xs" responsive={false} wrap>
+            <EuiFlexItem grow={false}>
+              <EuiBadge color={color}>{label}</EuiBadge>
+            </EuiFlexItem>
+            {item.syntheticSource && (
+              <EuiFlexItem grow={false}>
+                <EuiToolTip content="Synthetic _source: the original document is reconstructed from doc values">
+                  <EuiBadge color="hollow">Synthetic</EuiBadge>
+                </EuiToolTip>
+              </EuiFlexItem>
+            )}
+            {item.vector && (
+              <EuiFlexItem grow={false}>
+                <EuiToolTip content={`Vector fields: ${vectorLabel(item.vector)}`}>
+                  <EuiBadge color="primary">Vector</EuiBadge>
+                </EuiToolTip>
+              </EuiFlexItem>
+            )}
           </EuiFlexGroup>
         )
       },
@@ -244,7 +290,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<IndexInfo>) {
     if (newSort) {
-      const validSortFields: SortField[] = ['name', 'indexType', 'ilmPolicy', 'models', 'health', 'status', 'primaryShards', 'avgShardSizeBytes', 'docCount', 'storeSizeBytes']
+      const validSortFields: SortField[] = ['name', 'indexType', 'indexMode', 'ilmPolicy', 'models', 'health', 'status', 'primaryShards', 'avgShardSizeBytes', 'docCount', 'storeSizeBytes']
       if (validSortFields.includes(newSort.field as SortField)) {
         setSort({ field: newSort.field as SortField, direction: newSort.direction })
         setPageIndex(0)

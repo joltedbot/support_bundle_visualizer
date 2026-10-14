@@ -27,6 +27,7 @@ function makeModel(overrides: Partial<BundleModel> = {}): BundleModel {
     tierStorage: null,
     nodeHealthSignals: [],
     pendingTasks: null,
+    dataAdoption: null,
     ...overrides,
   }
 }
@@ -302,14 +303,14 @@ describe('Snapshots check', () => {
 
 describe('APM Agent Central Config check', () => {
   it('blocked when .apm-agent-configuration has docs', () => {
-    const model = makeModel({ indices: [{ name: '.apm-agent-configuration', isSystem: true, health: 'green', status: 'open', primaryShards: 1, replicaShards: 1, docCount: 12, storeSizeBytes: 1000, avgShardSizeBytes: 1000 }] })
+    const model = makeModel({ indices: [{ name: '.apm-agent-configuration', isSystem: true, health: 'green', status: 'open', primaryShards: 1, replicaShards: 1, docCount: 12, storeSizeBytes: 1000, primaryStoreSizeBytes: 1000, avgShardSizeBytes: 1000 }] })
     const c = check(parseServerlessReadiness(new Map(), model, null), 'apm-central-config')
     expect(c.state).toBe('blocked')
     expect(c.detail).toContain('12')
   })
 
   it('clear when .apm-agent-configuration has 0 docs', () => {
-    const model = makeModel({ indices: [{ name: '.apm-agent-configuration', isSystem: true, health: 'green', status: 'open', primaryShards: 1, replicaShards: 1, docCount: 0, storeSizeBytes: 498, avgShardSizeBytes: 498 }] })
+    const model = makeModel({ indices: [{ name: '.apm-agent-configuration', isSystem: true, health: 'green', status: 'open', primaryShards: 1, replicaShards: 1, docCount: 0, storeSizeBytes: 498, primaryStoreSizeBytes: 498, avgShardSizeBytes: 498 }] })
     expect(check(parseServerlessReadiness(new Map(), model, null), 'apm-central-config').state).toBe('clear')
   })
 

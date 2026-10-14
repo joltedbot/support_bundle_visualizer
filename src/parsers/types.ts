@@ -165,7 +165,32 @@ export interface IndexInfo {
   ilmPolicy?: string  // policy name from ilm_explain.json, if managed
   models?: string[]   // names of embedding/reranking models used
   indexType?: 'index' | 'datastream-backing' | 'alias-backing'
-  isLogsDb?: boolean  // true when index.mode=logsdb or mapping.source.mode=synthetic
+  primaryStoreSizeBytes: number  // cat pri.store.size — primary shards only (no replicas)
+  // Always populated by the parsers (null/false when unknown): optional per-index keys make the untyped
+  // generated bundleData.ts a union that tsc rejects (TS2590) on bundles with thousands of indices.
+  indexMode?: string | null      // settings index.mode verbatim; 'standard' when absent; null when the index has no settings entry
+  syntheticSource?: boolean      // true when _source mode is synthetic (settings or mapping)
+  vector?: VectorTraits | null   // set only when the mapping has dense/sparse/semantic fields
+}
+
+export interface VectorTraits {
+  dense: boolean
+  sparse: boolean
+  semantic: boolean
+  denseTypes: string[]  // distinct dense_vector index_options.type values ('hnsw' when unset)
+}
+
+export type DataAdoptionKind = 'logs' | 'metrics' | 'traces' | 'security' | 'synthetics' | 'other'
+
+export interface DataAdoptionRow {
+  kind: DataAdoptionKind
+  indexCount: number
+  docCount: number
+  primaryStoreSizeBytes: number
+}
+
+export interface DataAdoption {
+  rows: DataAdoptionRow[]  // fixed order; rows with no qualifying indices are omitted
 }
 
 export interface ShardInfo {
@@ -574,6 +599,7 @@ export interface BundleModel {
   tierStorage: Record<string, number> | null
   nodeHealthSignals: NodeHealthSignals[]
   pendingTasks: PendingTasksInfo | null
+  dataAdoption: DataAdoption | null
 }
 
 export interface GeneratedBundle {

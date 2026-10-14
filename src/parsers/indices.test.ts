@@ -46,3 +46,18 @@ describe('parseIndices — indexType', () => {
     expect(result).toEqual([])
   })
 })
+
+describe('parseIndices — primaryStoreSizeBytes', () => {
+  it('stores pri.store.size separately from store.size', () => {
+    const files = new Map([['cat/cat_indices.txt', makeFile(['my-index'])]])
+    const result = parseIndices(files, new Set())
+    expect(result[0].storeSizeBytes).toBe(1024 * 1024)
+    expect(result[0].primaryStoreSizeBytes).toBe(500 * 1024)
+  })
+
+  it('is 0 when the pri.store.size column is absent', () => {
+    const header = 'health status index pri rep docs.count store.size'
+    const files = new Map([['cat/cat_indices.txt', [header, 'green open my-index 1 1 100 1mb'].join('\n')]])
+    expect(parseIndices(files, new Set())[0].primaryStoreSizeBytes).toBe(0)
+  })
+})

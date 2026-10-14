@@ -7,6 +7,8 @@ import { parseInternalHealth } from './internalHealth'
 import { parseAuth } from './auth'
 import { parseNodes, buildNodeHealthSignals } from './nodes'
 import { parseIndices } from './indices'
+import { parseIndexTraits } from './indexTraits'
+import { buildDataAdoption } from './dataAdoption'
 import { parseShards } from './shards'
 import { parseStats } from './stats'
 import { parseILM, buildIndexPolicyMap } from './ilm'
@@ -56,29 +58,24 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
   // Join model names onto each index
   const indexModelMap = buildIndexModelMap(files)
 
-  // Build LogsDB detection map from settings.json
-  const settingsRaw = parseJsonFile<Record<string, {
-    settings?: { index?: { mode?: string; mapping?: { source?: { mode?: string } } } }
-  }>>(files, 'settings.json')
-  const logsDbSet = new Set<string>()
-  if (settingsRaw) {
-    for (const [indexName, entry] of Object.entries(settingsRaw)) {
-      const idx = entry?.settings?.index
-      const indexMode = idx?.mode
-      const sourceMode = idx?.mapping?.source?.mode
-      if (indexMode === 'logsdb' || sourceMode === 'synthetic') {
-        logsDbSet.add(indexName)
-      }
-    }
-  }
+  // Per-index mode / synthetic source / vector / data_stream.type from settings.json + mapping.json
+  const traitsByIndex = parseIndexTraits(files)
 
   const indices = rawIndices.map((idx) => {
     const policy = indexPolicyMap.get(idx.name)
     const models = indexModelMap.get(idx.name)
+    const traits = traitsByIndex.get(idx.name)
     let updated = idx
     if (policy) updated = { ...updated, ilmPolicy: policy }
     if (models) updated = { ...updated, models }
-    if (logsDbSet.has(idx.name)) updated = { ...updated, isLogsDb: true }
+    if (traits) {
+      updated = {
+        ...updated,
+        indexMode: traits.indexMode,
+        syntheticSource: traits.syntheticSource,
+        vector: traits.vector ?? null,
+      }
+    }
     return updated
   })
 
@@ -194,6 +191,7 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     tierStorage,
     nodeHealthSignals: buildNodeHealthSignals(files, nodesWithShardCounts),
     pendingTasks: parsePendingTasks(files),
+    dataAdoption: buildDataAdoption(indices, traitsByIndex),
   }
 }
 

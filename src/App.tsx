@@ -22,6 +22,7 @@ import DataProfile, { ILMPoliciesTable, SLMPoliciesTable } from './components/Da
 import SnapshotRepositories from './components/SnapshotRepositories'
 import AiMlSection from './components/AiMlSection'
 import IndexLandscape from './components/IndexLandscape'
+import DataAdoptionPanel from './components/DataAdoptionPanel'
 import DataStreams from './components/DataStreams'
 import IngestPipelines from './components/IngestPipelines'
 import CrossCluster from './components/CrossCluster'
@@ -132,6 +133,15 @@ function App() {
               <EuiTitle size="s"><h3>AI &amp; Machine Learning</h3></EuiTitle>
               <EuiSpacer size="s" />
               <AiMlSection aiMl={model.aiMl} features={model.features} />
+            </>
+          )}
+
+          {model.dataAdoption && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Data Adoption</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <DataAdoptionPanel dataAdoption={model.dataAdoption} />
             </>
           )}
 

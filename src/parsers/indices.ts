@@ -100,8 +100,12 @@ export function parseIndices(files: Map<string, string>, aliasBackedIndices: Set
       replicaShards,
       docCount,
       storeSizeBytes,
+      primaryStoreSizeBytes: priStoreSizeBytes,
       avgShardSizeBytes,
       indexType,
+      indexMode: null,
+      syntheticSource: false,
+      vector: null,
     })
   }
 
