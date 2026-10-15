@@ -10,6 +10,7 @@ import {
 } from '@elastic/eui'
 import type { ILMPolicyDetail } from '../parsers/types'
 import { parseMinAgeDays } from '../parsers/ilm'
+import { isOneOf } from '../utils/typeGuards'
 
 const ILM_PAGE_SIZE_OPTIONS = [10, 20, 50]
 const ILM_DEFAULT_PAGE_SIZE = 10
@@ -209,8 +210,8 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<ILMPolicyRow>) {
     if (newSort) {
       const validSortFields: ILMSortField[] = ['name', 'indexCount', 'forceMergeSegments', 'shrinkShards', 'hotDisplay', 'warmDisplay', 'coldDisplay', 'frozenDisplay', 'deleteDisplay']
-      if (validSortFields.includes(newSort.field as ILMSortField)) {
-        setSort({ field: newSort.field as ILMSortField, direction: newSort.direction })
+      if (isOneOf(validSortFields, newSort.field)) {
+        setSort({ field: newSort.field, direction: newSort.direction })
         setPageIndex(0)
       }
     }

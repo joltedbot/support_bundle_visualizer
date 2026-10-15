@@ -13,6 +13,7 @@ import {
 import type { IndexInfo, ShardInfo } from '../parsers/types'
 import { formatBytes, formatCount, healthColor } from '../utils/format'
 import { enrichModelLabel } from '../utils/modelHints'
+import { isOneOf } from '../utils/typeGuards'
 
 interface Props {
   indices: IndexInfo[]
@@ -291,8 +292,8 @@ export default function IndexLandscape({ indices, shards }: Props) {
   function onTableChange({ sort: newSort, page: newPage }: Criteria<IndexInfo>) {
     if (newSort) {
       const validSortFields: SortField[] = ['name', 'indexType', 'indexMode', 'ilmPolicy', 'models', 'health', 'status', 'primaryShards', 'avgShardSizeBytes', 'docCount', 'storeSizeBytes']
-      if (validSortFields.includes(newSort.field as SortField)) {
-        setSort({ field: newSort.field as SortField, direction: newSort.direction })
+      if (isOneOf(validSortFields, newSort.field)) {
+        setSort({ field: newSort.field, direction: newSort.direction })
         setPageIndex(0)
       }
     }

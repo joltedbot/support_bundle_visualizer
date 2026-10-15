@@ -11,6 +11,7 @@ import {
 } from '@elastic/eui'
 import type { PipelineInfo } from '../parsers/types'
 import { formatDate } from '../utils/format'
+import { isOneOf } from '../utils/typeGuards'
 
 interface Props {
   pipelines: PipelineInfo[]
@@ -157,8 +158,8 @@ export default function IngestPipelines({ pipelines }: Props) {
   function onTableChange({ sort: newSort, page: newPage }: Criteria<PipelineInfo>) {
     if (newSort) {
       const validSortFields: SortField[] = ['name', 'processorCount', 'createdDate']
-      if (validSortFields.includes(newSort.field as SortField)) {
-        setSort({ field: newSort.field as SortField, direction: newSort.direction })
+      if (isOneOf(validSortFields, newSort.field)) {
+        setSort({ field: newSort.field, direction: newSort.direction })
         setPageIndex(0)
       }
     }
