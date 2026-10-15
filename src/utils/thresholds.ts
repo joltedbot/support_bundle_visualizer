@@ -42,7 +42,6 @@ export const ML_MEM_CRIT_PCT = 90
 // Shard sizing
 export const SHARD_OVERSIZED_GiB = 50          // primary shard ≥ this → oversized flag
 export const SHARD_UNDERSIZED_GiB = 1          // primary shard < this (non-empty) → undersized flag
-export const SHARD_PERF_WARN_GB = 10           // shard < this → performance guidance warning
 
 // Load percent (load_average.1m / allocatedProcessors * 100)
 // Suppress load% display on nodes where RAM < 60 GB — host-level metric is unreliable on small Cloud VMs

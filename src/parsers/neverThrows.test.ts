@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseBundle } from './index'
+import type { IndexInfo, NodeInfo } from './types'
 import { parseManifest } from './manifest'
 import { parseHealth } from './health'
 import { parseInternalHealth } from './internalHealth'
@@ -46,17 +47,30 @@ const FILE_NAMES = [
 const PAYLOADS = [
   '', 'null', '[]', '{}', '"text"', '42', 'true', '[null]', '{"a":null}', '[1,"x",null]',
   '{"nodes":null}', '{"nodes":{"n1":null}}', '{"nodes":[null]}', '{"stats":42}', '{"indices":null}',
-  '{"x":{"aliases":null}}', '{"x":null}', 'not json at all', 'index shard\nnull null',
+  '{"x":{"aliases":null}}', '{"x":null}',
+  '{"nodes":{"n1":{"thread_pool":{"write":null},"breakers":{"parent":null},"jvm":null,"os":null,"indices":null}}}',
+  '{"nodes":{"n1":{"name":null,"roles":"data","settings":null}}}',
+  '{"stats":[null]}', '{"snapshots":[null]}', '{"trained_model_stats":[null],"jobs":[null],"datafeeds":[null]}',
+  '{"n1":{"mappings":{"properties":{"f":null,"g":{"properties":null}}}}}', 'not json at all', 'index shard\nnull null',
 ]
 
 // Called directly: parseBundle wraps these in safe(), which would hide a throwing parser.
+const STUB_NODE = {
+  id: 'n1', name: 'node-1', ip: '', roles: ['data_hot'], tier: 'hot',
+} as unknown as NodeInfo
+const STUB_INDEX = {
+  name: 'idx', isSystem: false, health: 'green', status: 'open', primaryShards: 1, replicaShards: 0,
+  docCount: 1, storeSizeBytes: 1, primaryStoreSizeBytes: 1, avgShardSizeBytes: 1,
+  ilmPolicy: null, models: [], indexType: 'index', indexMode: null, syntheticSource: false, vector: null,
+} as IndexInfo
+
 const PARSERS: Array<[string, (files: Map<string, string>) => unknown]> = [
   ['parseManifest', parseManifest],
   ['parseHealth', parseHealth],
   ['parseInternalHealth', parseInternalHealth],
   ['parseAuth', parseAuth],
   ['parseNodes', parseNodes],
-  ['buildNodeHealthSignals', f => buildNodeHealthSignals(f, [])],
+  ['buildNodeHealthSignals', f => buildNodeHealthSignals(f, [STUB_NODE])],
   ['parseIndices', f => parseIndices(f, new Set())],
   ['parseIndexTraits', parseIndexTraits],
   ['parseShards', parseShards],
@@ -64,11 +78,11 @@ const PARSERS: Array<[string, (files: Map<string, string>) => unknown]> = [
   ['parseILM', parseILM],
   ['buildIndexPolicyMap', buildIndexPolicyMap],
   ['buildIndexModelMap', buildIndexModelMap],
-  ['parseML', f => parseML(f, [])],
-  ['parseFeatures', f => parseFeatures(f, [])],
+  ['parseML', f => parseML(f, [STUB_INDEX])],
+  ['parseFeatures', f => parseFeatures(f, [STUB_INDEX])],
   ['parseReplication', parseReplication],
   ['parseSnapshots', f => parseSnapshots(f, null)],
-  ['parseSizing', f => parseSizing(f, [])],
+  ['parseSizing', f => parseSizing(f, [STUB_INDEX])],
   ['parseLicense', parseLicense],
   ['parsePlugins', parsePlugins],
   ['parseDataStreams', parseDataStreams],

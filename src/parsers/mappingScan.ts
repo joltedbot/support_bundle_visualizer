@@ -13,7 +13,7 @@ export type MappingField = {
   fields?: Record<string, MappingField>
 }
 
-export const MAPPING_MAX_DEPTH = 10
+const MAPPING_MAX_DEPTH = 10
 
 /**
  * Depth-first walk over a mapping `properties` tree (including multi-fields), calling `visit`
@@ -41,7 +41,7 @@ type Pipeline = {
   processors?: Array<{ inference?: { model_id?: string; inference_id?: string } } | null>
 }
 
-export interface PipelineLookups {
+interface PipelineLookups {
   /** index name → default (or final) ingest pipeline name, from settings.json */
   indexToPipeline: Map<string, string>
   /** pipeline name → model/inference id of its first inference processor, from pipelines.json */

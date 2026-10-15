@@ -155,6 +155,11 @@ function detectAiFeatures(indices: IndexInfo[]): AIFeatures {
   }
 }
 
+// Only the object entries of an array; [] for anything else (null entries and wrong shapes are skipped)
+function items<T>(v: readonly (T | null | undefined)[] | null | undefined): T[] {
+  return Array.isArray(v) ? v.filter((x): x is T => x !== null && typeof x === 'object') : []
+}
+
 // ── Main parser ───────────────────────────────────────────────────────────────
 
 export function parseML(files: Map<string, string>, indices: IndexInfo[]): AiMlInfo | null {
@@ -176,24 +181,24 @@ export function parseML(files: Map<string, string>, indices: IndexInfo[]): AiMlI
 
   // job_id → datafeed_id (handles custom datafeed names)
   const jobToDatafeedId = new Map<string, string>()
-  for (const df of datafeedsJson?.datafeeds ?? []) {
+  for (const df of items(datafeedsJson?.datafeeds)) {
     if (df.job_id && df.datafeed_id) jobToDatafeedId.set(df.job_id, df.datafeed_id)
   }
 
   // datafeed_id → state
   const datafeedIdToState = new Map<string, DatafeedState>()
-  for (const df of datafeedStatsJson?.datafeeds ?? []) {
+  for (const df of items(datafeedStatsJson?.datafeeds)) {
     if (df.datafeed_id && df.state) datafeedIdToState.set(df.datafeed_id, df.state as DatafeedState)
   }
 
   // job_id → stats
   const jobIdToStats = new Map<string, NonNullable<MLStatsJson['jobs']>[number]>()
-  for (const job of statsJson?.jobs ?? []) {
+  for (const job of items(statsJson?.jobs)) {
     if (job.job_id) jobIdToStats.set(job.job_id, job)
   }
 
   const anomalyJobs: AnomalyJob[] = []
-  for (const det of detectorsJson?.jobs ?? []) {
+  for (const det of items(detectorsJson?.jobs)) {
     const jobId = det.job_id ?? ''
     const stats = jobIdToStats.get(jobId)
     const datafeedId = jobToDatafeedId.get(jobId) ?? `datafeed-${jobId}`
@@ -216,12 +221,12 @@ export function parseML(files: Map<string, string>, indices: IndexInfo[]): AiMlI
 
   // model_id → first stats entry (duplicates arise when a model has multiple deployments)
   const modelIdToStats = new Map<string, NonNullable<TrainedModelStatsJson['trained_model_stats']>[number]>()
-  for (const s of modelStatsJson?.trained_model_stats ?? []) {
+  for (const s of items(modelStatsJson?.trained_model_stats)) {
     if (s.model_id && !modelIdToStats.has(s.model_id)) modelIdToStats.set(s.model_id, s)
   }
 
   const trainedModels: TrainedModel[] = []
-  for (const cfg of trainedModelsJson?.trained_model_configs ?? []) {
+  for (const cfg of items(trainedModelsJson?.trained_model_configs)) {
     const modelId = cfg.model_id ?? ''
     const { modelClass, inferenceTask } = classifyModel(modelId, cfg.model_type ?? '', cfg.inference_config ?? {})
     const stats = modelIdToStats.get(modelId)
@@ -247,11 +252,11 @@ export function parseML(files: Map<string, string>, indices: IndexInfo[]): AiMlI
   const dfaJson = parseJsonFile<DFAJson>(files, 'commercial/ml_dataframe.json')
   const dfaStatsJson = parseJsonFile<DFAStatsJson>(files, 'commercial/ml_dataframe_stats.json')
   const dfaIdToState = new Map<string, string>()
-  for (const j of dfaStatsJson?.data_frame_analytics ?? []) {
+  for (const j of items(dfaStatsJson?.data_frame_analytics)) {
     if (j.id && j.state) dfaIdToState.set(j.id, j.state)
   }
   const dfaJobs: DFAJob[] = []
-  for (const job of dfaJson?.data_frame_analytics ?? []) {
+  for (const job of items(dfaJson?.data_frame_analytics)) {
     const id = job.id ?? ''
     const analysisType = Object.keys(job.analysis ?? {})[0] as DFAType | undefined
     if (!analysisType) continue

@@ -63,7 +63,7 @@ export function IndexNameList({
   )
 }
 
-export const Dot = ({ color }: { color: string }) => (
+const Dot = ({ color }: { color: string }) => (
   <span
     aria-hidden="true"
     style={{
