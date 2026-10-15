@@ -1,18 +1,12 @@
 import { parseJsonFile } from '../utils/bundleReader'
 import type { VectorTraits } from './types'
-
-type MappingValue = {
-  type?: string
-  value?: string
-  index_options?: { type?: string }
-  properties?: Record<string, MappingValue>
-  fields?: Record<string, MappingValue>
-}
+import { walkMappingFields } from './mappingScan'
+import type { MappingField } from './mappingScan'
 
 type MappingIndex = {
   mappings?: {
     _source?: { mode?: string }
-    properties?: Record<string, MappingValue>
+    properties?: Record<string, MappingField>
   }
 }
 
@@ -27,7 +21,6 @@ export interface IndexTraits {
   vector?: VectorTraits        // present only when a dense/sparse/semantic field exists
 }
 
-const MAX_DEPTH = 10
 // dense_vector defaults to HNSW when index_options is not set
 const DEFAULT_DENSE_TYPE = 'hnsw'
 
@@ -38,10 +31,8 @@ interface VectorScan {
   denseTypes: Set<string>
 }
 
-function scanVectors(props: Record<string, MappingValue>, acc: VectorScan, depth = 0): void {
-  if (depth > MAX_DEPTH) return
-  for (const field of Object.values(props)) {
-    if (!field || typeof field !== 'object') continue
+function scanVectors(props: Record<string, MappingField>, acc: VectorScan): void {
+  walkMappingFields(props, field => {
     if (field.type === 'dense_vector') {
       acc.dense = true
       const optType = field.index_options?.type
@@ -51,9 +42,7 @@ function scanVectors(props: Record<string, MappingValue>, acc: VectorScan, depth
     } else if (field.type === 'semantic_text') {
       acc.semantic = true
     }
-    if (field.properties) scanVectors(field.properties, acc, depth + 1)
-    if (field.fields) scanVectors(field.fields, acc, depth + 1)
-  }
+  })
 }
 
 /**

@@ -1,5 +1,7 @@
 import { parseJsonFile } from '../utils/bundleReader'
 import type { DenseVectorDimGroup, FeatureInfo, IndexInfo } from './types'
+import { walkMappingFields, buildPipelineLookups } from './mappingScan'
+import type { MappingField } from './mappingScan'
 
 interface WatcherStatsJson {
   stats?: Array<{ watch_count?: number }>
@@ -22,32 +24,11 @@ interface RemoteClusterJson {
   [key: string]: unknown
 }
 
-type MappingValue = {
-  type?: string
-  dims?: number
-  inference_id?: string
-  properties?: Record<string, MappingValue>
-  fields?: Record<string, MappingValue>
-}
-
 type MappingIndex = {
   mappings?: {
-    properties?: Record<string, MappingValue>
+    properties?: Record<string, MappingField>
   }
 }
-
-type SettingsIndex = {
-  settings?: { index?: { default_pipeline?: string; final_pipeline?: string } }
-}
-
-type InferenceProcessor = {
-  model_id?: string
-  inference_id?: string
-}
-
-type PipelineProcessor = { inference?: InferenceProcessor }
-
-type Pipeline = { processors?: PipelineProcessor[] }
 
 const OBSERVABILITY_PATTERNS = [
   /^\.logs-/,
@@ -81,58 +62,35 @@ type MappingScanResult = {
 }
 
 /**
- * Recursively scan mapping properties for specific field types.
+ * Scan mapping properties for specific field types.
  * Returns flags, dense_vector field details, and all inference_id references found.
  */
-function scanMappingProperties(
-  props: Record<string, MappingValue>,
-  depth = 0
-): MappingScanResult {
-  let hasDenseVector = false
-  let hasSparseVector = false
-  let hasSemanticText = false
-  let hasGeoFields = false
-  const denseVectorFields: DenseVectorField[] = []
-  const inferenceIds: string[] = []
-
-  if (depth > 10) return { hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields, denseVectorFields, inferenceIds }
-
-  for (const field of Object.values(props)) {
-    if (!field || typeof field !== 'object') continue
-    const type = field.type
-    if (type === 'dense_vector') {
-      hasDenseVector = true
-      denseVectorFields.push({ dims: field.dims ?? 0, inferenceId: field.inference_id ?? null })
-      if (field.inference_id) inferenceIds.push(field.inference_id)
-    }
-    if (type === 'sparse_vector') hasSparseVector = true
-    if (type === 'semantic_text') {
-      hasSemanticText = true
-      if (field.inference_id) inferenceIds.push(field.inference_id)
-    }
-    if (type === 'geo_point' || type === 'geo_shape') hasGeoFields = true
-
-    if (field.properties) {
-      const sub = scanMappingProperties(field.properties, depth + 1)
-      if (sub.hasDenseVector) hasDenseVector = true
-      if (sub.hasSparseVector) hasSparseVector = true
-      if (sub.hasSemanticText) hasSemanticText = true
-      if (sub.hasGeoFields) hasGeoFields = true
-      denseVectorFields.push(...sub.denseVectorFields)
-      inferenceIds.push(...sub.inferenceIds)
-    }
-    if (field.fields) {
-      const sub = scanMappingProperties(field.fields, depth + 1)
-      if (sub.hasDenseVector) hasDenseVector = true
-      if (sub.hasSparseVector) hasSparseVector = true
-      if (sub.hasSemanticText) hasSemanticText = true
-      if (sub.hasGeoFields) hasGeoFields = true
-      denseVectorFields.push(...sub.denseVectorFields)
-      inferenceIds.push(...sub.inferenceIds)
-    }
+function scanMappingProperties(props: Record<string, MappingField>): MappingScanResult {
+  const result: MappingScanResult = {
+    hasDenseVector: false,
+    hasSparseVector: false,
+    hasSemanticText: false,
+    hasGeoFields: false,
+    denseVectorFields: [],
+    inferenceIds: [],
   }
 
-  return { hasDenseVector, hasSparseVector, hasSemanticText, hasGeoFields, denseVectorFields, inferenceIds }
+  walkMappingFields(props, field => {
+    const type = field.type
+    if (type === 'dense_vector') {
+      result.hasDenseVector = true
+      result.denseVectorFields.push({ dims: field.dims ?? 0, inferenceId: field.inference_id ?? null })
+      if (field.inference_id) result.inferenceIds.push(field.inference_id)
+    }
+    if (type === 'sparse_vector') result.hasSparseVector = true
+    if (type === 'semantic_text') {
+      result.hasSemanticText = true
+      if (field.inference_id) result.inferenceIds.push(field.inference_id)
+    }
+    if (type === 'geo_point' || type === 'geo_shape') result.hasGeoFields = true
+  })
+
+  return result
 }
 
 /**
@@ -161,33 +119,9 @@ export function parseFeatures(
   }
   if (solutionTypes.size === 0) solutionTypes.add('search')
 
-  // Build index → default pipeline lookup from settings.json
-  const indexToPipeline = new Map<string, string>()
-  const settingsRaw = parseJsonFile<Record<string, SettingsIndex>>(files, 'settings.json')
-  if (settingsRaw && typeof settingsRaw === 'object') {
-    for (const [indexName, indexSettings] of Object.entries(settingsRaw)) {
-      const idxBlock = indexSettings?.settings?.index
-      const pipeline = idxBlock?.default_pipeline ?? idxBlock?.final_pipeline
-      if (pipeline) indexToPipeline.set(indexName, pipeline)
-    }
-  }
-
-  // Build pipeline → model_id lookup from pipelines.json inference processors
-  const pipelineToModelId = new Map<string, string>()
-  const pipelines = parseJsonFile<Record<string, Pipeline>>(files, 'pipelines.json')
-  const ingestPipelineCount = pipelines ? Object.keys(pipelines).length : 0
+  // index → default pipeline (settings.json) and pipeline → model id (pipelines.json inference processors)
+  const { indexToPipeline, pipelineToModelId, pipelineCount: ingestPipelineCount } = buildPipelineLookups(files)
   const hasIngestPipelines = ingestPipelineCount > 0
-  if (pipelines && typeof pipelines === 'object') {
-    for (const [pipelineName, pipeline] of Object.entries(pipelines)) {
-      for (const proc of pipeline?.processors ?? []) {
-        const inf = proc?.inference
-        if (inf) {
-          const modelId = inf.model_id ?? inf.inference_id
-          if (modelId) { pipelineToModelId.set(pipelineName, modelId); break }
-        }
-      }
-    }
-  }
 
   // Collect inference IDs referenced in pipeline inference processors (globally)
   const pipelineInferenceIds = new Set<string>()
