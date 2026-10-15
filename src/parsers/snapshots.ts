@@ -1,6 +1,8 @@
 import { parseJsonFile } from '../utils/bundleReader'
 import type { SnapshotInfo, SnapshotRepository, SLMPolicyDetail } from './types'
 
+const REPO_SETTINGS_ALLOWLIST = ['bucket', 'container', 'base_path', 'location', 'compress'] as const
+
 interface RepositoryJson {
   type?: string
   settings?: Record<string, unknown>
@@ -76,10 +78,13 @@ export function parseSnapshots(files: Map<string, string>, collectionDateMs: num
     for (const [name, repo] of Object.entries(repositoriesRaw)) {
       const repoSnapshots = (snapshotsRaw?.snapshots ?? []).filter(s => s.repository === name)
 
+      // Allowlist: only keys the UI renders are baked into the customer-delivered HTML.
+      // Repository settings can also carry endpoints, roles and proxies that should not ship.
       const settings: Record<string, string> = {}
-      if (repo.settings) {
-        for (const [k, v] of Object.entries(repo.settings)) {
-          settings[k] = String(v)
+      if (repo.settings && typeof repo.settings === 'object') {
+        for (const k of REPO_SETTINGS_ALLOWLIST) {
+          const v = repo.settings[k]
+          if (v !== undefined && v !== null) settings[k] = String(v)
         }
       }
 

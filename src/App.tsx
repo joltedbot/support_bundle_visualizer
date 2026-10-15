@@ -42,7 +42,7 @@ function App() {
             body={
               <EuiText>
                 <p>
-                  Run <code>npm run generate</code> to process a diagnostic bundle before building.
+                  Run <code>pnpm run generate</code> to process a diagnostic bundle before building.
                 </p>
                 <p>
                   See <code>GENERATE.md</code> for the full workflow.

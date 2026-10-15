@@ -8,6 +8,7 @@ import { parseAuth } from './auth'
 import { parseNodes, buildNodeHealthSignals } from './nodes'
 import { parseIndices } from './indices'
 import { parseIndexTraits } from './indexTraits'
+import type { IndexTraits } from './indexTraits'
 import { buildDataAdoption } from './dataAdoption'
 import { parseShards } from './shards'
 import { parseStats } from './stats'
@@ -25,11 +26,21 @@ import { parsePipelines } from './pipelines'
 import { parseClusterSettings } from './clusterSettings'
 import { parsePendingTasks } from './pendingTasks'
 
+// Parsers must never throw: a wrong-shaped file (null entries, strings where objects are
+// expected) must not abort generation, so every sub-parser runs behind this guard.
+function safe<T>(fn: () => T, fallback: T): T {
+  try {
+    return fn()
+  } catch {
+    return fallback
+  }
+}
+
 export async function parseBundle(data: BundleData): Promise<BundleModel> {
   const { files } = data
 
   // Parse manifest early so we can pass collectionDateMs to sub-parsers
-  const identity = parseManifest(files)
+  const identity = safe(() => parseManifest(files), null)
   const parsedCollectionDate = identity?.collectionTimestamp
     ? new Date(identity.collectionTimestamp).getTime()
     : null
@@ -38,28 +49,28 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     : null
 
   // Build alias-backed index set from alias.json
-  const aliasJson = parseJsonFile<Record<string, { aliases?: Record<string, unknown> }>>(
+  const aliasJson = parseJsonFile<Record<string, { aliases?: Record<string, unknown> } | null>>(
     files,
     'alias.json'
   )
   const aliasBackedIndices = new Set<string>()
-  if (aliasJson) {
+  if (aliasJson && typeof aliasJson === 'object') {
     for (const [indexName, entry] of Object.entries(aliasJson)) {
-      if (entry.aliases && Object.keys(entry.aliases).length > 0) {
+      if (entry?.aliases && typeof entry.aliases === 'object' && Object.keys(entry.aliases).length > 0) {
         aliasBackedIndices.add(indexName)
       }
     }
   }
 
-  const rawIndices = parseIndices(files, aliasBackedIndices)
+  const rawIndices = safe(() => parseIndices(files, aliasBackedIndices), [])
 
   // Join ILM policy names onto each index
-  const indexPolicyMap = buildIndexPolicyMap(files)
+  const indexPolicyMap = safe(() => buildIndexPolicyMap(files), new Map<string, string>())
   // Join model names onto each index
-  const indexModelMap = buildIndexModelMap(files)
+  const indexModelMap = safe(() => buildIndexModelMap(files), new Map<string, string[]>())
 
   // Per-index mode / synthetic source / vector / data_stream.type from settings.json + mapping.json
-  const traitsByIndex = parseIndexTraits(files)
+  const traitsByIndex = safe(() => parseIndexTraits(files), new Map<string, IndexTraits>())
 
   const indices = rawIndices.map((idx) => {
     const policy = indexPolicyMap.get(idx.name)
@@ -80,8 +91,8 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
   })
 
   // Parse features and aiMl separately so we can merge semantic/vector counts
-  const features = parseFeatures(files, indices)
-  const aiMlBase = parseML(files, indices)
+  const features = safe(() => parseFeatures(files, indices), null)
+  const aiMlBase = safe(() => parseML(files, indices), null)
   const aiMl = aiMlBase ? {
     ...aiMlBase,
     semanticTextIndexCount: features?.semanticTextIndexCount ?? 0,
@@ -89,8 +100,8 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     sparseVectorIndexCount: features?.sparseVectorIndexCount ?? 0,
   } : null
 
-  const nodes = parseNodes(files)
-  const rawShards = parseShards(files)
+  const nodes = safe(() => parseNodes(files), [])
+  const rawShards = safe(() => parseShards(files), [])
 
   // Build name→id map so shard joins use stable node IDs, not display names
   const nodeNameToId = new Map<string, string>()
@@ -123,10 +134,10 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
   }
   const cacheStatsJson = parseJsonFile<CacheStatsJson>(files, 'commercial/searchable_snapshots_cache_stats.json')
   const sharedCacheByNodeId = new Map<string, number>()
-  if (cacheStatsJson?.nodes) {
+  if (cacheStatsJson?.nodes && typeof cacheStatsJson.nodes === 'object') {
     for (const [id, nodeStats] of Object.entries(cacheStatsJson.nodes)) {
-      const size = nodeStats.shared_cache?.size_in_bytes
-      if (size !== undefined) sharedCacheByNodeId.set(id, size)
+      const size = nodeStats?.shared_cache?.size_in_bytes
+      if (typeof size === 'number') sharedCacheByNodeId.set(id, size)
     }
   }
 
@@ -170,28 +181,28 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
 
   return {
     identity,
-    health: parseHealth(files),
-    internalHealth: parseInternalHealth(files),
-    auth: parseAuth(files),
+    health: safe(() => parseHealth(files), null),
+    internalHealth: safe(() => parseInternalHealth(files), null),
+    auth: safe(() => parseAuth(files), null),
     nodes: nodesWithShardCounts,
     indices,
     shards,
-    stats: parseStats(files),
-    ilm: parseILM(files),
+    stats: safe(() => parseStats(files), null),
+    ilm: safe(() => parseILM(files), null),
     aiMl,
     features,
-    replication: parseReplication(files),
-    snapshots: parseSnapshots(files, collectionDateMs),
-    sizing: parseSizing(files, indices),
-    license: parseLicense(files),
-    plugins: parsePlugins(files),
-    dataStreams: parseDataStreams(files),
-    ingestPipelines: parsePipelines(files),
-    clusterSettings: parseClusterSettings(files),
+    replication: safe(() => parseReplication(files), null),
+    snapshots: safe(() => parseSnapshots(files, collectionDateMs), null),
+    sizing: safe(() => parseSizing(files, indices), null),
+    license: safe(() => parseLicense(files), null),
+    plugins: safe(() => parsePlugins(files), []),
+    dataStreams: safe(() => parseDataStreams(files), []),
+    ingestPipelines: safe(() => parsePipelines(files), []),
+    clusterSettings: safe(() => parseClusterSettings(files), null),
     tierStorage,
-    nodeHealthSignals: buildNodeHealthSignals(files, nodesWithShardCounts),
-    pendingTasks: parsePendingTasks(files),
-    dataAdoption: buildDataAdoption(indices, traitsByIndex),
+    nodeHealthSignals: safe(() => buildNodeHealthSignals(files, nodesWithShardCounts), []),
+    pendingTasks: safe(() => parsePendingTasks(files), null),
+    dataAdoption: safe(() => buildDataAdoption(indices, traitsByIndex), null),
   }
 }
 

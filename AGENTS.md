@@ -77,6 +77,10 @@ Do NOT:
   Do NOT simplify `readEsClusterName()` to read only `cluster_health.json` — this returns a raw UUID on every ESS/Cloud deployment and would surface as the report title.
 - **Uniform Keys on Per-Index Fields**: `generate.ts` emits `src/generated/bundleData.ts` as an untyped object literal, so TypeScript infers a union over every distinct index object shape. Optional per-index fields (e.g. on `IndexInfo`) make shapes diverge, and `tsc` fails with TS2590 "union type too complex" only on very large bundles (Mengo, ~6k indices) while small bundles pass.
   Do NOT add an optional or conditionally-present field to `IndexInfo` (or other per-item arrays in `BundleModel`); always populate it with a default (`null`/`false`) so every object has identical keys.
+- **No `tsc` in CI**: `src/generated/` is gitignored, so a clean CI checkout has no `bundleData.ts` and `tsc -b` fails on the missing module. Type-checking only works locally after `pnpm run generate`.
+  Do NOT add a `tsc -b` step to `.github/workflows/node.js.yml`.
+- **Scoped secretlint runs**: a bare `secretlint "**/*"` walks local gitignored bundle directories and crashes on very large files (a 16 GB file was hit). The tracked `.secretlintignore` does not cover this on its own.
+  Do NOT run `secretlint "**/*"` without `--secretlintignore .gitignore`.
 
 ## Constraints
 

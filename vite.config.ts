@@ -28,7 +28,8 @@ export default defineConfig({
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
-        return html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+        // Replacer function: a string replacement would expand `$'` / `$&` sequences from the cluster name
+        return html.replace(/<title>[^<]*<\/title>/, () => `<title>${title}</title>`)
       },
     },
   ],

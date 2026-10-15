@@ -16,8 +16,6 @@ diagnostics/
 !diagnostics/.keep
 diagnostics/*
 docs/
-.secretlintignore
-.secretlintrc.json
 .claude/
 .gemini
 .pnpm-store

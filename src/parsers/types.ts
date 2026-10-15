@@ -9,10 +9,6 @@ export type UnavailableReason =
 
 export type Metric<T> = T | { unavailable: UnavailableReason }
 
-export function isUnavailable<T>(m: Metric<T>): m is { unavailable: UnavailableReason } {
-  return typeof m === 'object' && m !== null && 'unavailable' in (m as object)
-}
-
 // ── Per-node health signals (from nodes_stats.json) ───────────────────────────
 
 export interface NodeWorkload {

@@ -18,10 +18,13 @@ export function parseInternalHealth(files: Map<string, string>): InternalHealth 
   const indicators: Record<string, HealthIndicator> = {}
   
   for (const [key, val] of Object.entries(data.indicators)) {
+    if (!val || typeof val !== 'object') continue
+    const status = (val.status?.toLowerCase() as HealthIndicator['status']) || 'unknown'
     indicators[key] = {
-      status: (val.status?.toLowerCase() as HealthIndicator['status']) || 'unknown',
+      status,
       symptom: val.symptom || '',
-      details: val.details || null
+      // The UI shows details only for non-green indicators; don't bake the rest into the HTML
+      details: status === 'green' ? null : val.details || null
     }
   }
 

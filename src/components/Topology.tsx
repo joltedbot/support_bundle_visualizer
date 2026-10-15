@@ -12,7 +12,7 @@ import {
 } from '@elastic/eui'
 import type { NodeInfo, NodeRole, KibanaInfo, NodeHealthSignals } from '../parsers/types'
 import { resourceColor, formatBytes, formatUptime, diskUsageColor, diskUsageLabel } from '../utils/format'
-import { HEAP_RAM_WARN_PCT, HEAP_RAM_MAX_BYTES } from '../utils/thresholds'
+import { HEAP_WARN, HEAP_CRIT, CPU_WARN, CPU_CRIT, HEAP_RAM_WARN_PCT, HEAP_RAM_MAX_BYTES } from '../utils/thresholds'
 import {
   buildSummaryBar,
   groupNodesByAZ,
@@ -105,9 +105,9 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
   const primaryColor = TIER_COLORS[primaryTier] ?? '#7f8c8d'
 
   const heapColor = node.heapPercent !== undefined
-    ? resourceColor(node.heapPercent, 75, 85) : undefined
+    ? resourceColor(node.heapPercent, HEAP_WARN, HEAP_CRIT) : undefined
   const cpuColor = node.cpuPercent !== undefined
-    ? resourceColor(node.cpuPercent, 50, 80) : undefined
+    ? resourceColor(node.cpuPercent, CPU_WARN, CPU_CRIT) : undefined
 
   const vcpuStr = (node.allocatedProcessors ?? node.availableProcessors) !== undefined
     ? `${node.allocatedProcessors ?? node.availableProcessors} vCPU` : null
@@ -582,7 +582,7 @@ function eventLoopColor(ms: number): 'subdued' | 'warning' | 'danger' {
 
 function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
   const statusColor = kibana.status === 'green' ? '#017d73' : kibana.status === 'yellow' ? '#f5a700' : kibana.status === 'red' ? '#bd271e' : '#69707d'
-  const heapColor = kibana.heapPercent !== undefined ? resourceColor(kibana.heapPercent, 75, 85) : undefined
+  const heapColor = kibana.heapPercent !== undefined ? resourceColor(kibana.heapPercent, HEAP_WARN, HEAP_CRIT) : undefined
 
   return (
     <EuiPanel paddingSize="s" style={{ minWidth: 200, maxWidth: 280 }}>
