@@ -6,6 +6,7 @@ export const HEAP_CRIT = 85
 
 // JVM heap vs total RAM
 export const HEAP_RAM_WARN_PCT = 55            // heap max ≥ this % of RAM → over-allocated (warning)
+export const HEAP_RAM_CRIT_PCT = HEAP_RAM_WARN_PCT + 1  // no graded crit band: any pct above warn reads as danger
 export const HEAP_RAM_MAX_BYTES = 31 * 1024 ** 3  // heap max ≥ 31 GiB → compressed oops boundary (danger)
 
 // Disk usage

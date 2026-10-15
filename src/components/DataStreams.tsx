@@ -19,6 +19,8 @@ interface Props {
 
 type SortField = 'name' | 'status' | 'indexCount' | 'ilmPolicy'
 
+const VALID_SORT_FIELDS: readonly SortField[] = ['name', 'status', 'indexCount', 'ilmPolicy']
+
 interface SortState {
   field: SortField
   direction: 'asc' | 'desc'
@@ -164,8 +166,7 @@ export default function DataStreams({ dataStreams }: Props) {
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<DataStreamInfo>) {
     if (newSort) {
-      const validSortFields: SortField[] = ['name', 'status', 'indexCount', 'ilmPolicy']
-      if (isOneOf(validSortFields, newSort.field)) {
+      if (isOneOf(VALID_SORT_FIELDS, newSort.field)) {
         setSort({ field: newSort.field, direction: newSort.direction })
         setPageIndex(0)
       }

@@ -30,6 +30,8 @@ interface ILMPolicyRow extends ILMPolicyDetail {
 
 type ILMSortField = 'name' | 'indexCount' | 'forceMergeSegments' | 'shrinkShards' | 'hotDisplay' | 'warmDisplay' | 'coldDisplay' | 'frozenDisplay' | 'deleteDisplay'
 
+const VALID_SORT_FIELDS: readonly ILMSortField[] = ['name', 'indexCount', 'forceMergeSegments', 'shrinkShards', 'hotDisplay', 'warmDisplay', 'coldDisplay', 'frozenDisplay', 'deleteDisplay']
+
 interface ILMSortState {
   field: ILMSortField
   direction: 'asc' | 'desc'
@@ -209,8 +211,7 @@ export function ILMPoliciesTable({ policies }: { policies: ILMPolicyDetail[] }) 
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<ILMPolicyRow>) {
     if (newSort) {
-      const validSortFields: ILMSortField[] = ['name', 'indexCount', 'forceMergeSegments', 'shrinkShards', 'hotDisplay', 'warmDisplay', 'coldDisplay', 'frozenDisplay', 'deleteDisplay']
-      if (isOneOf(validSortFields, newSort.field)) {
+      if (isOneOf(VALID_SORT_FIELDS, newSort.field)) {
         setSort({ field: newSort.field, direction: newSort.direction })
         setPageIndex(0)
       }

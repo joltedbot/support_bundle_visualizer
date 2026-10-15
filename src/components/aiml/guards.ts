@@ -5,11 +5,17 @@ export function significantModels(models: TrainedModel[]): TrainedModel[] {
   return models.filter((m) => m.modelClass !== 'lang_ident')
 }
 
-export function hasAnything(aiMl: AiMlInfo, features: FeatureInfo | null): boolean {
-  const semanticCount =
+// Indices with semantic_text, dense_vector or sparse_vector fields
+export function semanticIndexCount(features: FeatureInfo | null): number {
+  return (
     (features?.semanticTextIndexCount ?? 0) +
     (features?.denseVectorIndexCount ?? 0) +
     (features?.sparseVectorIndexCount ?? 0)
+  )
+}
+
+export function hasAnything(aiMl: AiMlInfo, features: FeatureInfo | null): boolean {
+  const semanticCount = semanticIndexCount(features)
   return (
     aiMl.anomalyJobs.length > 0 ||
     significantModels(aiMl.trainedModels).length > 0 ||

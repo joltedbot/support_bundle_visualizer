@@ -19,6 +19,8 @@ interface Props {
 
 type SortField = 'name' | 'processorCount' | 'createdDate'
 
+const VALID_SORT_FIELDS: readonly SortField[] = ['name', 'processorCount', 'createdDate']
+
 interface SortState {
   field: SortField
   direction: 'asc' | 'desc'
@@ -157,8 +159,7 @@ export default function IngestPipelines({ pipelines }: Props) {
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<PipelineInfo>) {
     if (newSort) {
-      const validSortFields: SortField[] = ['name', 'processorCount', 'createdDate']
-      if (isOneOf(validSortFields, newSort.field)) {
+      if (isOneOf(VALID_SORT_FIELDS, newSort.field)) {
         setSort({ field: newSort.field, direction: newSort.direction })
         setPageIndex(0)
       }

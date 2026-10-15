@@ -129,9 +129,6 @@ function App() {
 
           <FleetSection kibana={kibana ?? null} />
 
-          <EuiSpacer size="l" />
-          <EuiTitle size="s"><h3>Data Profile</h3></EuiTitle>
-          <EuiSpacer size="s" />
           <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
 
           {model.aiMl && hasAnything(model.aiMl, model.features) && (

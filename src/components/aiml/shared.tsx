@@ -1,4 +1,4 @@
-import React from 'react'
+import type { ReactNode } from 'react'
 import {
   EuiFlexGroup,
   EuiFlexItem,
@@ -110,7 +110,7 @@ export const SubSection = ({
   children,
 }: {
   title: string
-  children: React.ReactNode
+  children: ReactNode
 }) => (
   <EuiFlexItem style={{ minWidth: 220 }}>
     <EuiTitle size="xxs"><h4>{title}</h4></EuiTitle>

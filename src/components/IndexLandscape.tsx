@@ -22,6 +22,8 @@ interface Props {
 
 type SortField = 'name' | 'indexType' | 'indexMode' | 'ilmPolicy' | 'models' | 'health' | 'status' | 'primaryShards' | 'avgShardSizeBytes' | 'docCount' | 'storeSizeBytes'
 
+const VALID_SORT_FIELDS: readonly SortField[] = ['name', 'indexType', 'indexMode', 'ilmPolicy', 'models', 'health', 'status', 'primaryShards', 'avgShardSizeBytes', 'docCount', 'storeSizeBytes']
+
 interface SortState {
   field: SortField
   direction: 'asc' | 'desc'
@@ -291,8 +293,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
 
   function onTableChange({ sort: newSort, page: newPage }: Criteria<IndexInfo>) {
     if (newSort) {
-      const validSortFields: SortField[] = ['name', 'indexType', 'indexMode', 'ilmPolicy', 'models', 'health', 'status', 'primaryShards', 'avgShardSizeBytes', 'docCount', 'storeSizeBytes']
-      if (isOneOf(validSortFields, newSort.field)) {
+      if (isOneOf(VALID_SORT_FIELDS, newSort.field)) {
         setSort({ field: newSort.field, direction: newSort.direction })
         setPageIndex(0)
       }

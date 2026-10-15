@@ -36,6 +36,9 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
 
   return (
     <>
+      <EuiSpacer size="l" />
+      <EuiTitle size="s"><h3>Data Profile</h3></EuiTitle>
+      <EuiSpacer size="s" />
       <EuiFlexGroup wrap gutterSize="l" alignItems="flexStart" responsive={false}>
         {hasStats && (
           <EuiFlexItem grow={false} style={{ minWidth: 280 }}>

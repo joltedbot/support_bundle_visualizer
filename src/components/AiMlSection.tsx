@@ -15,7 +15,7 @@ import { DFAPanel } from './aiml/DFAPanel'
 import { MLMemoryPanel } from './aiml/MLMemoryPanel'
 import { SemanticSearchPanel } from './aiml/SemanticSearchPanel'
 import { AIFeaturesPanel } from './aiml/AIFeaturesPanel'
-import { significantModels, hasAnything } from './aiml/guards'
+import { significantModels, hasAnything, semanticIndexCount } from './aiml/guards'
 
 interface Props {
   aiMl: AiMlInfo
@@ -37,10 +37,7 @@ function getStatus(aiMl: AiMlInfo, features: FeatureInfo | null): StatusInfo {
     )
   if (hasIssues) return { label: 'Issues Detected', color: 'danger' }
 
-  const semanticCount =
-    (features?.semanticTextIndexCount ?? 0) +
-    (features?.denseVectorIndexCount ?? 0) +
-    (features?.sparseVectorIndexCount ?? 0)
+  const semanticCount = semanticIndexCount(features)
   const isActive =
     aiMl.anomalyJobs.some((j) => j.state === 'opened') ||
     significantModels(aiMl.trainedModels).some((m) => m.deployed) ||
@@ -62,10 +59,7 @@ export default function AiMlSection({ aiMl, features }: Props) {
   const nonTrivialModels = significantModels(aiMl.trainedModels)
   const mlNodes = aiMl.mlNodeMemory.filter((n) => n.maxBytes > 0)
 
-  const semanticCount =
-    (features?.semanticTextIndexCount ?? 0) +
-    (features?.denseVectorIndexCount ?? 0) +
-    (features?.sparseVectorIndexCount ?? 0)
+  const semanticCount = semanticIndexCount(features)
 
   const { aiFeatures } = aiMl
   const activeInferenceEndpoints = features?.activeInferenceEndpoints ?? []
@@ -75,7 +69,7 @@ export default function AiMlSection({ aiMl, features }: Props) {
     aiFeatures.hasObservabilityAiAssistant ||
     aiFeatures.hasChatAgents ||
     aiFeatures.hasProductDocIndices ||
-    (features?.activeInferenceEndpoints.length ?? 0) > 0 ||
+    activeInferenceEndpoints.length > 0 ||
     aiFeatures.mlInferenceStorageBytes > 0 ||
     (features?.denseVectorDimGroups.filter((g) => g.inferenceId === null)
       .length ?? 0) > 0

@@ -3,15 +3,16 @@ import { ML_MEM_WARN_PCT, ML_MEM_CRIT_PCT } from '../../utils/thresholds'
 
 // ── Label helpers ─────────────────────────────────────────────────────────────
 
+const MODEL_CLASS_LABELS: Record<string, string> = {
+  elser: 'ELSER',
+  e5: 'E5',
+  dfa: 'DFA Model',
+  nlp: 'NLP',
+  lang_ident: 'Built-in',
+}
+
 export function modelClassLabel(m: TrainedModel): string {
-  const labels: Record<string, string> = {
-    elser: 'ELSER',
-    e5: 'E5',
-    dfa: 'DFA Model',
-    nlp: 'NLP',
-    lang_ident: 'Built-in',
-  }
-  return labels[m.modelClass] ?? 'Model'
+  return MODEL_CLASS_LABELS[m.modelClass] ?? 'Model'
 }
 
 export function modelClassColor(m: TrainedModel): string {

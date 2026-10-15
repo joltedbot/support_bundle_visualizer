@@ -14,7 +14,7 @@ import {
 import type { NodeInfo, NodeRole, KibanaInfo, NodeHealthSignals } from '../parsers/types'
 import { resourceColor, formatBytes, formatUptime, diskUsageColor, diskUsageLabel } from '../utils/format'
 import {
-  HEAP_WARN, HEAP_CRIT, CPU_WARN, CPU_CRIT, HEAP_RAM_WARN_PCT, HEAP_RAM_MAX_BYTES,
+  HEAP_WARN, HEAP_CRIT, CPU_WARN, CPU_CRIT, HEAP_RAM_WARN_PCT, HEAP_RAM_CRIT_PCT, HEAP_RAM_MAX_BYTES,
   SHARD_COUNT_WARN_PCT, SHARD_COUNT_CRIT_PCT, BREAKER_NOTABLE_RATIO, BREAKER_WARN_PCT, BREAKER_CRIT_PCT,
   EVENT_LOOP_WARN_MS, EVENT_LOOP_CRIT_MS,
 } from '../utils/thresholds'
@@ -261,7 +261,7 @@ function NodeDetail({ node, signals }: { node: NodeInfo; signals: NodeHealthSign
 function heapRamColorFor(node: NodeInfo): ProgressColor {
   if (node.heapMaxBytes === undefined || node.ramTotal === undefined || node.ramTotal <= 0) return undefined
   if (node.heapMaxBytes >= HEAP_RAM_MAX_BYTES) return 'danger'
-  return resourceColor(pctOf(node.heapMaxBytes, node.ramTotal), HEAP_RAM_WARN_PCT, HEAP_RAM_WARN_PCT + 1)
+  return resourceColor(pctOf(node.heapMaxBytes, node.ramTotal), HEAP_RAM_WARN_PCT, HEAP_RAM_CRIT_PCT)
 }
 
 function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
@@ -322,7 +322,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
         </EuiFlexItem>
         {secondaryRoles.map(r => (
           <EuiFlexItem grow={false} key={r}>
-            <EuiBadge color={TIER_COLORS[DATA_ROLE_TO_TIER[r as NodeRole] ?? r] ?? '#555'} style={{ fontSize: 10 }}>
+            <EuiBadge color={TIER_COLORS[DATA_ROLE_TO_TIER[r] ?? r] ?? '#555'} style={{ fontSize: 10 }}>
               {ROLE_LABELS[r] ?? r}
             </EuiBadge>
           </EuiFlexItem>
