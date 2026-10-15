@@ -16,6 +16,12 @@ function makeIndex(name: string, docCount = 0, storeSizeBytes = 0): IndexInfo {
     storeSizeBytes,
     primaryStoreSizeBytes: storeSizeBytes,
     avgShardSizeBytes: 0,
+    ilmPolicy: null,
+    models: [],
+    indexType: 'index',
+    indexMode: null,
+    syntheticSource: false,
+    vector: null,
   }
 }
 

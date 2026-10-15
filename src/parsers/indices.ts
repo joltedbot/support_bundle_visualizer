@@ -103,6 +103,8 @@ export function parseIndices(files: Map<string, string>, aliasBackedIndices: Set
       primaryStoreSizeBytes: priStoreSizeBytes,
       avgShardSizeBytes,
       indexType,
+      ilmPolicy: null,
+      models: [],
       indexMode: null,
       syntheticSource: false,
       vector: null,

@@ -21,6 +21,12 @@ function idx(name: string, over: Partial<IndexInfo> = {}): IndexInfo {
     storeSizeBytes: 2000,
     primaryStoreSizeBytes: 1000,
     avgShardSizeBytes: 1000,
+    ilmPolicy: null,
+    models: [],
+    indexType: 'index',
+    indexMode: null,
+    syntheticSource: false,
+    vector: null,
     ...over,
   }
 }

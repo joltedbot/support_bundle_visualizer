@@ -158,15 +158,15 @@ export interface IndexInfo {
   docCount: number
   storeSizeBytes: number
   avgShardSizeBytes: number
-  ilmPolicy?: string  // policy name from ilm_explain.json, if managed
-  models?: string[]   // names of embedding/reranking models used
-  indexType?: 'index' | 'datastream-backing' | 'alias-backing'
+  ilmPolicy: string | null  // policy name from ilm_explain.json; null when unmanaged
+  models: string[]          // names of embedding/reranking models used; [] when none
+  indexType: 'index' | 'datastream-backing' | 'alias-backing'
   primaryStoreSizeBytes: number  // cat pri.store.size — primary shards only (no replicas)
-  // Always populated by the parsers (null/false when unknown): optional per-index keys make the untyped
-  // generated bundleData.ts a union that tsc rejects (TS2590) on bundles with thousands of indices.
-  indexMode?: string | null      // settings index.mode verbatim; 'standard' when absent; null when the index has no settings entry
-  syntheticSource?: boolean      // true when _source mode is synthetic (settings or mapping)
-  vector?: VectorTraits | null   // set only when the mapping has dense/sparse/semantic fields
+  // Every per-index key is required and always populated (null/false/[] when unknown): optional keys make the
+  // untyped generated bundleData.ts a union that tsc rejects (TS2590) on bundles with thousands of indices.
+  indexMode: string | null      // settings index.mode verbatim; 'standard' when absent; null when the index has no settings entry
+  syntheticSource: boolean      // true when _source mode is synthetic (settings or mapping)
+  vector: VectorTraits | null   // set only when the mapping has dense/sparse/semantic fields
 }
 
 export interface VectorTraits {

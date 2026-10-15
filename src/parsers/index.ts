@@ -76,18 +76,16 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     const policy = indexPolicyMap.get(idx.name)
     const models = indexModelMap.get(idx.name)
     const traits = traitsByIndex.get(idx.name)
-    let updated = idx
-    if (policy) updated = { ...updated, ilmPolicy: policy }
-    if (models) updated = { ...updated, models }
-    if (traits) {
-      updated = {
-        ...updated,
+    return {
+      ...idx,
+      ilmPolicy: policy ?? null,
+      models: models ?? [],
+      ...(traits && {
         indexMode: traits.indexMode,
         syntheticSource: traits.syntheticSource,
         vector: traits.vector ?? null,
-      }
+      }),
     }
-    return updated
   })
 
   // Parse features and aiMl separately so we can merge semantic/vector counts
