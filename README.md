@@ -59,16 +59,11 @@ diagnostics/
 ```bash
 pnpm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
 pnpm run build
-# or with npm
-npm run generate -- --customer acme-corp --name "ACME Corp" --cluster "Production" --notes "Pre-renewal call"
-npm run build
 ```
 
 **Multi-deployment** (build runs automatically after each deployment):
 ```bash
 pnpm run generate -- --customer ada-support --name "ADA Support"
-# or with npm
-npm run generate -- --customer ada-support --name "ADA Support"
 ```
 
 **`generate` flags**
