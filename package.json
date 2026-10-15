@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@11.24.0",
   "scripts": {
     "generate": "tsx scripts/generate.ts",
     "dev": "vite",
@@ -18,7 +19,6 @@
     "@emotion/css": "^11.13.5",
     "@emotion/react": "^11.14.0",
     "moment": "^2.31.0",
-    "pnpm": "^11.24.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
