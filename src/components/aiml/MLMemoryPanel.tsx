@@ -9,10 +9,12 @@ import {
 import type {
   MLNodeMemory,
 } from '../../parsers/types'
+import { usePalette } from '../../theme/palette'
 import { formatBytes } from '../../utils/format'
-import { memBarColor } from './labels'
+import { memBarLevel } from './labels'
 
 export function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
+  const palette = usePalette()
   return (
     <EuiPanel paddingSize="m">
       <EuiTitle size="xs"><h3>ML Memory</h3></EuiTitle>
@@ -46,7 +48,7 @@ export function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
                 </EuiText>
               </EuiFlexItem>
               <EuiFlexItem grow={false}>
-                <EuiText size="xs" style={{ color: memBarColor(usedPct) }}>
+                <EuiText size="xs" style={{ color: palette[memBarLevel(usedPct)] }}>
                   {usedPct}% — {formatBytes(usedBytes)} /{' '}
                   {formatBytes(node.maxBytes)}
                 </EuiText>
@@ -56,7 +58,7 @@ export function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
             <div
               style={{
                 height: 10,
-                background: '#111827',
+                background: palette.memBar.track,
                 borderRadius: 5,
                 overflow: 'hidden',
                 display: 'flex',
@@ -64,19 +66,19 @@ export function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
             >
               {adPct > 0 && (
                 <div
-                  style={{ width: `${adPct}%`, background: '#ffab00' }}
+                  style={{ width: `${adPct}%`, background: palette.memBar.anomalyDetection }}
                   title={`Anomaly detectors: ${formatBytes(node.anomalyDetectorsBytes)}`}
                 />
               )}
               {infPct > 0 && (
                 <div
-                  style={{ width: `${infPct}%`, background: '#4c9aff' }}
+                  style={{ width: `${infPct}%`, background: palette.memBar.inference }}
                   title={`Native inference: ${formatBytes(node.nativeInferenceBytes)}`}
                 />
               )}
               {dfaPct > 0 && (
                 <div
-                  style={{ width: `${dfaPct}%`, background: '#a855f7' }}
+                  style={{ width: `${dfaPct}%`, background: palette.memBar.dataFrameAnalytics }}
                   title={`Data frame analytics: ${formatBytes(node.dataFrameAnalyticsBytes)}`}
                 />
               )}
@@ -85,7 +87,7 @@ export function MLMemoryPanel({ nodes }: { nodes: MLNodeMemory[] }) {
         )
       })}
       <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
-        Yellow = anomaly detectors · Blue = native inference · Purple = data
+        Yellow = anomaly detectors · Blue = native inference · Pink = data
         frame analytics
       </EuiText>
     </EuiPanel>

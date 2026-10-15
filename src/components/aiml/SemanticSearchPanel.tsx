@@ -10,9 +10,11 @@ import {
 import type {
   FeatureInfo,
 } from '../../parsers/types'
+import { usePalette } from '../../theme/palette'
 import { IndexNameList } from './shared'
 
 export function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
+  const { dot } = usePalette()
   const semanticNames = features.semanticTextIndexNames
   const sparseNames = features.sparseVectorIndexNames ?? []
   const hasDenseGroups = features.denseVectorDimGroups.length > 0
@@ -71,7 +73,7 @@ export function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
                   </EuiFlexGroup>
                   {indexNames.length > 0 && (
                     <div style={{ paddingLeft: 16 }}>
-                      <IndexNameList names={indexNames} dotColor="#4c9aff" />
+                      <IndexNameList names={indexNames} />
                     </div>
                   )}
                 </div>
@@ -86,7 +88,7 @@ export function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
           <EuiText size="xs" color="subdued" style={{ textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
             sparse_vector
           </EuiText>
-          <IndexNameList names={sparseNames} dotColor="#7b61ff" />
+          <IndexNameList names={sparseNames} dotColor={dot.sparse} />
         </div>
       )}
 
@@ -95,7 +97,7 @@ export function SemanticSearchPanel({ features }: { features: FeatureInfo }) {
           <EuiText size="xs" color="subdued" style={{ textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
             semantic_text
           </EuiText>
-          <IndexNameList names={semanticNames} dotColor="#00bfb3" />
+          <IndexNameList names={semanticNames} dotColor={dot.semantic} />
         </div>
       )}
     </EuiPanel>

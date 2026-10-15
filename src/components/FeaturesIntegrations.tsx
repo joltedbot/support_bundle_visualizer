@@ -5,6 +5,7 @@ import {
   EuiText,
   EuiSpacer,
 } from '@elastic/eui'
+import { SOLUTION_BADGE_COLORS, levelBadgeColor, type BadgeColor } from '../theme/palette'
 import type { FeatureInfo, ILMInfo, ReplicationInfo, SnapshotInfo, KibanaInfo } from '../parsers/types'
 
 interface Props {
@@ -15,12 +16,6 @@ interface Props {
   kibana: KibanaInfo | null
 }
 
-const SOLUTION_COLORS: Record<string, string> = {
-  search: '#0071c2',
-  observability: '#017d73',
-  security: '#bd271e',
-}
-
 const SOLUTION_LABELS: Record<string, string> = {
   search: 'Search',
   observability: 'Observability',
@@ -29,36 +24,36 @@ const SOLUTION_LABELS: Record<string, string> = {
 
 interface FeatureBadge {
   label: string
-  color?: string
+  color?: BadgeColor
 }
 
 export default function FeaturesIntegrations({ features, ilm, replication, kibana }: Props) {
   const badges: FeatureBadge[] = []
 
   if (features?.hasILM && ilm) {
-    badges.push({ label: `ILM (${ilm.policyCount} policies)`, color: '#017d73' })
+    badges.push({ label: `ILM (${ilm.policyCount} policies)`, color: 'success' })
   } else if (features?.hasILM) {
-    badges.push({ label: 'ILM', color: '#017d73' })
+    badges.push({ label: 'ILM', color: 'success' })
   }
 
   if (features?.hasCCR && replication) {
-    badges.push({ label: `CCR (${replication.followerIndexCount} followers)`, color: '#0071c2' })
+    badges.push({ label: `CCR (${replication.followerIndexCount} followers)`, color: 'primary' })
   } else if (features?.hasCCR) {
-    badges.push({ label: 'CCR', color: '#0071c2' })
+    badges.push({ label: 'CCR', color: 'primary' })
   }
 
   if (features?.hasCCS && replication && replication.remoteClusterCount > 0) {
-    badges.push({ label: `CCS (${replication.remoteClusterCount} remotes)`, color: '#0071c2' })
+    badges.push({ label: `CCS (${replication.remoteClusterCount} remotes)`, color: 'primary' })
   } else if (features?.hasCCS) {
-    badges.push({ label: 'CCS', color: '#0071c2' })
+    badges.push({ label: 'CCS', color: 'primary' })
   }
 
   if (features?.hasVectorSearch) {
-    badges.push({ label: 'Vector Search', color: '#f5a700' })
+    badges.push({ label: 'Vector Search', color: 'warning' })
   }
 
   if (features?.hasSemanticText) {
-    badges.push({ label: 'Semantic Text', color: '#f5a700' })
+    badges.push({ label: 'Semantic Text', color: 'warning' })
   }
 
   if (features?.hasIngestPipelines && features.ingestPipelineCount > 0) {
@@ -86,18 +81,18 @@ export default function FeaturesIntegrations({ features, ilm, replication, kiban
   }
 
   // Kibana health badges
-  interface KibanaBadge { label: string; color: string }
+  interface KibanaBadge { label: string; color: BadgeColor }
   const kibanaBadges: KibanaBadge[] = []
   if (kibana) {
-    const alertColor = kibana.alertingHealth === 'ok' ? '#017d73' : kibana.alertingHealth === 'warn' ? '#f5a700' : kibana.alertingHealth === 'error' ? '#bd271e' : '#69707d'
+    const alertColor = levelBadgeColor(kibana.alertingHealth)
     if (kibana.alertingHealth) {
       kibanaBadges.push({ label: `Alerting: ${kibana.alertingHealth}`, color: alertColor })
     }
     if (kibana.hasPermanentEncryptionKey === false) {
-      kibanaBadges.push({ label: 'No permanent encryption key', color: '#bd271e' })
+      kibanaBadges.push({ label: 'No permanent encryption key', color: 'danger' })
     }
     if (kibana.taskManagerStatus) {
-      const tmColor = kibana.taskManagerStatus === 'OK' ? '#017d73' : kibana.taskManagerStatus === 'warn' ? '#f5a700' : '#bd271e'
+      const tmColor = levelBadgeColor(kibana.taskManagerStatus)
       kibanaBadges.push({ label: `Task Manager: ${kibana.taskManagerStatus}`, color: tmColor })
     }
     if (kibana.fleet && kibana.fleet.total > 0) {
@@ -108,7 +103,7 @@ export default function FeaturesIntegrations({ features, ilm, replication, kiban
       if (f.error > 0)    parts.push(`${f.error} error`)
       if (f.updating > 0) parts.push(`${f.updating} updating`)
       if (f.inactive > 0) parts.push(`${f.inactive} inactive`)
-      kibanaBadges.push({ label: `Fleet: ${parts.join(', ')}`, color: '#0071c2' })
+      kibanaBadges.push({ label: `Fleet: ${parts.join(', ')}`, color: 'primary' })
     }
   }
 
@@ -133,7 +128,7 @@ export default function FeaturesIntegrations({ features, ilm, replication, kiban
           <EuiFlexGroup gutterSize="s" wrap responsive={false}>
             {features?.solutionTypes.map((sol) => (
               <EuiFlexItem key={sol} grow={false}>
-                <EuiBadge color={SOLUTION_COLORS[sol] ?? 'default'} style={{ fontSize: 13, padding: '4px 10px' }}>
+                <EuiBadge color={SOLUTION_BADGE_COLORS[sol] ?? 'default'} style={{ fontSize: 13, padding: '4px 10px' }}>
                   {SOLUTION_LABELS[sol] ?? sol}
                 </EuiBadge>
               </EuiFlexItem>

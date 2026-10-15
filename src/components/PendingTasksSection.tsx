@@ -7,6 +7,7 @@ import {
   EuiSpacer,
 } from '@elastic/eui'
 import type { PendingTasksInfo } from '../parsers/types'
+import type { BadgeColor } from '../theme/palette'
 import { formatWaitTime } from '../utils/format'
 import { PENDING_WAIT_WARN_MS, PENDING_WAIT_CRIT_MS } from '../utils/thresholds'
 
@@ -14,14 +15,14 @@ interface Props {
   pendingTasks: PendingTasksInfo
 }
 
-const PRIORITY_COLORS: Record<string, string> = {
-  IMMEDIATE: '#bd271e',
-  URGENT:    '#bd271e',
-  HIGH:      '#f5a700',
+const PRIORITY_COLORS: Record<string, BadgeColor> = {
+  IMMEDIATE: 'danger',
+  URGENT:    'danger',
+  HIGH:      'warning',
 }
 
-function priorityColor(priority: string): string {
-  return PRIORITY_COLORS[priority.toUpperCase()] ?? '#69707d'
+function priorityColor(priority: string): BadgeColor {
+  return PRIORITY_COLORS[priority.toUpperCase()] ?? 'default'
 }
 
 function maxWaitColor(ms: number): 'danger' | 'warning' | 'subdued' {

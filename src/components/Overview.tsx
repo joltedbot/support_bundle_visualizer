@@ -7,17 +7,12 @@ import {
   EuiText,
 } from '@elastic/eui'
 import type { BundleModel, KibanaInfo } from '../parsers/types'
+import { SOLUTION_BADGE_COLORS } from '../theme/palette'
 import { formatBytes, formatCount, healthColor } from '../utils/format'
 
 interface Props {
   model: BundleModel
   kibana: KibanaInfo | null
-}
-
-const SOLUTION_COLORS: Record<string, string> = {
-  search:        '#0077cc',
-  observability: '#006BB4',
-  security:      '#017D73',
 }
 
 const SOLUTION_LABELS: Record<string, string> = {
@@ -108,7 +103,7 @@ export default function Overview({ model, kibana }: Props) {
             <EuiFlexGroup gutterSize="xs" wrap responsive={false}>
               {model.features?.solutionTypes.map((s) => (
                 <EuiFlexItem grow={false} key={s}>
-                  <EuiBadge color={SOLUTION_COLORS[s] ?? 'default'}>
+                  <EuiBadge color={SOLUTION_BADGE_COLORS[s] ?? 'default'}>
                     {SOLUTION_LABELS[s] ?? s}
                   </EuiBadge>
                 </EuiFlexItem>

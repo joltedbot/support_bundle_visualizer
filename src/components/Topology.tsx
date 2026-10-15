@@ -12,6 +12,7 @@ import {
   EuiIcon,
 } from '@elastic/eui'
 import type { NodeInfo, NodeRole, KibanaInfo, NodeHealthSignals } from '../parsers/types'
+import { levelBadgeColor, usePalette } from '../theme/palette'
 import { resourceColor, formatBytes, formatUptime, diskUsageColor, diskUsageLabel } from '../utils/format'
 import {
   HEAP_WARN, HEAP_CRIT, CPU_WARN, CPU_CRIT, HEAP_RAM_WARN_PCT, HEAP_RAM_CRIT_PCT, HEAP_RAM_MAX_BYTES,
@@ -58,19 +59,6 @@ function InfoTip({ content }: { content: string }) {
 }
 
 // ─── Colours & labels ────────────────────────────────────────────────────────
-
-const TIER_COLORS: Record<string, string> = {
-  master:       '#9b59b6',
-  hot:          '#e74c3c',
-  warm:         '#e67e22',
-  cold:         '#3498db',
-  frozen:       '#1abc9c',
-  coordinating: '#95a5a6',
-  mixed:        '#7f8c8d',
-  ml:           '#8e44ad',
-  ingest:       '#16a085',
-  transform:    '#d35400',
-}
 
 const ROLE_LABELS: Record<string, string> = {
   master:               'Master',
@@ -283,6 +271,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
   maxShardsPerNodeFrozen: number | null
   signals?: NodeHealthSignals
 }) {
+  const palette = usePalette()
   const primaryRole: NodeRole =
     node.roles.find(r => DATA_ROLE_TO_TIER[r]) ??
     node.roles.find(r => r !== 'remote_cluster_client') ??
@@ -290,7 +279,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
   const secondaryRoles = node.roles.filter(r => r !== primaryRole)
 
   const primaryTier = DATA_ROLE_TO_TIER[primaryRole] ?? primaryRole
-  const primaryColor = TIER_COLORS[primaryTier] ?? '#7f8c8d'
+  const primaryColor = palette.tier[primaryTier] ?? palette.tierFallback
 
   const heapColor = node.heapPercent !== undefined
     ? resourceColor(node.heapPercent, HEAP_WARN, HEAP_CRIT) : undefined
@@ -335,7 +324,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
         </EuiFlexItem>
         {secondaryRoles.map(r => (
           <EuiFlexItem grow={false} key={r}>
-            <EuiBadge color={TIER_COLORS[DATA_ROLE_TO_TIER[r] ?? r] ?? '#555'} style={{ fontSize: 10 }}>
+            <EuiBadge color={palette.tier[DATA_ROLE_TO_TIER[r] ?? r] ?? palette.tierFallback} style={{ fontSize: 10 }}>
               {ROLE_LABELS[r] ?? r}
             </EuiBadge>
           </EuiFlexItem>
@@ -569,7 +558,9 @@ function eventLoopColor(ms: number): 'subdued' | 'warning' | 'danger' {
 }
 
 function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
-  const statusColor = kibana.status === 'green' ? '#017d73' : kibana.status === 'yellow' ? '#f5a700' : kibana.status === 'red' ? '#bd271e' : '#69707d'
+  const palette = usePalette()
+  const level = levelBadgeColor(kibana.status)
+  const statusColor = level === 'success' || level === 'warning' || level === 'danger' ? palette[level] : palette.neutral
   const heapColor = kibana.heapPercent !== undefined ? resourceColor(kibana.heapPercent, HEAP_WARN, HEAP_CRIT) : undefined
 
   return (
@@ -585,7 +576,7 @@ function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
         </EuiFlexItem>
       </EuiFlexGroup>
       <EuiSpacer size="xs" />
-      <EuiBadge color="#2563eb" style={{ fontSize: 10 }}>Kibana v{kibana.version}</EuiBadge>
+      <EuiBadge color="primary" style={{ fontSize: 10 }}>Kibana v{kibana.version}</EuiBadge>
       {kibana.heapSizeLimit !== undefined && (
         <EuiText size="xs" color="subdued" style={{ marginTop: 4 }}>
           {formatBytes(kibana.heapSizeLimit)} instance

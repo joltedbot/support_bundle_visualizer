@@ -6,6 +6,7 @@ import {
   EuiToolTip,
   type EuiBasicTableColumn,
 } from '@elastic/eui'
+import { usePalette } from '../theme/palette'
 import type { ServerlessCheck, ServerlessReadinessInfo } from '../parsers/types'
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -115,6 +116,7 @@ const detailColumns: EuiBasicTableColumn<ServerlessCheck>[] = [
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ServerlessReadiness({ readiness }: { readiness: ServerlessReadinessInfo }) {
+  const { dangerTint } = usePalette()
   const blockers = readiness.checks.filter(c => c.state === 'blocked' && c.severity === 'hard').length
   const planned = readiness.checks.filter(c => c.state === 'blocked' && c.severity === 'planned').length
   const cleared = readiness.checks.filter(c => c.state === 'clear').length
@@ -139,7 +141,7 @@ export default function ServerlessReadiness({ readiness }: { readiness: Serverle
             items={readiness.checks}
             columns={detailColumns}
             rowProps={(check: ServerlessCheck) => ({
-              style: check.state === 'blocked' ? { background: 'rgba(189, 39, 30, 0.15)' } : {},
+              style: check.state === 'blocked' ? { background: dangerTint } : {},
             })}
           />
         </EuiAccordion>

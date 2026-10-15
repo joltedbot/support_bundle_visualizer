@@ -50,9 +50,9 @@ export function memoryStatusColor(
   return 'default'
 }
 
-// Intentional vis-palette hex: semantic status colors used as raw CSS backgrounds for the stacked bar
-export function memBarColor(pct: number): string {
-  if (pct >= ML_MEM_CRIT_PCT) return '#ff5630'
-  if (pct >= ML_MEM_WARN_PCT) return '#ffab00'
-  return '#36b37e'
+// Palette key for the memory-usage text colour; resolve with usePalette()
+export function memBarLevel(pct: number): 'danger' | 'warning' | 'success' {
+  if (pct >= ML_MEM_CRIT_PCT) return 'danger'
+  if (pct >= ML_MEM_WARN_PCT) return 'warning'
+  return 'success'
 }

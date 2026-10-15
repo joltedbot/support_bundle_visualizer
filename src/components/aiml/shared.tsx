@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { usePalette } from '../../theme/palette'
 import {
   EuiFlexGroup,
   EuiFlexItem,
@@ -12,11 +13,13 @@ import {
 
 export function IndexNameList({
   names,
-  dotColor = '#4c9aff',
+  dotColor,
 }: {
   names: string[]
   dotColor?: string
 }) {
+  const { dot } = usePalette()
+  const userDotColor = dotColor ?? dot.primary
   const userNames = names.filter((n) => !n.startsWith('.')).sort()
   const systemNames = names.filter((n) => n.startsWith('.')).sort()
   const bothGroups = userNames.length > 0 && systemNames.length > 0
@@ -28,7 +31,7 @@ export function IndexNameList({
         size="xs"
         color={isSystem ? 'subdued' : 'text'}
         label={<code>{name}</code>}
-        icon={<Dot color={isSystem ? '#444c60' : dotColor} />}
+        icon={<Dot color={isSystem ? dot.system : userDotColor} />}
         wrapText
       />
     ))

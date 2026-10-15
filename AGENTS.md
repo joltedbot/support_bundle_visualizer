@@ -81,6 +81,8 @@ Do NOT:
   Do NOT add a `tsc -b` step to `.github/workflows/node.js.yml`.
 - **Scoped secretlint runs**: a bare `secretlint "**/*"` walks local gitignored bundle directories and crashes on very large files (a 16 GB file was hit). The tracked `.secretlintignore` does not cover this on its own.
   Do NOT run `secretlint "**/*"` without `--secretlintignore .gitignore`.
+- **Palette Colours**: component colours come from `src/theme/palette.ts` (`usePalette()` built on `useEuiTheme` tokens, `SOLUTION_BADGE_COLORS`, `levelBadgeColor`) or named `EuiBadge` colours — the user prefers EUI tokens over hex, and duplicated colours should be harmonised. Hex/rgba literals are not theme-aware and previously drifted (the same solution had different colours in different components).
+  Do NOT add hex or rgba literals in `src/components/`, and do NOT call `usePalette()` after an early return.
 
 ## Constraints
 

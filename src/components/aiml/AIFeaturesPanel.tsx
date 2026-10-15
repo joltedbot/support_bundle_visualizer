@@ -12,6 +12,7 @@ import type {
   FeatureInfo,
   DenseVectorDimGroup,
 } from '../../parsers/types'
+import { usePalette } from '../../theme/palette'
 import { formatBytes, formatCount } from '../../utils/format'
 import { getModelHint } from '../../utils/modelHints'
 import { Pill, SubSection } from './shared'
@@ -23,6 +24,7 @@ export function AIFeaturesPanel({
   aiMl: AiMlInfo
   features: FeatureInfo | null
 }) {
+  const { dot } = usePalette()
   const { aiFeatures } = aiMl
   const activeEndpoints = features?.activeInferenceEndpoints ?? []
   const externalGroups =
@@ -64,14 +66,14 @@ export function AIFeaturesPanel({
           <SubSection title="AI Agents">
             {aiFeatures.hasSecurityAiAssistant && (
               <Pill
-                dotColor="#36b37e"
+                dotColor={dot.agent}
                 title="Security AI Assistant"
                 subtitle=".kibana-elastic-ai-assistant-*"
               />
             )}
             {aiFeatures.hasObservabilityAiAssistant && (
               <Pill
-                dotColor="#36b37e"
+                dotColor={dot.agent}
                 title="Observability AI Assistant"
                 subtitle={`.kibana-observability-ai-assistant-*${aiFeatures.observabilityConversationCount > 0 ? ` · ${formatCount(aiFeatures.observabilityConversationCount)} conversations` : ''}`}
               />
@@ -83,21 +85,21 @@ export function AIFeaturesPanel({
           <SubSection title="Agent Builder">
             {aiFeatures.chatAgentCount > 0 && (
               <Pill
-                dotColor="#4c9aff"
+                dotColor={dot.primary}
                 title="Chat Agents"
                 subtitle={`.chat-agents · ${formatCount(aiFeatures.chatAgentCount)} agents`}
               />
             )}
             {aiFeatures.chatConversationCount > 0 && (
               <Pill
-                dotColor="#4c9aff"
+                dotColor={dot.primary}
                 title="Conversations"
                 subtitle={`.chat-conversations · ${formatCount(aiFeatures.chatConversationCount)}`}
               />
             )}
             {aiFeatures.chatToolCount > 0 && (
               <Pill
-                dotColor="#4c9aff"
+                dotColor={dot.primary}
                 title="Tool Definitions"
                 subtitle={`.chat-tools · ${formatCount(aiFeatures.chatToolCount)} tools`}
               />
@@ -108,7 +110,7 @@ export function AIFeaturesPanel({
         {aiFeatures.hasProductDocIndices && (
           <SubSection title="AI Product Docs (KB)">
             <Pill
-              dotColor="#4c9aff"
+              dotColor={dot.primary}
               title={`${aiFeatures.productDocIndexCount} product doc ${aiFeatures.productDocIndexCount === 1 ? 'index' : 'indices'}`}
               subtitle=".kibana_ai_product_doc_* · E5 embeddings"
             />
@@ -121,14 +123,14 @@ export function AIFeaturesPanel({
             {activeEndpoints.map((id) => (
               <Pill
                 key={id}
-                dotColor="#4c9aff"
+                dotColor={dot.primary}
                 title={id}
                 subtitle="referenced in mappings / pipelines"
               />
             ))}
             {aiFeatures.mlInferenceStorageBytes > 0 && (
               <Pill
-                dotColor="#4c9aff"
+                dotColor={dot.primary}
                 title="ML inference storage"
                 subtitle={`.ml-inference-native-* · ${formatBytes(aiFeatures.mlInferenceStorageBytes)}`}
               />

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { usePalette } from '../theme/palette'
 import {
   EuiBasicTable,
   EuiBadge,
@@ -54,6 +55,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const DEFAULT_PAGE_SIZE = 10
 
 export default function IndexLandscape({ indices, shards }: Props) {
+  const { warning } = usePalette()
   const [showSystem, setShowSystem] = useState(false)
   const [sort, setSort] = useState<SortState>({ field: 'storeSizeBytes', direction: 'desc' })
   const [pageIndex, setPageIndex] = useState(0)
@@ -325,7 +327,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
         pagination={pagination}
         onChange={onTableChange}
         rowProps={(item) =>
-          flaggedIndices.has(item.name) ? { style: { borderLeft: '3px solid var(--euiColorWarning, #f5a700)' } } : {}
+          flaggedIndices.has(item.name) ? { style: { borderLeft: `3px solid ${warning}` } } : {}
         }
       />
     </div>
