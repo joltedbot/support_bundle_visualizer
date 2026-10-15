@@ -15,11 +15,9 @@ A local tool for Elastic SAs to quickly orient on a customer cluster from an Ela
 
 ```bash
 pnpm install
-# or with npm
-npm install --legacy-peer-deps
 ```
 
-(pnpm handles the React 19 and `@elastic/charts` peer dependency conflicts automatically. npm requires `--legacy-peer-deps` for the same reason.)
+(pnpm handles the React 19 and `@elastic/charts` peer dependency conflicts automatically.)
 
 ## Generating a report
 
