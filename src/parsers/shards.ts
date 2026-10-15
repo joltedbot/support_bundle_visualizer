@@ -1,33 +1,10 @@
 import { getTextFile } from '../utils/bundleReader'
+import { parseSize } from '../utils/parseSize'
 import { SHARD_OVERSIZED_GiB, SHARD_UNDERSIZED_GiB } from '../utils/thresholds'
 import type { ShardInfo } from './types'
 
 const OVERSIZED_BYTES = SHARD_OVERSIZED_GiB * 1024 * 1024 * 1024
 const UNDERSIZED_BYTES = SHARD_UNDERSIZED_GiB * 1024 * 1024 * 1024
-
-/**
- * Convert size string to bytes.
- * Handles: b, kb, mb, gb, tb (case-insensitive).
- */
-function parseSize(sizeStr: string): number {
-  if (!sizeStr || sizeStr === '-' || sizeStr === '') return 0
-  const lower = sizeStr.toLowerCase().trim()
-  const units: Record<string, number> = {
-    tb: 1024 * 1024 * 1024 * 1024,
-    gb: 1024 * 1024 * 1024,
-    mb: 1024 * 1024,
-    kb: 1024,
-    b: 1,
-  }
-  for (const [suffix, multiplier] of Object.entries(units)) {
-    if (lower.endsWith(suffix)) {
-      const num = parseFloat(lower.slice(0, -suffix.length))
-      return isNaN(num) ? 0 : Math.round(num * multiplier)
-    }
-  }
-  const num = parseFloat(lower)
-  return isNaN(num) ? 0 : Math.round(num)
-}
 
 /**
  * Parse cat/cat_shards.txt → ShardInfo[].
