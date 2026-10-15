@@ -176,7 +176,7 @@ export interface VectorTraits {
   denseTypes: string[]  // distinct dense_vector index_options.type values ('hnsw' when unset)
 }
 
-export type DataAdoptionKind = 'logs' | 'metrics' | 'traces' | 'security' | 'synthetics' | 'other'
+export type DataAdoptionKind = 'logs' | 'metrics' | 'traces' | 'security' | 'synthetics' | 'vector' | 'other'
 
 export interface DataAdoptionRow {
   kind: DataAdoptionKind

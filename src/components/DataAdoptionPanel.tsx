@@ -18,6 +18,7 @@ const KIND_LABELS: Record<DataAdoptionKind, string> = {
   traces: 'Traces',
   security: 'Security',
   synthetics: 'Synthetics',
+  vector: 'Vector Search',
   other: 'Other',
 }
 

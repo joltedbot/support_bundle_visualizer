@@ -1,7 +1,7 @@
 import type { DataAdoption, DataAdoptionKind, DataAdoptionRow, IndexInfo } from './types'
 import type { IndexTraits } from './indexTraits'
 
-const ROW_ORDER: DataAdoptionKind[] = ['logs', 'metrics', 'traces', 'security', 'synthetics', 'other']
+const ROW_ORDER: DataAdoptionKind[] = ['logs', 'metrics', 'traces', 'security', 'synthetics', 'vector', 'other']
 
 // Elastic Security artifacts only. Vendor/OS log datasets (logs-system.security-*,
 // logs-akamai.siem-*) are deliberately absent — calling them Security would be a guess.
@@ -87,12 +87,15 @@ export function classifyIndex(name: string, traits?: IndexTraits): DataAdoptionK
   if (traits?.indexMode === 'time_series') return 'metrics'
   if (traits?.indexMode === 'logsdb') return 'logs'
 
+  // Custom-named indices with dense/sparse/semantic fields are search workloads
+  if (traits?.vector) return 'vector'
+
   return 'other'
 }
 
 /**
  * Roll open, non-empty indices up into Logs / Metrics / Traces / Security /
- * Synthetics / Other. Docs and storage are primary-only. Returns null when nothing
+ * Synthetics / Vector Search / Other. Docs and storage are primary-only. Returns null when nothing
  * qualifies so the UI can stay silent.
  */
 export function buildDataAdoption(

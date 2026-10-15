@@ -200,3 +200,16 @@ describe('buildDataAdoption', () => {
     expect(buildDataAdoption(indices, t)?.rows[0].kind).toBe('logs')
   })
 })
+
+describe('classifyIndex — vector search', () => {
+  const vector = { dense: true, sparse: false, semantic: false, denseTypes: ['hnsw'] }
+  it('custom-named index with vector fields -> vector', () => {
+    expect(classifyIndex('profiles-sc41-v2', traits({ vector }))).toBe('vector')
+  })
+  it('vector fields do not override a name-prefix match', () => {
+    expect(classifyIndex('logs-app-default', traits({ vector }))).toBe('logs')
+  })
+  it('custom-named index without vector fields stays other', () => {
+    expect(classifyIndex('profiles-sc41-v2', traits())).toBe('other')
+  })
+})
