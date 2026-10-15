@@ -1,3 +1,4 @@
+import type { ComponentProps, CSSProperties, ReactNode } from 'react'
 import {
   EuiFlexGroup,
   EuiFlexItem,
@@ -91,7 +92,177 @@ const DATA_ROLE_TO_TIER: Partial<Record<NodeRole, string>> = {
   data_frozen: 'frozen',
 }
 
+// ─── Shared building blocks ───────────────────────────────────────────────────
+
+type ProgressColor = ComponentProps<typeof EuiProgress>['color']
+
+const pctOf = (part: number, whole: number): number => Math.round((part / whole) * 100)
+
+function MetricBar({ label, valueText, pct, color, size = 's', wrapperStyle, children }: {
+  label: string
+  valueText: string
+  pct: number
+  color?: ProgressColor
+  size?: ComponentProps<typeof EuiProgress>['size']
+  wrapperStyle?: CSSProperties
+  children?: ReactNode
+}) {
+  return (
+    <div style={wrapperStyle}>
+      <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
+        <EuiFlexItem><EuiText size="xs" color="subdued">{label}</EuiText></EuiFlexItem>
+        <EuiFlexItem grow={false}><EuiText size="xs">{valueText}</EuiText></EuiFlexItem>
+      </EuiFlexGroup>
+      <EuiProgress value={pct} max={100} size={size} color={color} />
+      {children}
+    </div>
+  )
+}
+
+function Subtext({ children }: { children: ReactNode }) {
+  return <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>{children}</EuiText>
+}
+
+// A detail line (first child) followed by an info tooltip
+function InfoRow({ tip, style, children }: { tip: string; style?: CSSProperties; children: ReactNode }) {
+  return (
+    <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false} style={style}>
+      <EuiFlexItem grow={false}>{children}</EuiFlexItem>
+      <EuiFlexItem grow={false}><InfoTip content={tip} /></EuiFlexItem>
+    </EuiFlexGroup>
+  )
+}
+
+// ─── Node detail accordion body ───────────────────────────────────────────────
+
+function GcDetail({ gc, jvmUptimeMs }: { gc: NonNullable<NodeHealthSignals['gc']>; jvmUptimeMs?: number }) {
+  const youngPct = jvmUptimeMs ? Math.round(gc.youngCollectionTimeMs / jvmUptimeMs * 1000) / 10 : null
+  const oldPct = jvmUptimeMs ? Math.round(gc.oldCollectionTimeMs / jvmUptimeMs * 1000) / 10 : null
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <InfoRow tip="The JVM periodically reclaims unused heap memory. Routine (young) GC is expected and cheap. Full (old) GC is a stop-the-world pause that briefly freezes the node — high counts or long total duration indicate heap pressure.">
+        <EuiText size="xs" color="subdued"><strong>Garbage Collection</strong></EuiText>
+      </InfoRow>
+      <EuiText size="xs" color="subdued" style={{ marginLeft: 8 }}>
+        Routine (young): {gc.youngCollectionCount} runs{youngPct !== null ? ` · ${youngPct}% of uptime` : ''}
+      </EuiText>
+      <EuiText size="xs" color={oldPct !== null && oldPct > 0 ? 'warning' : 'subdued'} style={{ marginLeft: 8 }}>
+        Full (old): {gc.oldCollectionCount} runs{oldPct !== null ? ` · ${oldPct}% of uptime` : ''}
+      </EuiText>
+    </div>
+  )
+}
+
+function CircuitBreakersDetail({ breakers }: { breakers: NodeHealthSignals['circuitBreakers'] }) {
+  if (breakers.length === 0) return null
+  const tripped = breakers.filter(cb => cb.tripped > 0)
+  const notable = breakers.filter(cb =>
+    cb.tripped > 0 ||
+    (cb.limitSizeInBytes > 0 && (cb.estimatedSizeInBytes / cb.limitSizeInBytes) >= BREAKER_NOTABLE_RATIO)
+  )
+  if (notable.length === 0) return null
+  return (
+    <div style={{ marginTop: 4 }}>
+      <InfoRow tip="Safety limits that reject requests before they exhaust JVM heap. 'Tripped' means a request was rejected with HTTP 429. Total Heap Guard fires when overall heap approaches 95% — more serious than individual breaker trips.">
+        <EuiText size="xs" color={tripped.length > 0 ? 'danger' : 'subdued'}>
+          <strong>Circuit Breakers{tripped.length > 0 ? ` — tripped: ${tripped.map(cb => cbFriendlyName(cb.name)).join(', ')}` : ''}</strong>
+        </EuiText>
+      </InfoRow>
+      {notable.map(cb => {
+        const pct = cb.limitSizeInBytes > 0 ? pctOf(cb.estimatedSizeInBytes, cb.limitSizeInBytes) : 0
+        const barColor = cb.tripped > 0 ? 'danger' : resourceColor(pct, BREAKER_WARN_PCT, BREAKER_CRIT_PCT)
+        return (
+          <MetricBar
+            key={cb.name}
+            label={`${cbFriendlyName(cb.name)}${cb.tripped > 0 ? ` (${cb.tripped} trip${cb.tripped !== 1 ? 's' : ''})` : ''}`}
+            valueText={`${pct}%`}
+            pct={pct}
+            color={barColor}
+            size="xs"
+            wrapperStyle={{ marginBottom: 3, marginLeft: 8 }}
+          >
+            <Subtext>{formatBytes(cb.estimatedSizeInBytes)} / {formatBytes(cb.limitSizeInBytes)}</Subtext>
+          </MetricBar>
+        )
+      })}
+    </div>
+  )
+}
+
+function NodeDetail({ node, signals }: { node: NodeInfo; signals: NodeHealthSignals }) {
+  const rejectedPools = signals.threadPools.filter(tp => tp.rejected > 0)
+  const ip = signals.indexingPressure
+  return (
+    <div style={{ paddingTop: 4 }}>
+      {signals.gc && <GcDetail gc={signals.gc} jvmUptimeMs={node.jvmUptimeMs} />}
+
+      {signals.fielddataEvictions !== null && signals.fielddataEvictions > 0 && (
+        <InfoRow
+          style={{ marginBottom: 2 }}
+          tip="Fielddata was evicted from the heap cache and must be reloaded from disk on next use. Any evictions mean the fielddata cache is undersized for this node's query patterns."
+        >
+          <EuiText size="xs" color="subdued">Fielddata evictions: {signals.fielddataEvictions}</EuiText>
+        </InfoRow>
+      )}
+
+      {rejectedPools.length > 0 && (
+        <div style={{ marginBottom: 2 }}>
+          <InfoRow tip="Requests were discarded when a thread pool's queue was full. Rejections cause HTTP 429 errors for callers. Each pool handles a specific category of work (search, write, etc.).">
+            <EuiText size="xs" color="subdued"><strong>Thread pool rejections</strong></EuiText>
+          </InfoRow>
+          {rejectedPools.map(tp => (
+            <EuiText key={tp.pool} size="xs" color="subdued" style={{ marginLeft: 8 }}>
+              {tp.pool}: {tp.rejected} rejected
+            </EuiText>
+          ))}
+        </div>
+      )}
+
+      {ip?.hasRejections && (
+        <InfoRow
+          style={{ marginBottom: 2 }}
+          tip="Elasticsearch rejected indexing requests because memory used by in-flight bulk operations exceeded the indexing pressure limit. Indicates the node cannot keep up with ingest load."
+        >
+          <EuiText size="xs" color="subdued">
+            Indexing backpressure: Coord {ip.totalRejectionsCoordinating} / Primary {ip.totalRejectionsPrimary} / Replica {ip.totalRejectionsReplica} rejections
+          </EuiText>
+        </InfoRow>
+      )}
+
+      {signals.loadPercent !== null && (
+        <InfoRow
+          style={{ marginBottom: 2 }}
+          tip="1-minute CPU load average as a percentage of allocated vCPUs. Above 100% means the node is CPU-saturated. On small VMs the load reflects the host machine, not this node's container — treat as unreliable in that case."
+        >
+          <EuiText size="xs" color="subdued">
+            System load: {signals.loadPercent}%{signals.loadPercentReliable ? '' : ' (unreliable — small VM)'}
+          </EuiText>
+        </InfoRow>
+      )}
+
+      {signals.workload && (
+        <div style={{ marginBottom: 2 }}>
+          <InfoRow tip="Cumulative thread-time for each activity divided by node uptime. Values above 100% are normal on multi-core nodes — 16 threads all indexing simultaneously produce 1600% for one second of wall time. High merge % means the node is spending significant CPU compacting Lucene segments, which competes with indexing and search.">
+            <EuiText size="xs" color="subdued"><strong>Thread load vs uptime</strong></EuiText>
+          </InfoRow>
+          <EuiText size="xs" color="subdued" style={{ marginLeft: 8 }}>
+            Indexing {signals.workload.indexingPercent ?? '—'}% · Query {signals.workload.queryPercent ?? '—'}% · Merge {signals.workload.mergePercent ?? '—'}%
+          </EuiText>
+        </div>
+      )}
+
+      <CircuitBreakersDetail breakers={signals.circuitBreakers} />
+    </div>
+  )
+}
+
 // ─── NodeCard ─────────────────────────────────────────────────────────────────
+
+function heapRamColorFor(node: NodeInfo): ProgressColor {
+  if (node.heapMaxBytes === undefined || node.ramTotal === undefined || node.ramTotal <= 0) return undefined
+  if (node.heapMaxBytes >= HEAP_RAM_MAX_BYTES) return 'danger'
+  return resourceColor(pctOf(node.heapMaxBytes, node.ramTotal), HEAP_RAM_WARN_PCT, HEAP_RAM_WARN_PCT + 1)
+}
 
 function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
   node: NodeInfo
@@ -120,16 +291,12 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
   const capacityStr = [vcpuStr, ramStr && `${ramStr} RAM`, diskStr && `${diskStr} disk`]
     .filter(Boolean).join(' · ')
 
-  const heapRamColor = (node.heapMaxBytes !== undefined && node.ramTotal !== undefined && node.ramTotal > 0)
-    ? (() => {
-        const pct = Math.round((node.heapMaxBytes / node.ramTotal) * 100)
-        if (node.heapMaxBytes >= HEAP_RAM_MAX_BYTES) return 'danger' as const
-        return resourceColor(pct, HEAP_RAM_WARN_PCT, HEAP_RAM_WARN_PCT + 1)
-      })()
-    : undefined
+  const diskLabel = node.diskUsedPercent !== undefined ? diskUsageLabel(node.diskUsedPercent) : null
 
-  const rejectedPools = signals?.threadPools.filter(tp => tp.rejected > 0) ?? []
-  const hasDetailContent = signals !== undefined
+  const shardMax = (node.tier === 'frozen' && maxShardsPerNodeFrozen != null)
+    ? maxShardsPerNodeFrozen
+    : (maxShardsPerNode ?? 1000)
+  const shardPct = node.shardCount !== undefined && shardMax > 0 ? pctOf(node.shardCount, shardMax) : 0
 
   return (
     <EuiPanel paddingSize="s" style={{ minWidth: 220, maxWidth: 280 }}>
@@ -177,53 +344,34 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
       <EuiSpacer size="xs" />
 
       {node.heapPercent !== undefined && (
-        <div style={{ marginBottom: 4 }}>
-          <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-            <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap Used</EuiText></EuiFlexItem>
-            <EuiFlexItem grow={false}><EuiText size="xs">{node.heapPercent}%</EuiText></EuiFlexItem>
-          </EuiFlexGroup>
-          <EuiProgress value={node.heapPercent} max={100} size="s" color={heapColor} />
-        </div>
+        <MetricBar
+          label="JVM Heap Used" valueText={`${node.heapPercent}%`} pct={node.heapPercent}
+          color={heapColor} wrapperStyle={{ marginBottom: 4 }}
+        />
       )}
 
       {node.heapMaxBytes !== undefined && node.ramTotal !== undefined && node.ramTotal > 0 && (
-        <div style={{ marginBottom: 4 }}>
-          {(() => {
-            const pct = Math.round((node.heapMaxBytes / node.ramTotal) * 100)
-            return (
-              <>
-                <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-                  <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap / RAM</EuiText></EuiFlexItem>
-                  <EuiFlexItem grow={false}><EuiText size="xs">{pct}%</EuiText></EuiFlexItem>
-                </EuiFlexGroup>
-                <EuiProgress value={pct} max={100} size="s" color={heapRamColor} />
-                <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
-                  {formatBytes(node.heapMaxBytes)} / {formatBytes(node.ramTotal)}
-                </EuiText>
-              </>
-            )
-          })()}
-        </div>
+        <MetricBar
+          label="JVM Heap / RAM"
+          valueText={`${pctOf(node.heapMaxBytes, node.ramTotal)}%`}
+          pct={pctOf(node.heapMaxBytes, node.ramTotal)}
+          color={heapRamColorFor(node)}
+          wrapperStyle={{ marginBottom: 4 }}
+        >
+          <Subtext>{formatBytes(node.heapMaxBytes)} / {formatBytes(node.ramTotal)}</Subtext>
+        </MetricBar>
       )}
 
       {node.ramUsed !== undefined && node.ramTotal !== undefined && node.ramTotal > 0 && (
-        <div style={{ marginBottom: 4 }}>
-          {(() => {
-            const pct = Math.round((node.ramUsed / node.ramTotal) * 100)
-            return (
-              <>
-                <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-                  <EuiFlexItem><EuiText size="xs" color="subdued">Memory Used</EuiText></EuiFlexItem>
-                  <EuiFlexItem grow={false}><EuiText size="xs">{pct}%</EuiText></EuiFlexItem>
-                </EuiFlexGroup>
-                <EuiProgress value={pct} max={100} size="s" color="primary" />
-                <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
-                  {formatBytes(node.ramUsed)} / {formatBytes(node.ramTotal)}
-                </EuiText>
-              </>
-            )
-          })()}
-        </div>
+        <MetricBar
+          label="Memory Used"
+          valueText={`${pctOf(node.ramUsed, node.ramTotal)}%`}
+          pct={pctOf(node.ramUsed, node.ramTotal)}
+          color="primary"
+          wrapperStyle={{ marginBottom: 4 }}
+        >
+          <Subtext>{formatBytes(node.ramUsed)} / {formatBytes(node.ramTotal)}</Subtext>
+        </MetricBar>
       )}
 
       {node.offHeapBytes !== undefined && (
@@ -233,20 +381,16 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
       )}
 
       {node.diskUsedPercent !== undefined && node.tier !== 'frozen' && (
-        <div style={{ marginBottom: 4 }}>
-          <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-            <EuiFlexItem>
-              <EuiText size="xs" color="subdued">Disk Used</EuiText>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}><EuiText size="xs">{node.diskUsedPercent}%</EuiText></EuiFlexItem>
-          </EuiFlexGroup>
-          <EuiProgress value={node.diskUsedPercent} max={100} size="s" color={diskUsageColor(node.diskUsedPercent)} />
-          {diskUsageLabel(node.diskUsedPercent) && (
+        <MetricBar
+          label="Disk Used" valueText={`${node.diskUsedPercent}%`} pct={node.diskUsedPercent}
+          color={diskUsageColor(node.diskUsedPercent)} wrapperStyle={{ marginBottom: 4 }}
+        >
+          {diskLabel && (
             <EuiText size="xs" color="warning" style={{ marginTop: 1 }}>
-              ⚠ {diskUsageLabel(node.diskUsedPercent)}
+              ⚠ {diskLabel}
             </EuiText>
           )}
-        </div>
+        </MetricBar>
       )}
 
       {node.tier === 'frozen' && node.sharedCacheSizeBytes !== undefined && (
@@ -261,37 +405,21 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
         </EuiText>
       )}
 
-      {node.shardCount !== undefined && (() => {
-        const shardMax = (node.tier === 'frozen' && maxShardsPerNodeFrozen != null)
-          ? maxShardsPerNodeFrozen
-          : (maxShardsPerNode ?? 1000)
-        const shardPct = shardMax > 0 ? Math.round((node.shardCount / shardMax) * 100) : 0
-        const shardColor = resourceColor(shardPct, SHARD_COUNT_WARN_PCT, SHARD_COUNT_CRIT_PCT)
-        return (
-          <div style={{ marginBottom: 4 }}>
-            <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-              <EuiFlexItem><EuiText size="xs" color="subdued">Shards</EuiText></EuiFlexItem>
-              <EuiFlexItem grow={false}><EuiText size="xs">{shardPct}%</EuiText></EuiFlexItem>
-            </EuiFlexGroup>
-            <EuiProgress value={shardPct} max={100} size="s" color={shardColor} />
-            <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
-              {node.shardCount} / {shardMax}
-            </EuiText>
-          </div>
-        )
-      })()}
-
-      {node.cpuPercent !== undefined && (
-        <div>
-          <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-            <EuiFlexItem><EuiText size="xs" color="subdued">CPU</EuiText></EuiFlexItem>
-            <EuiFlexItem grow={false}><EuiText size="xs">{node.cpuPercent}%</EuiText></EuiFlexItem>
-          </EuiFlexGroup>
-          <EuiProgress value={node.cpuPercent} max={100} size="s" color={cpuColor} />
-        </div>
+      {node.shardCount !== undefined && (
+        <MetricBar
+          label="Shards" valueText={`${shardPct}%`} pct={shardPct}
+          color={resourceColor(shardPct, SHARD_COUNT_WARN_PCT, SHARD_COUNT_CRIT_PCT)}
+          wrapperStyle={{ marginBottom: 4 }}
+        >
+          <Subtext>{node.shardCount} / {shardMax}</Subtext>
+        </MetricBar>
       )}
 
-      {hasDetailContent && (
+      {node.cpuPercent !== undefined && (
+        <MetricBar label="CPU" valueText={`${node.cpuPercent}%`} pct={node.cpuPercent} color={cpuColor} />
+      )}
+
+      {signals !== undefined && (
         <EuiAccordion
           id={`node-detail-${node.id}`}
           buttonContent="Node detail"
@@ -299,164 +427,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
           paddingSize="none"
           style={{ marginTop: 6 }}
         >
-          <div style={{ paddingTop: 4 }}>
-
-            {/* ── Garbage Collection ── */}
-            {signals.gc && (() => {
-              const youngPct = node.jvmUptimeMs
-                ? Math.round(signals.gc!.youngCollectionTimeMs / node.jvmUptimeMs * 1000) / 10
-                : null
-              const oldPct = node.jvmUptimeMs
-                ? Math.round(signals.gc!.oldCollectionTimeMs / node.jvmUptimeMs * 1000) / 10
-                : null
-              return (
-                <div style={{ marginBottom: 4 }}>
-                  <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false}>
-                    <EuiFlexItem grow={false}>
-                      <EuiText size="xs" color="subdued"><strong>Garbage Collection</strong></EuiText>
-                    </EuiFlexItem>
-                    <EuiFlexItem grow={false}>
-                      <InfoTip content="The JVM periodically reclaims unused heap memory. Routine (young) GC is expected and cheap. Full (old) GC is a stop-the-world pause that briefly freezes the node — high counts or long total duration indicate heap pressure." />
-                    </EuiFlexItem>
-                  </EuiFlexGroup>
-                  <EuiText size="xs" color="subdued" style={{ marginLeft: 8 }}>
-                    Routine (young): {signals.gc!.youngCollectionCount} runs{youngPct !== null ? ` · ${youngPct}% of uptime` : ''}
-                  </EuiText>
-                  <EuiText size="xs" color={oldPct !== null && oldPct > 0 ? 'warning' : 'subdued'} style={{ marginLeft: 8 }}>
-                    Full (old): {signals.gc!.oldCollectionCount} runs{oldPct !== null ? ` · ${oldPct}% of uptime` : ''}
-                  </EuiText>
-                </div>
-              )
-            })()}
-
-            {/* ── Fielddata evictions ── */}
-            {signals.fielddataEvictions !== null && signals.fielddataEvictions > 0 && (
-              <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false} style={{ marginBottom: 2 }}>
-                <EuiFlexItem grow={false}>
-                  <EuiText size="xs" color="subdued">
-                    Fielddata evictions: {signals.fielddataEvictions}
-                  </EuiText>
-                </EuiFlexItem>
-                <EuiFlexItem grow={false}>
-                  <InfoTip content="Fielddata was evicted from the heap cache and must be reloaded from disk on next use. Any evictions mean the fielddata cache is undersized for this node's query patterns." />
-                </EuiFlexItem>
-              </EuiFlexGroup>
-            )}
-
-            {/* ── Thread pool rejections ── */}
-            {rejectedPools.length > 0 && (
-              <div style={{ marginBottom: 2 }}>
-                <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false}>
-                  <EuiFlexItem grow={false}>
-                    <EuiText size="xs" color="subdued"><strong>Thread pool rejections</strong></EuiText>
-                  </EuiFlexItem>
-                  <EuiFlexItem grow={false}>
-                    <InfoTip content="Requests were discarded when a thread pool's queue was full. Rejections cause HTTP 429 errors for callers. Each pool handles a specific category of work (search, write, etc.)." />
-                  </EuiFlexItem>
-                </EuiFlexGroup>
-                {rejectedPools.map(tp => (
-                  <EuiText key={tp.pool} size="xs" color="subdued" style={{ marginLeft: 8 }}>
-                    {tp.pool}: {tp.rejected} rejected
-                  </EuiText>
-                ))}
-              </div>
-            )}
-
-            {/* ── Indexing backpressure ── */}
-            {signals.indexingPressure?.hasRejections && (
-              <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false} style={{ marginBottom: 2 }}>
-                <EuiFlexItem grow={false}>
-                  <EuiText size="xs" color="subdued">
-                    Indexing backpressure: Coord {signals.indexingPressure.totalRejectionsCoordinating} / Primary {signals.indexingPressure.totalRejectionsPrimary} / Replica {signals.indexingPressure.totalRejectionsReplica} rejections
-                  </EuiText>
-                </EuiFlexItem>
-                <EuiFlexItem grow={false}>
-                  <InfoTip content="Elasticsearch rejected indexing requests because memory used by in-flight bulk operations exceeded the indexing pressure limit. Indicates the node cannot keep up with ingest load." />
-                </EuiFlexItem>
-              </EuiFlexGroup>
-            )}
-
-            {/* ── System load ── */}
-            {signals.loadPercent !== null && (
-              <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false} style={{ marginBottom: 2 }}>
-                <EuiFlexItem grow={false}>
-                  <EuiText size="xs" color="subdued">
-                    System load: {signals.loadPercent}%{signals.loadPercentReliable ? '' : ' (unreliable — small VM)'}
-                  </EuiText>
-                </EuiFlexItem>
-                <EuiFlexItem grow={false}>
-                  <InfoTip content="1-minute CPU load average as a percentage of allocated vCPUs. Above 100% means the node is CPU-saturated. On small VMs the load reflects the host machine, not this node's container — treat as unreliable in that case." />
-                </EuiFlexItem>
-              </EuiFlexGroup>
-            )}
-
-            {/* ── Thread-load workload ── */}
-            {signals.workload && (
-              <div style={{ marginBottom: 2 }}>
-                <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false}>
-                  <EuiFlexItem grow={false}>
-                    <EuiText size="xs" color="subdued"><strong>Thread load vs uptime</strong></EuiText>
-                  </EuiFlexItem>
-                  <EuiFlexItem grow={false}>
-                    <InfoTip content="Cumulative thread-time for each activity divided by node uptime. Values above 100% are normal on multi-core nodes — 16 threads all indexing simultaneously produce 1600% for one second of wall time. High merge % means the node is spending significant CPU compacting Lucene segments, which competes with indexing and search." />
-                  </EuiFlexItem>
-                </EuiFlexGroup>
-                <EuiText size="xs" color="subdued" style={{ marginLeft: 8 }}>
-                  Indexing {signals.workload.indexingPercent ?? '—'}% · Query {signals.workload.queryPercent ?? '—'}% · Merge {signals.workload.mergePercent ?? '—'}%
-                </EuiText>
-              </div>
-            )}
-
-            {/* ── Circuit breakers ── */}
-            {(() => {
-              const cbs = signals.circuitBreakers
-              if (cbs.length === 0) return null
-              const tripped = cbs.filter(cb => cb.tripped > 0)
-              const notable = cbs.filter(cb =>
-                cb.tripped > 0 ||
-                (cb.limitSizeInBytes > 0 && (cb.estimatedSizeInBytes / cb.limitSizeInBytes) >= BREAKER_NOTABLE_RATIO)
-              )
-              if (notable.length === 0) return null
-              return (
-                <div style={{ marginTop: 4 }}>
-                  <EuiFlexGroup gutterSize="none" alignItems="center" responsive={false}>
-                    <EuiFlexItem grow={false}>
-                      <EuiText size="xs" color={tripped.length > 0 ? 'danger' : 'subdued'}>
-                        <strong>Circuit Breakers{tripped.length > 0 ? ` — tripped: ${tripped.map(cb => cbFriendlyName(cb.name)).join(', ')}` : ''}</strong>
-                      </EuiText>
-                    </EuiFlexItem>
-                    <EuiFlexItem grow={false}>
-                      <InfoTip content="Safety limits that reject requests before they exhaust JVM heap. 'Tripped' means a request was rejected with HTTP 429. Total Heap Guard fires when overall heap approaches 95% — more serious than individual breaker trips." />
-                    </EuiFlexItem>
-                  </EuiFlexGroup>
-                  {notable.map(cb => {
-                    const pct = cb.limitSizeInBytes > 0
-                      ? Math.round((cb.estimatedSizeInBytes / cb.limitSizeInBytes) * 100)
-                      : 0
-                    const barColor = cb.tripped > 0 ? 'danger' : resourceColor(pct, BREAKER_WARN_PCT, BREAKER_CRIT_PCT)
-                    return (
-                      <div key={cb.name} style={{ marginBottom: 3, marginLeft: 8 }}>
-                        <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-                          <EuiFlexItem>
-                            <EuiText size="xs" color="subdued">
-                              {cbFriendlyName(cb.name)}{cb.tripped > 0 ? ` (${cb.tripped} trip${cb.tripped !== 1 ? 's' : ''})` : ''}
-                            </EuiText>
-                          </EuiFlexItem>
-                          <EuiFlexItem grow={false}>
-                            <EuiText size="xs">{pct}%</EuiText>
-                          </EuiFlexItem>
-                        </EuiFlexGroup>
-                        <EuiProgress value={pct} max={100} size="xs" color={barColor} />
-                        <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
-                          {formatBytes(cb.estimatedSizeInBytes)} / {formatBytes(cb.limitSizeInBytes)}
-                        </EuiText>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
-          </div>
+          <NodeDetail node={node} signals={signals} />
         </EuiAccordion>
       )}
 
@@ -609,18 +580,14 @@ function KibanaCard({ kibana }: { kibana: KibanaInfo }) {
       )}
 
       {kibana.heapPercent !== undefined && (
-        <div style={{ marginTop: 6 }}>
-          <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
-            <EuiFlexItem><EuiText size="xs" color="subdued">JVM Heap Used</EuiText></EuiFlexItem>
-            <EuiFlexItem grow={false}><EuiText size="xs">{kibana.heapPercent}%</EuiText></EuiFlexItem>
-          </EuiFlexGroup>
-          <EuiProgress value={kibana.heapPercent} max={100} size="s" color={heapColor} />
+        <MetricBar
+          label="JVM Heap Used" valueText={`${kibana.heapPercent}%`} pct={kibana.heapPercent}
+          color={heapColor} wrapperStyle={{ marginTop: 6 }}
+        >
           {kibana.heapUsed !== undefined && kibana.heapSizeLimit !== undefined && (
-            <EuiText size="xs" color="subdued" style={{ marginTop: 1 }}>
-              {formatBytes(kibana.heapUsed)} / {formatBytes(kibana.heapSizeLimit)}
-            </EuiText>
+            <Subtext>{formatBytes(kibana.heapUsed)} / {formatBytes(kibana.heapSizeLimit)}</Subtext>
           )}
-        </div>
+        </MetricBar>
       )}
 
       {kibana.eventLoopDelayMs !== undefined && (
