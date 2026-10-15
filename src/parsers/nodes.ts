@@ -144,7 +144,7 @@ export function buildNodeHealthSignals(
   const result: NodeHealthSignals[] = []
 
   for (const node of nodes) {
-    const statsEntry = nodesStatsJson.nodes[node.id]
+    const statsEntry = nodesStatsJson.nodes[node.id]  // may be null in a malformed bundle
     if (!statsEntry) continue
 
     const uptimeMs = statsEntry.jvm?.uptime_in_millis ?? 0
@@ -215,11 +215,11 @@ export function buildNodeHealthSignals(
     if (statsEntry.thread_pool) {
       for (const [pool, tp] of Object.entries(statsEntry.thread_pool)) {
         if (!INTERESTING_THREAD_POOLS.has(pool)) continue
-        const threads = tp.threads ?? 0
-        const active = tp.active ?? 0
-        const queue = tp.queue ?? 0
-        const rejected = tp.rejected ?? 0
-        const largest = tp.largest ?? 0
+        const threads = tp?.threads ?? 0
+        const active = tp?.active ?? 0
+        const queue = tp?.queue ?? 0
+        const rejected = tp?.rejected ?? 0
+        const largest = tp?.largest ?? 0
         // Include only pools that have any activity worth showing
         if (threads > 0 || active > 0 || queue > 0 || rejected > 0) {
           threadPools.push({ pool, threads, active, queue, rejected, largest })
@@ -233,9 +233,9 @@ export function buildNodeHealthSignals(
       for (const [name, br] of Object.entries(statsEntry.breakers)) {
         circuitBreakers.push({
           name,
-          tripped: br.tripped ?? 0,
-          estimatedSizeInBytes: br.estimated_size_in_bytes ?? 0,
-          limitSizeInBytes: br.limit_size_in_bytes ?? 0,
+          tripped: br?.tripped ?? 0,
+          estimatedSizeInBytes: br?.estimated_size_in_bytes ?? 0,
+          limitSizeInBytes: br?.limit_size_in_bytes ?? 0,
         })
       }
     }
@@ -363,6 +363,7 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
 
   if (nodesStatsJson?.nodes) {
     for (const [id, node] of Object.entries(nodesStatsJson.nodes)) {
+      if (!node || typeof node !== 'object') continue
       const heapPercent = node.jvm?.mem?.heap_used_percent
       const heapMaxBytes = node.jvm?.mem?.heap_max_in_bytes
       const cpuPercent = node.os?.cpu?.percent ?? node.process?.cpu?.percent
@@ -398,11 +399,12 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
   const result: NodeInfo[] = []
 
   for (const [id, node] of Object.entries(nodesJson.nodes)) {
+    if (!node || typeof node !== 'object') continue
     const name = node.name ?? id
     const ip = node.ip ?? ''
 
     // Map roles
-    const rawRoles = node.roles ?? []
+    const rawRoles = Array.isArray(node.roles) ? node.roles : []
     const roles: NodeRole[] = rawRoles
       .map(normalizeRole)
       .filter((r): r is NodeRole => r !== null)

@@ -77,17 +77,9 @@ const PARSERS: Array<[string, (files: Map<string, string>) => unknown]> = [
   ['parsePendingTasks', parsePendingTasks],
 ]
 
-// Known gaps: these still throw on wrong-shaped JSON and rely on safe() in parseBundle.
-// Marked it.fails so fixing one turns the test red — then delete its entry here.
-const KNOWN_THROWING = new Set([
-  'parseAuth', 'parseNodes', 'parseML', 'parseFeatures', 'parseReplication',
-  'parseSnapshots', 'parseSizing', 'parsePlugins', 'parsePipelines',
-])
-
 describe('individual parsers never throw on wrong-shaped input', () => {
   for (const [name, parser] of PARSERS) {
-    const run = KNOWN_THROWING.has(name) ? it.fails : it
-    run(name, () => {
+    it(name, () => {
       for (const payload of PAYLOADS) {
         const allFiles = new Map(FILE_NAMES.map(file => [file, payload]))
         expect(() => parser(allFiles), `${name} with all files = ${JSON.stringify(payload)}`).not.toThrow()

@@ -50,44 +50,47 @@ export function parseReplication(files: Map<string, string>): ReplicationInfo | 
   const followerIndexCount = Array.isArray(followerIndicesStats) ? followerIndicesStats.length : 0
   const hasCCR = followerIndexCount > 0
 
-  const remoteClusterNames = remoteClusterInfo ? Object.keys(remoteClusterInfo) : []
+  const remoteClusterObj = remoteClusterInfo && typeof remoteClusterInfo === 'object' && !Array.isArray(remoteClusterInfo)
+    ? remoteClusterInfo
+    : null
+  const remoteClusterNames = remoteClusterObj ? Object.keys(remoteClusterObj) : []
   const remoteClusterCount = remoteClusterNames.length
 
   const remoteClusters: RemoteCluster[] = []
-  if (remoteClusterInfo) {
-    for (const [name, info] of Object.entries(remoteClusterInfo)) {
+  if (remoteClusterObj) {
+    for (const [name, info] of Object.entries(remoteClusterObj)) {
       remoteClusters.push({
         name,
-        connected: info.connected ?? false,
-        mode: info.mode || 'sniff',
-        proxyAddress: info.proxy_address || null,
-        skipUnavailable: info.skip_unavailable ?? false,
-        socketConnections: info.num_proxy_sockets_connected,
-        maxSocketConnections: info.max_proxy_socket_connections,
+        connected: info?.connected ?? false,
+        mode: info?.mode || 'sniff',
+        proxyAddress: info?.proxy_address || null,
+        skipUnavailable: info?.skip_unavailable ?? false,
+        socketConnections: info?.num_proxy_sockets_connected,
+        maxSocketConnections: info?.max_proxy_socket_connections,
       })
     }
   }
 
   const followerIndices: FollowerIndex[] = []
-  if (ccrFollowerInfo?.follower_indices) {
+  if (Array.isArray(ccrFollowerInfo?.follower_indices)) {
     for (const f of ccrFollowerInfo.follower_indices) {
       followerIndices.push({
-        followerIndex: f.follower_index || '',
-        remoteCluster: f.remote_cluster || '',
-        leaderIndex: f.leader_index || '',
-        status: f.status || '',
+        followerIndex: f?.follower_index || '',
+        remoteCluster: f?.remote_cluster || '',
+        leaderIndex: f?.leader_index || '',
+        status: f?.status || '',
       })
     }
   }
 
   const autoFollowPatterns: AutoFollowPattern[] = []
-  if (ccrAutoFollowPatterns?.patterns) {
+  if (Array.isArray(ccrAutoFollowPatterns?.patterns)) {
     for (const p of ccrAutoFollowPatterns.patterns) {
       autoFollowPatterns.push({
-        name: p.name || '',
-        remoteCluster: p.remote_cluster || '',
-        leaderIndexPatterns: p.leader_index_patterns || [],
-        followIndexPattern: p.follow_index_pattern || '',
+        name: p?.name || '',
+        remoteCluster: p?.remote_cluster || '',
+        leaderIndexPatterns: Array.isArray(p?.leader_index_patterns) ? p.leader_index_patterns : [],
+        followIndexPattern: p?.follow_index_pattern || '',
       })
     }
   }

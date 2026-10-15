@@ -257,9 +257,9 @@ export function parseFeatures(
   // Watcher
   const watcherStats = parseJsonFile<WatcherStatsJson>(files, 'commercial/watcher_stats.json')
   let watcherCount = 0
-  if (watcherStats?.stats) {
+  if (Array.isArray(watcherStats?.stats)) {
     for (const stat of watcherStats.stats) {
-      watcherCount += stat.watch_count ?? 0
+      watcherCount += stat?.watch_count ?? 0
     }
   }
   const hasWatcher = watcherCount > 0

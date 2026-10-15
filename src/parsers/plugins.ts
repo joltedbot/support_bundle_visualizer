@@ -13,8 +13,8 @@ export function parsePlugins(files: Map<string, string>): PluginEntry[] {
 
   const seen = new Map<string, string>()
   for (const p of json) {
-    const component = p.component
-    if (!component) continue
+    const component = p?.component
+    if (!component || typeof component !== 'string') continue
     if (!seen.has(component)) {
       seen.set(component, p.version ?? '')
     }

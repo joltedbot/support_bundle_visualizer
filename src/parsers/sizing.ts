@@ -53,13 +53,13 @@ export function parseSizing(files: Map<string, string>, indices: IndexInfo[]): S
   let avgQueryRateQPS: number | null = null
   let nodeUptimeDays: number | null = null
 
-  if (nodesStatsRaw?.nodes) {
+  if (nodesStatsRaw?.nodes && typeof nodesStatsRaw.nodes === 'object') {
     let totalQueryTotal = 0
     let maxUptimeMs = 0
 
     for (const node of Object.values(nodesStatsRaw.nodes)) {
-      const qt = node.indices?.search?.query_total ?? 0
-      const uptime = node.jvm?.uptime_in_millis ?? 0
+      const qt = node?.indices?.search?.query_total ?? 0
+      const uptime = node?.jvm?.uptime_in_millis ?? 0
       totalQueryTotal += qt
       if (uptime > maxUptimeMs) maxUptimeMs = uptime
     }

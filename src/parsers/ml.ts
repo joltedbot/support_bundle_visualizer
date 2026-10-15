@@ -108,7 +108,7 @@ function classifyModel(
     pass_through: 'pass_through',
     text_similarity: 'text_similarity',
   }
-  const taskKey = Object.keys(inferenceConfig).find(k => k in taskMap)
+  const taskKey = Object.keys(inferenceConfig).find(k => Object.hasOwn(taskMap, k))
   return { modelClass: 'nlp', inferenceTask: taskKey ? taskMap[taskKey] : null }
 }
 
@@ -165,7 +165,7 @@ export function parseML(files: Map<string, string>, indices: IndexInfo[]): AiMlI
   if (!mlInfo && !trainedModelsJson && !memStatsJson) return null
 
   // ── Status ──────────────────────────────────────────────────────────────────
-  const mlEnabled = mlInfo !== null && 'native_code' in mlInfo
+  const mlEnabled = mlInfo !== null && typeof mlInfo === 'object' && 'native_code' in mlInfo
   const upgradeMode = mlInfo?.upgrade_mode ?? false
 
   // ── Anomaly Detection ───────────────────────────────────────────────────────
@@ -226,8 +226,8 @@ export function parseML(files: Map<string, string>, indices: IndexInfo[]): AiMlI
     const { modelClass, inferenceTask } = classifyModel(modelId, cfg.model_type ?? '', cfg.inference_config ?? {})
     const stats = modelIdToStats.get(modelId)
     const dep = stats?.deployment_stats ?? null
-    const nodeTimes = (dep?.nodes ?? [])
-      .map(n => n.average_inference_time_ms)
+    const nodeTimes = (Array.isArray(dep?.nodes) ? dep.nodes : [])
+      .map(n => n?.average_inference_time_ms)
       .filter((t): t is number => typeof t === 'number' && t > 0)
     trainedModels.push({
       modelId,
@@ -261,6 +261,7 @@ export function parseML(files: Map<string, string>, indices: IndexInfo[]): AiMlI
   // ── ML Memory ───────────────────────────────────────────────────────────────
   const mlNodeMemory: MLNodeMemory[] = []
   for (const node of Object.values(memStatsJson?.nodes ?? {})) {
+    if (!node || typeof node !== 'object') continue
     const ml = node.mem?.ml
     if (!ml || (ml.max_in_bytes ?? 0) === 0) continue
     mlNodeMemory.push({

@@ -25,7 +25,7 @@ export function parseAuth(files: Map<string, string>): IdentityInfo | null {
   let reservedUserCount = 0
   if (usersRaw) {
     for (const user of Object.values(usersRaw)) {
-      if (user.metadata?._reserved === true) {
+      if (user?.metadata?._reserved === true) {
         reservedUserCount++
       } else {
         nativeUserCount++
@@ -34,7 +34,7 @@ export function parseAuth(files: Map<string, string>): IdentityInfo | null {
   }
 
   const providers: IdentityProvider[] = []
-  if (nodesRaw?.nodes) {
+  if (nodesRaw?.nodes && typeof nodesRaw.nodes === 'object') {
     // Look at the first node's settings (they should be identical for security config)
     const firstNode = Object.values(nodesRaw.nodes)[0]
     const xpack = firstNode?.settings?.xpack as Record<string, unknown> | undefined
@@ -60,7 +60,7 @@ export function parseAuth(files: Map<string, string>): IdentityInfo | null {
             const idp = config.idp as Record<string, unknown> | undefined
             const idpMetadata = idp?.metadata as Record<string, unknown> | undefined
             const metadata = (idpMetadata?.path as string | undefined) || (idp?.entity_id as string | undefined)
-            if (metadata) {
+            if (metadata && typeof metadata === 'string') {
               const domain = metadata.match(/https?:\/\/([^/]+)/)?.[1] || metadata
               label = `SAML · ${domain}`
             }

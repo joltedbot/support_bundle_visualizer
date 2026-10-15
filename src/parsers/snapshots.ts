@@ -48,22 +48,22 @@ export function parseSnapshots(files: Map<string, string>, collectionDateMs: num
   const slmPolicies: SLMPolicyDetail[] = []
   if (slmRaw) {
     for (const [name, entry] of Object.entries(slmRaw)) {
-      const nextExecutionMillis = entry.next_execution_millis ?? null
+      const nextExecutionMillis = entry?.next_execution_millis ?? null
       const overdue =
         nextExecutionMillis !== null &&
         collectionDateMs !== null &&
         nextExecutionMillis < collectionDateMs
       slmPolicies.push({
         name,
-        repository: entry.policy?.repository ?? '',
-        schedule: entry.policy?.schedule ?? '',
-        retentionExpireAfter: entry.policy?.retention?.expire_after ?? null,
-        retentionMaxCount: entry.policy?.retention?.max_count ?? null,
-        retentionMinCount: entry.policy?.retention?.min_count ?? null,
-        lastSuccessDate: entry.last_success?.start_time_string ?? null,
-        lastFailureDate: entry.last_failure?.time_string ?? null,
-        snapshotsTaken: entry.stats?.snapshots_taken ?? 0,
-        snapshotsFailed: entry.stats?.snapshots_failed ?? 0,
+        repository: entry?.policy?.repository ?? '',
+        schedule: entry?.policy?.schedule ?? '',
+        retentionExpireAfter: entry?.policy?.retention?.expire_after ?? null,
+        retentionMaxCount: entry?.policy?.retention?.max_count ?? null,
+        retentionMinCount: entry?.policy?.retention?.min_count ?? null,
+        lastSuccessDate: entry?.last_success?.start_time_string ?? null,
+        lastFailureDate: entry?.last_failure?.time_string ?? null,
+        snapshotsTaken: entry?.stats?.snapshots_taken ?? 0,
+        snapshotsFailed: entry?.stats?.snapshots_failed ?? 0,
         nextExecutionMillis,
         overdue,
       })
@@ -76,12 +76,12 @@ export function parseSnapshots(files: Map<string, string>, collectionDateMs: num
   const repositories: SnapshotRepository[] = []
   if (repositoriesRaw) {
     for (const [name, repo] of Object.entries(repositoriesRaw)) {
-      const repoSnapshots = (snapshotsRaw?.snapshots ?? []).filter(s => s.repository === name)
+      const repoSnapshots = (Array.isArray(snapshotsRaw?.snapshots) ? snapshotsRaw.snapshots : []).filter(s => s?.repository === name)
 
       // Allowlist: only keys the UI renders are baked into the customer-delivered HTML.
       // Repository settings can also carry endpoints, roles and proxies that should not ship.
       const settings: Record<string, string> = {}
-      if (repo.settings && typeof repo.settings === 'object') {
+      if (repo?.settings && typeof repo.settings === 'object') {
         for (const k of REPO_SETTINGS_ALLOWLIST) {
           const v = repo.settings[k]
           if (v !== undefined && v !== null) settings[k] = String(v)
@@ -103,7 +103,7 @@ export function parseSnapshots(files: Map<string, string>, collectionDateMs: num
 
       repositories.push({
         name,
-        type: repo.type || 'unknown',
+        type: repo?.type || 'unknown',
         snapshotCount: repoSnapshots.length,
         successCount: repoSnapshots.filter(s => s.state === 'SUCCESS').length,
         failedCount: repoSnapshots.filter(s => s.state === 'FAILED' || s.state === 'PARTIAL').length,
