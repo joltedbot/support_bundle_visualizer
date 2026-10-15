@@ -18,6 +18,27 @@ export const DISK_FLOOD = 95                   // flood-stage — all writes blo
 export const CPU_WARN = 50
 export const CPU_CRIT = 80
 
+// Shards per node, as % of the cluster's per-node shard maximum
+export const SHARD_COUNT_WARN_PCT = 86
+export const SHARD_COUNT_CRIT_PCT = 96
+
+// Circuit breakers (estimated / limit)
+export const BREAKER_NOTABLE_RATIO = 0.6       // show a breaker once it is at least this full (or has tripped)
+export const BREAKER_WARN_PCT = 70
+export const BREAKER_CRIT_PCT = 90
+
+// Kibana event loop delay (ms)
+export const EVENT_LOOP_WARN_MS = 100
+export const EVENT_LOOP_CRIT_MS = 500
+
+// Pending cluster tasks: longest wait (ms)
+export const PENDING_WAIT_WARN_MS = 30 * 1000
+export const PENDING_WAIT_CRIT_MS = 5 * 60 * 1000
+
+// ML node memory use (% of ML max)
+export const ML_MEM_WARN_PCT = 75
+export const ML_MEM_CRIT_PCT = 90
+
 // Shard sizing
 export const SHARD_OVERSIZED_GiB = 50          // primary shard ≥ this → oversized flag
 export const SHARD_UNDERSIZED_GiB = 1          // primary shard < this (non-empty) → undersized flag

@@ -8,6 +8,7 @@ import {
 } from '@elastic/eui'
 import type { PendingTasksInfo } from '../parsers/types'
 import { formatWaitTime } from '../utils/format'
+import { PENDING_WAIT_WARN_MS, PENDING_WAIT_CRIT_MS } from '../utils/thresholds'
 
 interface Props {
   pendingTasks: PendingTasksInfo
@@ -24,8 +25,8 @@ function priorityColor(priority: string): string {
 }
 
 function maxWaitColor(ms: number): 'danger' | 'warning' | 'subdued' {
-  if (ms >= 5 * 60 * 1000) return 'danger'
-  if (ms >= 30 * 1000) return 'warning'
+  if (ms >= PENDING_WAIT_CRIT_MS) return 'danger'
+  if (ms >= PENDING_WAIT_WARN_MS) return 'warning'
   return 'subdued'
 }
 

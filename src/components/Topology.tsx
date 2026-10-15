@@ -12,7 +12,11 @@ import {
 } from '@elastic/eui'
 import type { NodeInfo, NodeRole, KibanaInfo, NodeHealthSignals } from '../parsers/types'
 import { resourceColor, formatBytes, formatUptime, diskUsageColor, diskUsageLabel } from '../utils/format'
-import { HEAP_WARN, HEAP_CRIT, CPU_WARN, CPU_CRIT, HEAP_RAM_WARN_PCT, HEAP_RAM_MAX_BYTES } from '../utils/thresholds'
+import {
+  HEAP_WARN, HEAP_CRIT, CPU_WARN, CPU_CRIT, HEAP_RAM_WARN_PCT, HEAP_RAM_MAX_BYTES,
+  SHARD_COUNT_WARN_PCT, SHARD_COUNT_CRIT_PCT, BREAKER_NOTABLE_RATIO, BREAKER_WARN_PCT, BREAKER_CRIT_PCT,
+  EVENT_LOOP_WARN_MS, EVENT_LOOP_CRIT_MS,
+} from '../utils/thresholds'
 import {
   buildSummaryBar,
   groupNodesByAZ,
@@ -262,7 +266,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
           ? maxShardsPerNodeFrozen
           : (maxShardsPerNode ?? 1000)
         const shardPct = shardMax > 0 ? Math.round((node.shardCount / shardMax) * 100) : 0
-        const shardColor = resourceColor(shardPct, 86, 96)
+        const shardColor = resourceColor(shardPct, SHARD_COUNT_WARN_PCT, SHARD_COUNT_CRIT_PCT)
         return (
           <div style={{ marginBottom: 4 }}>
             <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
@@ -410,7 +414,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
               const tripped = cbs.filter(cb => cb.tripped > 0)
               const notable = cbs.filter(cb =>
                 cb.tripped > 0 ||
-                (cb.limitSizeInBytes > 0 && (cb.estimatedSizeInBytes / cb.limitSizeInBytes) >= 0.6)
+                (cb.limitSizeInBytes > 0 && (cb.estimatedSizeInBytes / cb.limitSizeInBytes) >= BREAKER_NOTABLE_RATIO)
               )
               if (notable.length === 0) return null
               return (
@@ -429,7 +433,7 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
                     const pct = cb.limitSizeInBytes > 0
                       ? Math.round((cb.estimatedSizeInBytes / cb.limitSizeInBytes) * 100)
                       : 0
-                    const barColor = cb.tripped > 0 ? 'danger' : resourceColor(pct, 70, 90)
+                    const barColor = cb.tripped > 0 ? 'danger' : resourceColor(pct, BREAKER_WARN_PCT, BREAKER_CRIT_PCT)
                     return (
                       <div key={cb.name} style={{ marginBottom: 3, marginLeft: 8 }}>
                         <EuiFlexGroup justifyContent="spaceBetween" gutterSize="none" responsive={false}>
@@ -575,8 +579,8 @@ function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen, sig
 // ─── KibanaCard ───────────────────────────────────────────────────────────────
 
 function eventLoopColor(ms: number): 'subdued' | 'warning' | 'danger' {
-  if (ms >= 500) return 'danger'
-  if (ms >= 100) return 'warning'
+  if (ms >= EVENT_LOOP_CRIT_MS) return 'danger'
+  if (ms >= EVENT_LOOP_WARN_MS) return 'warning'
   return 'subdued'
 }
 

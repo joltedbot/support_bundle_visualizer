@@ -24,6 +24,7 @@ import type {
 } from "../parsers/types";
 import { formatBytes, formatCount } from "../utils/format";
 import { getModelHint } from "../utils/modelHints";
+import { ML_MEM_WARN_PCT, ML_MEM_CRIT_PCT } from "../utils/thresholds";
 
 interface Props {
   aiMl: AiMlInfo;
@@ -132,8 +133,8 @@ function memoryStatusColor(
 
 // Intentional vis-palette hex: semantic status colors used as raw CSS backgrounds for the stacked bar
 function memBarColor(pct: number): string {
-  if (pct >= 90) return "#ff5630";
-  if (pct >= 75) return "#ffab00";
+  if (pct >= ML_MEM_CRIT_PCT) return "#ff5630";
+  if (pct >= ML_MEM_WARN_PCT) return "#ffab00";
   return "#36b37e";
 }
 
