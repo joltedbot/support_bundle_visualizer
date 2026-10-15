@@ -19,7 +19,9 @@ export function parseInternalHealth(files: Map<string, string>): InternalHealth 
   
   for (const [key, val] of Object.entries(data.indicators)) {
     if (!val || typeof val !== 'object') continue
-    const status = (val.status?.toLowerCase() as HealthIndicator['status']) || 'unknown'
+    const rawStatus = typeof val.status === 'string' ? val.status.toLowerCase() : ''
+    const status: HealthIndicator['status'] =
+      rawStatus === 'green' || rawStatus === 'yellow' || rawStatus === 'red' ? rawStatus : 'unknown'
     indicators[key] = {
       status,
       symptom: val.symptom || '',

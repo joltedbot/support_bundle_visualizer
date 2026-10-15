@@ -26,6 +26,12 @@ import { parsePipelines } from './pipelines'
 import { parseClusterSettings } from './clusterSettings'
 import { parsePendingTasks } from './pendingTasks'
 
+interface CacheStatsJson {
+  nodes?: Record<string, { shared_cache?: { size_in_bytes?: number } }>
+}
+
+const DATA_TIERS = new Set(['hot', 'warm', 'cold', 'frozen'])
+
 // Parsers must never throw: a wrong-shaped file (null entries, strings where objects are
 // expected) must not abort generation, so every sub-parser runs behind this guard.
 function safe<T>(fn: () => T, fallback: T): T {
@@ -127,9 +133,6 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
   }
 
   // Build shared cache size map from commercial/searchable_snapshots_cache_stats.json (keyed by node ID)
-  interface CacheStatsJson {
-    nodes?: Record<string, { shared_cache?: { size_in_bytes?: number } }>
-  }
   const cacheStatsJson = parseJsonFile<CacheStatsJson>(files, 'commercial/searchable_snapshots_cache_stats.json')
   const sharedCacheByNodeId = new Map<string, number>()
   if (cacheStatsJson?.nodes && typeof cacheStatsJson.nodes === 'object') {
@@ -139,7 +142,6 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     }
   }
 
-  const DATA_TIERS = new Set(['hot', 'warm', 'cold', 'frozen'])
   const nodesWithShardCounts = nodes.map((node) => {
     const count = shardCountsByNode.get(node.id)
     const snapshotData = snapshotDataByNode.get(node.id)

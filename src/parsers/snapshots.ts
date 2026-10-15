@@ -89,9 +89,9 @@ export function parseSnapshots(files: Map<string, string>, collectionDateMs: num
       }
 
       // Find the latest successful snapshot end time for age calculation
-      const successEndTimes = repoSnapshots
-        .filter(s => s.state === 'SUCCESS' && s.end_time_in_millis != null)
-        .map(s => s.end_time_in_millis as number)
+      const successEndTimes = repoSnapshots.flatMap(s =>
+        s?.state === 'SUCCESS' && typeof s.end_time_in_millis === 'number' ? [s.end_time_in_millis] : []
+      )
       const latestSuccessMs = successEndTimes.length > 0
         ? successEndTimes.reduce((acc, t) => Math.max(acc, t), -Infinity)
         : null

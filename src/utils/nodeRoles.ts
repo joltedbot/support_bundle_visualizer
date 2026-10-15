@@ -32,8 +32,12 @@ export function groupNodesByAZ(nodes: NodeInfo[]): Map<string, NodeInfo[]> | nul
   const buckets = new Map<string, NodeInfo[]>()
   for (const node of nodes) {
     const key = node.az ?? 'Unknown AZ'
-    if (!buckets.has(key)) buckets.set(key, [])
-    buckets.get(key)!.push(node)
+    let bucket = buckets.get(key)
+    if (!bucket) {
+      bucket = []
+      buckets.set(key, bucket)
+    }
+    bucket.push(node)
   }
 
   const sorted = new Map(

@@ -92,7 +92,6 @@ export default function SnapshotRepositories({ repositories }: Props) {
         <EuiBasicTable
           items={repositories}
           columns={columns}
-          noItemsMessage="No snapshot repositories found"
         />
       </EuiPanel>
     </>
