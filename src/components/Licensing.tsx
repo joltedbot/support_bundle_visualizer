@@ -30,10 +30,13 @@ export default function Licensing({ license }: Props) {
   const items: StatItem[] = [
     { label: 'Type', value: license.type },
     { label: 'Status', value: <EuiBadge color={statusColor(license.status)}>{license.status}</EuiBadge> },
-    { label: 'Issued to', value: license.issuedTo ?? '—' },
     { label: 'Issue date', value: formatDate(license.issueDate) },
     { label: 'Expiry date', value: formatDate(license.expiryDate) },
   ]
+
+  if (license.issuedTo !== null) {
+    items.splice(2, 0, { label: 'Issued to', value: license.issuedTo })
+  }
 
   if (license.maxNodes !== null) {
     items.push({ label: 'Max nodes', value: String(license.maxNodes) })

@@ -189,7 +189,20 @@ function CircuitBreakersDetail({ breakers }: { breakers: NodeHealthSignals['circ
   )
 }
 
+function workloadSummary(workload: NodeHealthSignals['workload']): string {
+  if (!workload) return ''
+  return [
+    ['Indexing', workload.indexingPercent],
+    ['Query', workload.queryPercent],
+    ['Merge', workload.mergePercent],
+  ]
+    .filter(([, pct]) => pct !== null)
+    .map(([label, pct]) => `${label} ${pct}%`)
+    .join(' · ')
+}
+
 function NodeDetail({ node, signals }: { node: NodeInfo; signals: NodeHealthSignals }) {
+  const workloadText = workloadSummary(signals.workload)
   const rejectedPools = signals.threadPools.filter(tp => tp.rejected > 0)
   const ip = signals.indexingPressure
   return (
@@ -240,13 +253,13 @@ function NodeDetail({ node, signals }: { node: NodeInfo; signals: NodeHealthSign
         </InfoRow>
       )}
 
-      {signals.workload && (
+      {workloadText && (
         <div style={{ marginBottom: 2 }}>
           <InfoRow tip="Cumulative thread-time for each activity divided by node uptime. Values above 100% are normal on multi-core nodes — 16 threads all indexing simultaneously produce 1600% for one second of wall time. High merge % means the node is spending significant CPU compacting Lucene segments, which competes with indexing and search.">
             <EuiText size="xs" color="subdued"><strong>Thread load vs uptime</strong></EuiText>
           </InfoRow>
           <EuiText size="xs" color="subdued" style={{ marginLeft: 8 }}>
-            Indexing {signals.workload.indexingPercent ?? '—'}% · Query {signals.workload.queryPercent ?? '—'}% · Merge {signals.workload.mergePercent ?? '—'}%
+            {workloadText}
           </EuiText>
         </div>
       )}
