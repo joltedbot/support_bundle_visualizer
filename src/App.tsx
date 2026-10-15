@@ -23,6 +23,7 @@ import { ILMPoliciesTable } from './components/ILMPoliciesTable'
 import { SLMPoliciesTable } from './components/SLMPoliciesTable'
 import SnapshotRepositories from './components/SnapshotRepositories'
 import AiMlSection from './components/AiMlSection'
+import { hasAnything } from './components/aiml/guards'
 import IndexLandscape from './components/IndexLandscape'
 import DataAdoptionPanel from './components/DataAdoptionPanel'
 import DataStreams from './components/DataStreams'
@@ -87,16 +88,20 @@ function App() {
             </>
           )}
 
-          <EuiSpacer size="l" />
-          <EuiTitle size="s"><h3>Topology</h3></EuiTitle>
-          <EuiSpacer size="s" />
-          <Topology
-            nodes={model.nodes}
-            kibana={kibana ?? null}
-            maxShardsPerNode={model.clusterSettings?.maxShardsPerNode ?? null}
-            maxShardsPerNodeFrozen={model.clusterSettings?.maxShardsPerNodeFrozen ?? null}
-            nodeHealthSignals={model.nodeHealthSignals}
-          />
+          {(model.nodes.length > 0 || kibana) && (
+            <>
+              <EuiSpacer size="l" />
+              <EuiTitle size="s"><h3>Topology</h3></EuiTitle>
+              <EuiSpacer size="s" />
+              <Topology
+                nodes={model.nodes}
+                kibana={kibana ?? null}
+                maxShardsPerNode={model.clusterSettings?.maxShardsPerNode ?? null}
+                maxShardsPerNodeFrozen={model.clusterSettings?.maxShardsPerNodeFrozen ?? null}
+                nodeHealthSignals={model.nodeHealthSignals}
+              />
+            </>
+          )}
 
           {model.pendingTasks && model.pendingTasks.taskCount > 0 && (
             <>
@@ -129,7 +134,7 @@ function App() {
           <EuiSpacer size="s" />
           <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
 
-          {model.aiMl && (
+          {model.aiMl && hasAnything(model.aiMl, model.features) && (
             <>
               <EuiSpacer size="l" />
               <EuiTitle size="s"><h3>AI &amp; Machine Learning</h3></EuiTitle>

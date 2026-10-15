@@ -7,11 +7,7 @@ import {
   EuiSpacer,
   EuiBadge,
 } from '@elastic/eui'
-import type {
-  AiMlInfo,
-  FeatureInfo,
-  TrainedModel,
-} from '../parsers/types'
+import type { AiMlInfo, FeatureInfo } from '../parsers/types'
 import { modelClassLabel } from './aiml/labels'
 import { AnomalyDetectionPanel } from './aiml/AnomalyDetectionPanel'
 import { TrainedModelsPanel } from './aiml/TrainedModelsPanel'
@@ -19,34 +15,14 @@ import { DFAPanel } from './aiml/DFAPanel'
 import { MLMemoryPanel } from './aiml/MLMemoryPanel'
 import { SemanticSearchPanel } from './aiml/SemanticSearchPanel'
 import { AIFeaturesPanel } from './aiml/AIFeaturesPanel'
+import { significantModels, hasAnything } from './aiml/guards'
 
 interface Props {
   aiMl: AiMlInfo
   features: FeatureInfo | null
 }
 
-// ── Guards and status ─────────────────────────────────────────────────────────
-
-function significantModels(models: TrainedModel[]): TrainedModel[] {
-  return models.filter((m) => m.modelClass !== 'lang_ident')
-}
-
-function hasAnything(aiMl: AiMlInfo, features: FeatureInfo | null): boolean {
-  const semanticCount =
-    (features?.semanticTextIndexCount ?? 0) +
-    (features?.denseVectorIndexCount ?? 0) +
-    (features?.sparseVectorIndexCount ?? 0)
-  return (
-    aiMl.anomalyJobs.length > 0 ||
-    significantModels(aiMl.trainedModels).length > 0 ||
-    aiMl.dfaJobs.length > 0 ||
-    semanticCount > 0 ||
-    aiMl.aiFeatures.hasSecurityAiAssistant ||
-    aiMl.aiFeatures.hasObservabilityAiAssistant ||
-    aiMl.aiFeatures.hasChatAgents ||
-    aiMl.aiFeatures.inferenceEndpointCount > 0
-  )
-}
+// ── Status ────────────────────────────────────────────────────────────────────
 
 type EuiBadgeColor = 'success' | 'danger' | 'default'
 type StatusInfo = { label: string; color: EuiBadgeColor }
