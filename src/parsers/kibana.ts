@@ -132,34 +132,7 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     }
   }
 
-  // Fleet Policies
-  const fleetPolicies: KibanaInfo['fleetPolicies'] = []
-  const fleetPoliciesJson = parseJson(files, 'kibana_fleet_agent_policies_1.json')
-  if (isObj(fleetPoliciesJson) && Array.isArray(fleetPoliciesJson.items)) {
-    for (const item of fleetPoliciesJson.items) {
-      if (!isObj(item)) continue
-      const packagePolicies = Array.isArray(item.package_policies)
-        ? item.package_policies
-            .filter(isObj)
-            .map(pp => (isObj(pp.package) ? String((pp.package as Record<string, unknown>).name || '') : ''))
-            .filter(Boolean)
-        : []
-
-      fleetPolicies.push({
-        name: String(item.name || ''),
-        id: String(item.id || ''),
-        agentCount: typeof item.agents_count === 'number' ? item.agents_count : 0,
-        isManaged: !!item.is_managed,
-        isPreconfigured: !!item.is_preconfigured,
-        status: String(item.status || ''),
-        updatedAt: String(item.updated_at || ''),
-        version: String(item.version || ''),
-        packagePolicies,
-      })
-    }
-  }
-
-  // Agentless policies: Fleet policies with supports_agentless, joined to their agents by policy id
+  // Agents per policy from kibana_fleet_agents_1.json (page 1 only, so a lower bound on big fleets)
   const agentsByPolicy = new Map<string, { online: number; total: number }>()
   const fleetAgentsJson = parseJson(files, 'kibana_fleet_agents_1.json')
   if (isObj(fleetAgentsJson) && Array.isArray(fleetAgentsJson.items)) {
@@ -171,6 +144,44 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
       agentsByPolicy.set(agent.policy_id, counts)
     }
   }
+
+  // Fleet Policies
+  const fleetPolicies: KibanaInfo['fleetPolicies'] = []
+  const fleetPoliciesJson = parseJson(files, 'kibana_fleet_agent_policies_1.json')
+  if (isObj(fleetPoliciesJson) && Array.isArray(fleetPoliciesJson.items)) {
+    for (const item of fleetPoliciesJson.items) {
+      if (!isObj(item)) continue
+      // package_policies is absent unless Kibana was asked for full=true. When present it holds
+      // package objects ({package: {name}}) or, in older Kibana, plain package-policy id strings.
+      const packagePolicies = Array.isArray(item.package_policies)
+        ? item.package_policies
+            .map(pp => {
+              if (typeof pp === 'string') return pp
+              return isObj(pp) && isObj(pp.package) ? String((pp.package as Record<string, unknown>).name || '') : ''
+            })
+            .filter(Boolean)
+        : []
+
+      fleetPolicies.push({
+        name: String(item.name || ''),
+        id: String(item.id || ''),
+        // The policy file's `agents` (older responses: `agents_count`) can read 0 on Cloud deployments,
+        // and the agents file is only page 1 on large fleets. Both are lower bounds, so take the larger.
+        agentCount: Math.max(
+          typeof item.agents === 'number' ? item.agents : typeof item.agents_count === 'number' ? item.agents_count : 0,
+          agentsByPolicy.get(String(item.id || ''))?.total ?? 0
+        ),
+        isManaged: !!item.is_managed,
+        isPreconfigured: !!item.is_preconfigured,
+        status: String(item.status || ''),
+        updatedAt: String(item.updated_at || ''),
+        version: String(item.version || ''),
+        packagePolicies,
+      })
+    }
+  }
+
+  // Agentless policies: Fleet policies with supports_agentless, joined to their agents by policy id
   const agentlessPolicies: KibanaInfo['agentlessPolicies'] = []
   if (isObj(fleetPoliciesJson) && Array.isArray(fleetPoliciesJson.items)) {
     for (const item of fleetPoliciesJson.items) {

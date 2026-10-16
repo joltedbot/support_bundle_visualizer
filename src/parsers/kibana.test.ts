@@ -162,3 +162,36 @@ describe('parseKibana — agentless policies', () => {
     expect(parseKibana(new Map([['kibana_status.json', STATUS_JSON]]))!.agentlessPolicies).toEqual([])
   })
 })
+
+describe('parseKibana — fleet policy agent counts and package policies', () => {
+  const parse = (items: unknown[]) => parseKibana(new Map([
+    ['kibana_status.json', STATUS_JSON],
+    ['kibana_fleet_agent_policies_1.json', JSON.stringify({ items })],
+  ]))!.fleetPolicies
+
+  it('reads the agent count from `agents`, falling back to `agents_count`', () => {
+    const [a, b, c] = parse([{ name: 'a', agents: 3 }, { name: 'b', agents_count: 2 }, { name: 'c' }])
+    expect([a.agentCount, b.agentCount, c.agentCount]).toEqual([3, 2, 0])
+  })
+
+  it('takes the larger of the policy-file count and the agents-file count', () => {
+    const files = new Map([
+      ['kibana_status.json', STATUS_JSON],
+      ['kibana_fleet_agent_policies_1.json', JSON.stringify({ items: [
+        { id: 'p1', name: 'cloud', agents: 0 },
+        { id: 'p2', name: 'big', agents: 12 },
+      ] })],
+      ['kibana_fleet_agents_1.json', JSON.stringify({ items: [{ policy_id: 'p1', status: 'online' }, { policy_id: 'p2', status: 'online' }] })],
+    ])
+    expect(parseKibana(files)!.fleetPolicies.map(p => p.agentCount)).toEqual([1, 12])
+  })
+
+  it('accepts package objects and plain package-policy id strings, skipping junk', () => {
+    const [p] = parse([{ name: 'p', package_policies: [{ package: { name: 'system' } }, 'default-system', null, 5, {}] }])
+    expect(p.packagePolicies).toEqual(['system', 'default-system'])
+  })
+
+  it('is empty when package_policies is absent', () => {
+    expect(parse([{ name: 'p' }])[0].packagePolicies).toEqual([])
+  })
+})

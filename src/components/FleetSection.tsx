@@ -76,7 +76,8 @@ function renderContent(kibana: KibanaInfo | null) {
         <EuiBadge color={status === 'active' ? 'success' : 'hollow'}>{status}</EuiBadge>
       ),
     },
-    {
+    // Silent UI: the collector often omits package_policies, so only show the column when present
+    ...(fleetPolicies.some(p => p.packagePolicies.length > 0) ? [{
       name: 'Integrations',
       render: (policy: FleetAgentPolicy) => (
         <EuiFlexGroup gutterSize="xs" wrap responsive={false}>
@@ -87,7 +88,7 @@ function renderContent(kibana: KibanaInfo | null) {
           ))}
         </EuiFlexGroup>
       ),
-    },
+    }] : []),
   ]
 
   const packageColumns = [

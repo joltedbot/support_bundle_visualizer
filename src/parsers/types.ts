@@ -421,7 +421,7 @@ export interface FleetAgentPolicy {
   status: string
   updatedAt: string
   version: string
-  packagePolicies: string[]  // names of integrations
+  packagePolicies: string[]  // package names, or package-policy ids on older Kibana; empty when not collected
 }
 
 export interface FleetPackage {
