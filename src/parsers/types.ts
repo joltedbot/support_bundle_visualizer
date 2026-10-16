@@ -198,9 +198,6 @@ export interface ShardInfo {
   nodeId?: string       // resolved node ID from shard→node join; undefined when join fails
   storeSizeBytes: number
   datasetSizeBytes: number  // total dataset size incl. remote (searchable snapshot); equals storeSizeBytes for regular shards
-  // Flags (primaries only — never set on replicas)
-  oversized: boolean   // primary > 50 GiB
-  undersized: boolean  // primary < 1 GiB (and not empty)
 }
 
 export interface ClusterStats {
@@ -435,6 +432,31 @@ export interface FleetPackage {
   policyNames: string[]
 }
 
+export interface InferenceEndpoint {
+  id: string
+  service: string
+  taskType: string
+  inUse: boolean  // referenced by a mapping inference_id or an ingest pipeline inference processor
+}
+
+export interface InferenceInventory {
+  endpoints: InferenceEndpoint[]  // user-created, third-party or EIS endpoints (ids without a leading dot)
+  builtInCount: number            // Elastic-hosted preconfigured endpoints (ids with a leading dot)
+}
+
+export interface AgentlessPolicy {
+  name: string
+  packageName: string
+  agentsOnline: number
+  agentsTotal: number
+}
+
+export interface AgentlessIntegration {
+  name: string
+  status: 'receiving' | 'installed'  // receiving = a matching data stream has documents
+  agentsOnline: number | null        // null when the Kibana agents file is unavailable
+}
+
 export interface KibanaInfo {
   version: string
   instanceName: string
@@ -462,6 +484,7 @@ export interface KibanaInfo {
   fleetSettings: { fleetServerHosts: string[]; isConfigured: boolean } | null
   fleetPolicies: FleetAgentPolicy[]
   fleetInstalledPackages: FleetPackage[]
+  agentlessPolicies: AgentlessPolicy[]  // Fleet policies running agentless (supports_agentless)
   synthetics: {
     projectCount: number
     monitorTypes: string[]
@@ -579,7 +602,6 @@ export interface BundleModel {
   auth: IdentityInfo | null
   nodes: NodeInfo[]
   indices: IndexInfo[]
-  shards: ShardInfo[]
   stats: ClusterStats | null
   ilm: ILMInfo | null
   aiMl: AiMlInfo | null
@@ -596,6 +618,7 @@ export interface BundleModel {
   nodeHealthSignals: NodeHealthSignals[]
   pendingTasks: PendingTasksInfo | null
   dataAdoption: DataAdoption | null
+  inference: InferenceInventory | null
 }
 
 export interface GeneratedBundle {

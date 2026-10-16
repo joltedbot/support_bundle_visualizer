@@ -1,24 +1,21 @@
 import { useState, useMemo } from 'react'
-import { usePalette } from '../theme/palette'
 import {
   EuiBasicTable,
   EuiBadge,
   EuiButtonEmpty,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiIcon,
   EuiToolTip,
   type EuiBasicTableColumn,
   type Criteria,
 } from '@elastic/eui'
-import type { IndexInfo, ShardInfo } from '../parsers/types'
+import type { IndexInfo } from '../parsers/types'
 import { formatBytes, formatCount, healthColor } from '../utils/format'
 import { enrichModelLabel } from '../utils/modelHints'
 import { isOneOf } from '../utils/typeGuards'
 
 interface Props {
   indices: IndexInfo[]
-  shards: ShardInfo[]
 }
 
 type SortField = 'name' | 'indexType' | 'indexMode' | 'ilmPolicy' | 'models' | 'health' | 'status' | 'primaryShards' | 'avgShardSizeBytes' | 'docCount' | 'storeSizeBytes'
@@ -54,23 +51,11 @@ function vectorLabel(v: NonNullable<IndexInfo['vector']>): string {
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const DEFAULT_PAGE_SIZE = 10
 
-export default function IndexLandscape({ indices, shards }: Props) {
-  const { warning } = usePalette()
+export default function IndexLandscape({ indices }: Props) {
   const [showSystem, setShowSystem] = useState(false)
   const [sort, setSort] = useState<SortState>({ field: 'storeSizeBytes', direction: 'desc' })
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-
-  // Build a set of indices with shard issues
-  const flaggedIndices = useMemo(() => {
-    const flags = new Set<string>()
-    for (const shard of shards) {
-      if (shard.oversized || shard.undersized) {
-        flags.add(shard.index)
-      }
-    }
-    return flags
-  }, [shards])
 
   const sorted = useMemo(() => {
     const filtered = showSystem ? indices : indices.filter((i) => !i.isSystem)
@@ -104,7 +89,7 @@ export default function IndexLandscape({ indices, shards }: Props) {
       name: 'Name',
       sortable: true,
       truncateText: true,
-      render: (name: string, item: IndexInfo) => (
+      render: (name: string) => (
         <EuiFlexGroup gutterSize="xs" alignItems="center" responsive={false}>
           <EuiFlexItem grow={false} style={{ overflow: 'hidden' }}>
             <span
@@ -119,13 +104,6 @@ export default function IndexLandscape({ indices, shards }: Props) {
               {name}
             </span>
           </EuiFlexItem>
-          {flaggedIndices.has(item.name) && (
-            <EuiFlexItem grow={false}>
-              <EuiToolTip content="Shard sizing issue detected (over or undersized shard)">
-                <EuiIcon type="warning" color="warning" size="s" />
-              </EuiToolTip>
-            </EuiFlexItem>
-          )}
         </EuiFlexGroup>
       ),
     },
@@ -326,9 +304,6 @@ export default function IndexLandscape({ indices, shards }: Props) {
         sorting={sorting}
         pagination={pagination}
         onChange={onTableChange}
-        rowProps={(item) =>
-          flaggedIndices.has(item.name) ? { style: { borderLeft: `3px solid ${warning}` } } : {}
-        }
       />
     </div>
   )

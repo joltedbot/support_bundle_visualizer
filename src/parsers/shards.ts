@@ -1,10 +1,6 @@
 import { getTextFile } from '../utils/bundleReader'
 import { parseSize } from '../utils/parseSize'
-import { SHARD_OVERSIZED_GiB, SHARD_UNDERSIZED_GiB } from '../utils/thresholds'
 import type { ShardInfo } from './types'
-
-const OVERSIZED_BYTES = SHARD_OVERSIZED_GiB * 1024 * 1024 * 1024
-const UNDERSIZED_BYTES = SHARD_UNDERSIZED_GiB * 1024 * 1024 * 1024
 
 /**
  * Parse cat/cat_shards.txt → ShardInfo[].
@@ -55,8 +51,6 @@ export function parseShards(files: Map<string, string>): ShardInfo[] {
       node,
       storeSizeBytes,
       datasetSizeBytes,
-      oversized: prirep === 'p' && storeSizeBytes > OVERSIZED_BYTES,
-      undersized: prirep === 'p' && storeSizeBytes > 0 && storeSizeBytes < UNDERSIZED_BYTES,
     })
   }
 

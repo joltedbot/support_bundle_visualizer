@@ -40,10 +40,6 @@ export const PENDING_WAIT_CRIT_MS = 5 * 60 * 1000
 export const ML_MEM_WARN_PCT = 75
 export const ML_MEM_CRIT_PCT = 90
 
-// Shard sizing
-export const SHARD_OVERSIZED_GiB = 50          // primary shard ≥ this → oversized flag
-export const SHARD_UNDERSIZED_GiB = 1          // primary shard < this (non-empty) → undersized flag
-
 // Load percent (load_average.1m / allocatedProcessors * 100)
 // Suppress load% display on nodes where RAM < 60 GB — host-level metric is unreliable on small Cloud VMs
 export const LOAD_PERCENT_MIN_RAM_BYTES = 60 * 1024 ** 3  // 60 GiB

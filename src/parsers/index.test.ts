@@ -26,25 +26,6 @@ function makeFiles(overrides: Record<string, unknown> = {}): Map<string, string>
 }
 
 describe('parseBundle — shard→node join by ID', () => {
-  it('resolves shard nodeId to the matching node ID', async () => {
-    const files = makeFiles()
-    const model = await parseBundle({ files, rootName: 'test' })
-    const shard = model.shards.find(s => s.index === 'my-index')
-    expect(shard?.nodeId).toBe('abc123')
-  })
-
-  it('leaves nodeId undefined when node name does not match any node', async () => {
-    const files = makeFiles({
-      'cat/cat_shards.txt': [
-        'index shard prirep state   docs  store dataset node',
-        'my-index 0     p      STARTED 1000 50mb  50mb    unknown-node',
-      ].join('\n'),
-    })
-    const model = await parseBundle({ files, rootName: 'test' })
-    const shard = model.shards.find(s => s.index === 'my-index')
-    expect(shard?.nodeId).toBeUndefined()
-  })
-
   it('counts shards by node ID, not name', async () => {
     const files = makeFiles()
     const model = await parseBundle({ files, rootName: 'test' })

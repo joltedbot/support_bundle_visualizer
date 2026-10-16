@@ -18,6 +18,7 @@ import Topology from './components/Topology'
 import PendingTasksSection from './components/PendingTasksSection'
 import FeaturesIntegrations from './components/FeaturesIntegrations'
 import FleetSection from './components/FleetSection'
+import InferenceIntegrations from './components/InferenceIntegrations'
 import DataProfile from './components/DataProfile'
 import { ILMPoliciesTable } from './components/ILMPoliciesTable'
 import { SLMPoliciesTable } from './components/SLMPoliciesTable'
@@ -129,6 +130,8 @@ function App() {
 
           <FleetSection kibana={kibana ?? null} />
 
+          <InferenceIntegrations inference={model.inference} kibana={kibana ?? null} indices={model.indices} />
+
           <DataProfile stats={model.stats} ilm={model.ilm} snapshots={model.snapshots} sizing={model.sizing} tierStorage={model.tierStorage} />
 
           {model.aiMl && hasAnything(model.aiMl, model.features) && (
@@ -152,7 +155,7 @@ function App() {
           <EuiSpacer size="l" />
           <EuiTitle size="s"><h3>Indexes</h3></EuiTitle>
           <EuiSpacer size="s" />
-          <IndexLandscape indices={model.indices} shards={model.shards} />
+          <IndexLandscape indices={model.indices} />
 
           {model.dataStreams.length > 0 && (
             <>

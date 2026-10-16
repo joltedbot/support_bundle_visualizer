@@ -25,6 +25,7 @@ import { parseDataStreams } from './datastreams'
 import { parsePipelines } from './pipelines'
 import { parseClusterSettings } from './clusterSettings'
 import { parsePendingTasks } from './pendingTasks'
+import { parseInferenceEndpoints } from './inference'
 
 interface CacheStatsJson {
   nodes?: Record<string, { shared_cache?: { size_in_bytes?: number } }>
@@ -186,7 +187,6 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     auth: safe(() => parseAuth(files), null),
     nodes: nodesWithShardCounts,
     indices,
-    shards,
     stats: safe(() => parseStats(files), null),
     ilm: safe(() => parseILM(files), null),
     aiMl,
@@ -203,6 +203,7 @@ export async function parseBundle(data: BundleData): Promise<BundleModel> {
     nodeHealthSignals: safe(() => buildNodeHealthSignals(files, nodesWithShardCounts), []),
     pendingTasks: safe(() => parsePendingTasks(files), null),
     dataAdoption: safe(() => buildDataAdoption(indices, traitsByIndex), null),
+    inference: safe(() => parseInferenceEndpoints(files, features?.activeInferenceEndpoints ?? []), null),
   }
 }
 

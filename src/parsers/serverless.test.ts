@@ -11,7 +11,6 @@ function makeModel(overrides: Partial<BundleModel> = {}): BundleModel {
     auth: null,
     nodes: [],
     indices: [],
-    shards: [],
     stats: null,
     ilm: null,
     aiMl: null,
@@ -28,6 +27,7 @@ function makeModel(overrides: Partial<BundleModel> = {}): BundleModel {
     nodeHealthSignals: [],
     pendingTasks: null,
     dataAdoption: null,
+    inference: null,
     ...overrides,
   }
 }

@@ -119,3 +119,46 @@ describe('parseKibana — new metrics from kibana_stats.json', () => {
     expect(parseKibana(files)).toBeNull()
   })
 })
+
+describe('parseKibana — agentless policies', () => {
+  const policies = JSON.stringify({
+    items: [
+      { id: 'p1', name: 'Agentless policy for ti_abusech', supports_agentless: true },
+      { id: 'p2', name: 'Agentless policy for ess_billing-1', supports_agentless: true },
+      { id: 'p3', name: 'Defend Policy' },
+      null,
+    ],
+  })
+  const agents = JSON.stringify({
+    items: [
+      { policy_id: 'p1', status: 'online' },
+      { policy_id: 'p1', status: 'offline' },
+      { policy_id: 'p3', status: 'online' },
+      { status: 'online' },
+    ],
+  })
+
+  it('lists only agentless policies with package name and agent counts', () => {
+    const files = new Map([
+      ['kibana_status.json', STATUS_JSON],
+      ['kibana_fleet_agent_policies_1.json', policies],
+      ['kibana_fleet_agents_1.json', agents],
+    ])
+    expect(parseKibana(files)!.agentlessPolicies).toEqual([
+      { name: 'Agentless policy for ti_abusech', packageName: 'ti_abusech', agentsOnline: 1, agentsTotal: 2 },
+      { name: 'Agentless policy for ess_billing-1', packageName: 'ess_billing', agentsOnline: 0, agentsTotal: 0 },
+    ])
+  })
+
+  it('keeps the name unchanged (no suffix strip) when it lacks the agentless prefix', () => {
+    const files = new Map([
+      ['kibana_status.json', STATUS_JSON],
+      ['kibana_fleet_agent_policies_1.json', JSON.stringify({ items: [{ id: 'p9', name: 'My policy-2', supports_agentless: true }] })],
+    ])
+    expect(parseKibana(files)!.agentlessPolicies[0].packageName).toBe('My policy-2')
+  })
+
+  it('is empty when the Fleet files are absent', () => {
+    expect(parseKibana(new Map([['kibana_status.json', STATUS_JSON]]))!.agentlessPolicies).toEqual([])
+  })
+})

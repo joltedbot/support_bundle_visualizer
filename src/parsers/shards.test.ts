@@ -7,37 +7,21 @@ function makeShardFile(rows: string[]): Map<string, string> {
   return new Map([['cat/cat_shards.txt', content]])
 }
 
-describe('parseShards — oversized/undersized flags (primaries only)', () => {
-  it('flags an oversized primary shard', () => {
-    const files = makeShardFile(['my-index 0 p STARTED 1000 60gb 60gb node-1'])
-    const shards = parseShards(files)
-    expect(shards[0].oversized).toBe(true)
-    expect(shards[0].undersized).toBe(false)
+describe('parseShards', () => {
+  it('parses columns into a ShardInfo', () => {
+    const [shard] = parseShards(makeShardFile(['my-index 2 r STARTED 1000 60gb 70gb node-2']))
+    expect(shard).toEqual({
+      index: 'my-index',
+      shard: 2,
+      prirep: 'r',
+      state: 'STARTED',
+      node: 'node-2',
+      storeSizeBytes: 60 * 1024 ** 3,
+      datasetSizeBytes: 70 * 1024 ** 3,
+    })
   })
 
-  it('does NOT flag an oversized replica shard', () => {
-    const files = makeShardFile(['my-index 0 r STARTED 1000 60gb 60gb node-2'])
-    const shards = parseShards(files)
-    expect(shards[0].oversized).toBe(false)
-  })
-
-  it('flags an undersized primary shard', () => {
-    const files = makeShardFile(['my-index 0 p STARTED 100 500mb 500mb node-1'])
-    const shards = parseShards(files)
-    expect(shards[0].undersized).toBe(true)
-    expect(shards[0].oversized).toBe(false)
-  })
-
-  it('does NOT flag an undersized replica shard', () => {
-    const files = makeShardFile(['my-index 0 r STARTED 100 500mb 500mb node-2'])
-    const shards = parseShards(files)
-    expect(shards[0].undersized).toBe(false)
-  })
-
-  it('sets both flags false for an empty primary shard (0 bytes)', () => {
-    const files = makeShardFile(['my-index 0 p STARTED 0 0b 0b node-1'])
-    const shards = parseShards(files)
-    expect(shards[0].oversized).toBe(false)
-    expect(shards[0].undersized).toBe(false)
+  it('returns an empty array when the file is missing', () => {
+    expect(parseShards(new Map())).toEqual([])
   })
 })

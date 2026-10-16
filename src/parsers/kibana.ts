@@ -1,5 +1,7 @@
 import type { KibanaInfo } from './types'
 
+const AGENTLESS_NAME = /^Agentless policy for /i
+
 function parseJson(files: Map<string, string>, name: string): unknown {
   const raw = files.get(name)
   if (!raw) return null
@@ -157,6 +159,35 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     }
   }
 
+  // Agentless policies: Fleet policies with supports_agentless, joined to their agents by policy id
+  const agentsByPolicy = new Map<string, { online: number; total: number }>()
+  const fleetAgentsJson = parseJson(files, 'kibana_fleet_agents_1.json')
+  if (isObj(fleetAgentsJson) && Array.isArray(fleetAgentsJson.items)) {
+    for (const agent of fleetAgentsJson.items) {
+      if (!isObj(agent) || typeof agent.policy_id !== 'string') continue
+      const counts = agentsByPolicy.get(agent.policy_id) ?? { online: 0, total: 0 }
+      counts.total++
+      if (agent.status === 'online') counts.online++
+      agentsByPolicy.set(agent.policy_id, counts)
+    }
+  }
+  const agentlessPolicies: KibanaInfo['agentlessPolicies'] = []
+  if (isObj(fleetPoliciesJson) && Array.isArray(fleetPoliciesJson.items)) {
+    for (const item of fleetPoliciesJson.items) {
+      if (!isObj(item) || item.supports_agentless !== true) continue
+      const name = String(item.name || '')
+      const counts = agentsByPolicy.get(String(item.id || ''))
+      agentlessPolicies.push({
+        name,
+        // Fleet names these "Agentless policy for <package>[-<n>]"; the numeric suffix is a
+        // package-policy counter. Only strip it when the prefix matched, else keep the name as is.
+        packageName: AGENTLESS_NAME.test(name) ? name.replace(AGENTLESS_NAME, '').replace(/-\d+$/, '') : name,
+        agentsOnline: counts?.online ?? 0,
+        agentsTotal: counts?.total ?? 0,
+      })
+    }
+  }
+
   // Fleet Installed Packages
   const fleetInstalledPackages: KibanaInfo['fleetInstalledPackages'] = []
   const fleetPackagesJson = parseJson(files, 'kibana_fleet_packages.json')
@@ -231,6 +262,7 @@ export function parseKibana(files: Map<string, string>): KibanaInfo | null {
     fleetSettings,
     fleetPolicies,
     fleetInstalledPackages,
+    agentlessPolicies,
     synthetics,
     dataViews,
   }

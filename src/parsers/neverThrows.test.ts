@@ -23,10 +23,11 @@ import { parseDataStreams } from './datastreams'
 import { parsePipelines } from './pipelines'
 import { parseClusterSettings } from './clusterSettings'
 import { parsePendingTasks } from './pendingTasks'
+import { parseInferenceEndpoints } from './inference'
 
 // Every file name the parsers read. Keep in sync when a parser starts reading a new file.
 const FILE_NAMES = [
-  'alias.json', 'cat/cat_indices.txt', 'cat/cat_nodeattrs.txt', 'cat/cat_nodes.txt', 'cat/cat_shards.txt',
+  'alias.json', 'cluster_state.json', 'cat/cat_indices.txt', 'cat/cat_nodeattrs.txt', 'cat/cat_nodes.txt', 'cat/cat_shards.txt',
   'cluster_health.json', 'cluster_pending_tasks.json', 'cluster_settings.json', 'cluster_stats.json',
   'commercial/ccr_autofollow_patterns.json', 'commercial/ccr_follower_info.json', 'commercial/ccr_stats.json',
   'commercial/data_stream.json', 'commercial/enrich_policies.json', 'commercial/ilm_explain.json',
@@ -89,6 +90,7 @@ const PARSERS: Array<[string, (files: Map<string, string>) => unknown]> = [
   ['parsePipelines', parsePipelines],
   ['parseClusterSettings', parseClusterSettings],
   ['parsePendingTasks', parsePendingTasks],
+  ['parseInferenceEndpoints', f => parseInferenceEndpoints(f, ['x'])],
 ]
 
 describe('individual parsers never throw on wrong-shaped input', () => {
