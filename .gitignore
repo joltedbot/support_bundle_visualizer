@@ -32,6 +32,9 @@ output/
 
 .superpowers/
 
+# Draft SA diagnostic-bundle skills — private until the user approves a release
+diagnostic-bundle-skills/
+
 # Editor directories and files
 .DS_Store
 *.suo
