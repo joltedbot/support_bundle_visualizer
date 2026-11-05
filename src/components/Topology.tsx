@@ -462,9 +462,9 @@ function AZHeader({ az, nodes }: { az: string; nodes: NodeInfo[] }) {
 
 // ─── Summary bar ─────────────────────────────────────────────────────────────
 
-function SummaryBar({ nodes }: { nodes: NodeInfo[] }) {
+function SummaryBar({ nodes, kibana }: { nodes: NodeInfo[]; kibana: KibanaInfo | null }) {
   const entries = buildSummaryBar(nodes)
-  if (entries.length === 0) return null
+  if (entries.length === 0 && !kibana) return null
 
   return (
     <EuiFlexGroup gutterSize="s" wrap responsive={false} style={{ marginBottom: 16 }}>
@@ -475,6 +475,11 @@ function SummaryBar({ nodes }: { nodes: NodeInfo[] }) {
           </EuiBadge>
         </EuiFlexItem>
       ))}
+      {kibana && (
+        <EuiFlexItem grow={false} key="kibana">
+          <EuiBadge color="hollow">Kibana: 1</EuiBadge>
+        </EuiFlexItem>
+      )}
     </EuiFlexGroup>
   )
 }
@@ -629,7 +634,7 @@ export default function Topology({ nodes, kibana, maxShardsPerNode, maxShardsPer
 
   return (
     <div>
-      {nodes.length > 0 && <SummaryBar nodes={nodes} />}
+      {(nodes.length > 0 || kibana) && <SummaryBar nodes={nodes} kibana={kibana} />}
 
       {nodes.length > 0 && (azGroups ? (
         Array.from(azGroups.entries()).map(([az, azNodes]) => (
