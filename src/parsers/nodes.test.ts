@@ -356,3 +356,66 @@ describe('buildNodeHealthSignals — missing nodes_stats', () => {
     expect(signals).toHaveLength(0)
   })
 })
+
+describe('parseNodes — availability zone', () => {
+  const withAttrs = (attrs: Record<string, string>) =>
+    JSON.stringify({
+      nodes: { n1: { name: 'instance-1', ip: '10.0.0.1', roles: ['data_hot'], attributes: attrs } },
+    })
+
+  it('uses nodes.json attributes.availability_zone, ignoring logical zone', () => {
+    const files = new Map([['nodes.json', withAttrs({ availability_zone: 'us-east-1e', logical_availability_zone: 'zone-0' })]])
+    expect(parseNodes(files)[0].az).toBe('us-east-1e')
+  })
+
+  it('falls back to 8-column cat_nodeattrs', () => {
+    const nodeattrs = [
+      'node       id   pid host     ip       port  attr              value',
+      'instance-1 abcd 12  10.0.0.1 10.0.0.1 19000 availability_zone westus2-1',
+    ].join('\n')
+    const files = new Map([
+      ['nodes.json', withAttrs({})],
+      ['cat/cat_nodeattrs.txt', nodeattrs],
+    ])
+    expect(parseNodes(files)[0].az).toBe('westus2-1')
+  })
+
+  it('falls back to 5-column cat_nodeattrs', () => {
+    const nodeattrs = [
+      'node       host     ip       attr  value',
+      'instance-1 10.0.0.1 10.0.0.1 zone  rack-a',
+    ].join('\n')
+    const files = new Map([
+      ['nodes.json', withAttrs({})],
+      ['cat/cat_nodeattrs.txt', nodeattrs],
+    ])
+    expect(parseNodes(files)[0].az).toBe('rack-a')
+  })
+
+  it('prefers nodes.json attribute over cat_nodeattrs when both are present', () => {
+    const nodeattrs = [
+      'node       id   pid host     ip       port  attr              value',
+      'instance-1 abcd 12  10.0.0.1 10.0.0.1 19000 availability_zone other-zone',
+    ].join('\n')
+    const files = new Map([
+      ['nodes.json', withAttrs({ availability_zone: 'us-east-1a' })],
+      ['cat/cat_nodeattrs.txt', nodeattrs],
+    ])
+    expect(parseNodes(files)[0].az).toBe('us-east-1a')
+  })
+
+  it('does not throw on an unrecognised or header-only cat_nodeattrs', () => {
+    for (const content of ['garbage line only', 'node id pid host ip port attr value', 'a b c\nd e f']) {
+      const files = new Map([
+        ['nodes.json', withAttrs({})],
+        ['cat/cat_nodeattrs.txt', content],
+      ])
+      expect(parseNodes(files)[0].az).toBeUndefined()
+    }
+  })
+
+  it('leaves az undefined when no source has it (self-hosted)', () => {
+    const files = new Map([['nodes.json', withAttrs({})]])
+    expect(parseNodes(files)[0].az).toBeUndefined()
+  })
+})

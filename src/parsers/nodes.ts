@@ -276,25 +276,31 @@ export function buildNodeHealthSignals(
 
 /**
  * Parse cat/cat_nodeattrs.txt to build a map of node name → AZ.
- * Looks for attr = availability_zone or zone or aws_availability_zone.
+ * Header-driven (column layouts vary); accepts attr = availability_zone, zone,
+ * aws_availability_zone or rack_id.
  */
 function parseNodeAZMap(content: string): Map<string, string> {
   const azMap = new Map<string, string>()
-  const lines = content.split('\n')
-  // First line is header: node id pid host ip port attr value
+  const lines = content.split('\n').filter(l => l.trim())
+  if (lines.length < 2) return azMap
+  // Locate columns from the header: layouts vary ("node host ip attr value" vs
+  // "node id pid host ip port attr value" on Cloud bundles).
+  const header = lines[0].trim().split(/\s+/)
+  const nodeIdx = header.indexOf('node')
+  const attrIdx = header.indexOf('attr')
+  const valueIdx = header.indexOf('value')
+  if (nodeIdx < 0 || attrIdx < 0 || valueIdx < 0) return azMap
   for (const line of lines.slice(1)) {
     const parts = line.trim().split(/\s+/)
-    if (parts.length < 5) continue
-    const nodeName = parts[0]
-    const attr = parts[3]
-    const value = parts[4]
+    if (parts.length <= Math.max(nodeIdx, attrIdx, valueIdx)) continue
+    const attr = parts[attrIdx]
     if (
       attr === 'availability_zone' ||
       attr === 'zone' ||
       attr === 'aws_availability_zone' ||
       attr === 'rack_id'
     ) {
-      azMap.set(nodeName, value)
+      azMap.set(parts[nodeIdx], parts[valueIdx])
     }
   }
   return azMap
@@ -411,8 +417,10 @@ export function parseNodes(files: Map<string, string>): NodeInfo[] {
 
     const tier = determineTier(roles)
 
-    // AZ from nodeattrs
-    const az = azMap.get(name)
+    // AZ: nodes.json attribute first (Cloud: AWS/Azure/GCP zone name), then cat_nodeattrs.
+    // logical_availability_zone (zone-N) is deliberately not used.
+    const attrAz = node.attributes?.availability_zone?.trim()
+    const az = (attrAz || undefined) ?? azMap.get(name)
 
     // Resource stats: prefer nodes_stats, fall back to cat_nodes
     let stats = statsById.get(id)
