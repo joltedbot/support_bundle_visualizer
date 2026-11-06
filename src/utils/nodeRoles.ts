@@ -15,15 +15,7 @@ const ROLE_PRIORITY: Record<string, number> = {
 
 const DATA_ROLES = new Set<NodeRole>(['data_hot', 'data_warm', 'data_cold', 'data_frozen'])
 
-export function getNodeSortPriority(node: NodeInfo): number {
-  const dataRole = node.roles.find(r => DATA_ROLES.has(r))
-  if (dataRole) return ROLE_PRIORITY[dataRole] ?? 99
-  const highest = node.roles.reduce((best, r) => {
-    const p = ROLE_PRIORITY[r] ?? 99
-    return p < best ? p : best
-  }, 99)
-  return highest
-}
+export const UNKNOWN_AZ_LABEL = 'Unknown AZ'
 
 export function groupNodesByAZ(nodes: NodeInfo[]): Map<string, NodeInfo[]> | null {
   const hasAny = nodes.some(n => n.az)
@@ -31,7 +23,7 @@ export function groupNodesByAZ(nodes: NodeInfo[]): Map<string, NodeInfo[]> | nul
 
   const buckets = new Map<string, NodeInfo[]>()
   for (const node of nodes) {
-    const key = node.az ?? 'Unknown AZ'
+    const key = node.az ?? UNKNOWN_AZ_LABEL
     let bucket = buckets.get(key)
     if (!bucket) {
       bucket = []
@@ -42,8 +34,8 @@ export function groupNodesByAZ(nodes: NodeInfo[]): Map<string, NodeInfo[]> | nul
 
   const sorted = new Map(
     Array.from(buckets.entries()).sort(([a], [b]) => {
-      if (a === 'Unknown AZ') return 1
-      if (b === 'Unknown AZ') return -1
+      if (a === UNKNOWN_AZ_LABEL) return 1
+      if (b === UNKNOWN_AZ_LABEL) return -1
       return a.localeCompare(b)
     })
   )
@@ -108,6 +100,68 @@ export function buildSummaryBar(nodes: NodeInfo[]): SummaryEntry[] {
   return result
 }
 
-export function sortNodesByRole(nodes: NodeInfo[]): NodeInfo[] {
-  return [...nodes].sort((a, b) => getNodeSortPriority(a) - getNodeSortPriority(b))
+// ─── Topology placement (vertical top-to-bottom order inside a column) ───────
+
+export type PlacementTier = 'master' | 'ingest' | 'hot' | 'warm' | 'cold' | 'frozen' | 'ml'
+
+/** Top-to-bottom display order of sections inside a topology column. */
+export const PLACEMENT_ORDER: PlacementTier[] = ['master', 'ingest', 'hot', 'warm', 'cold', 'frozen', 'ml']
+
+/** Section for one node, ignoring the cluster-wide tiebreaker exception. */
+function basePlacement(node: NodeInfo): PlacementTier {
+  const roles = node.roles
+  // Hot is the pricing tier and must stay visible: any hot node is Hot, whatever else it does.
+  if (roles.includes('data_hot')) return 'hot'
+  if (roles.includes('master')) return 'master'
+  if (roles.includes('ingest') || roles.includes('coordinating')) return 'ingest'
+  if (roles.includes('data_warm')) return 'warm'
+  if (roles.includes('data_cold')) return 'cold'
+  if (roles.includes('data_frozen')) return 'frozen'
+  if (roles.includes('ml')) return 'ml'
+  // No recognised role (e.g. only transform / remote_cluster_client): coordinating-only node.
+  return 'ingest'
+}
+
+/**
+ * Section for every node, keyed by node id. Cluster-wide because of one exception:
+ * in a shared Hot/Master cluster (two or more master-eligible Hot nodes plus exactly
+ * one master-only tiebreaker) the tiebreaker ranks with the Hot nodes.
+ */
+export function computePlacements(nodes: NodeInfo[]): Map<string, PlacementTier> {
+  const placements = new Map<string, PlacementTier>()
+  for (const n of nodes) placements.set(n.id, basePlacement(n))
+
+  // Tiebreaker: a strictly master-only node (no data, ml or ingest role).
+  const masterOnly = nodes.filter(n =>
+    n.tier === 'master' && !n.roles.includes('ml') && !n.roles.includes('ingest') && !n.roles.includes('coordinating'))
+  const hotMasterEligible = nodes.filter(n => n.roles.includes('data_hot') && n.roles.includes('master')).length
+  if (masterOnly.length === 1 && hotMasterEligible >= 2) {
+    placements.set(masterOnly[0].id, 'hot')
+  }
+  return placements
+}
+
+/** Nodes in display order: by section, then by name (numeric-aware) within a section. */
+export function sortNodesByPlacement(nodes: NodeInfo[], placements: Map<string, PlacementTier>): NodeInfo[] {
+  const rank = (n: NodeInfo) => PLACEMENT_ORDER.indexOf(placements.get(n.id) ?? basePlacement(n))
+  return [...nodes].sort((a, b) =>
+    rank(a) - rank(b) || a.name.localeCompare(b.name, undefined, { numeric: true }),
+  )
+}
+
+export const SELF_HOSTED_LABEL = 'Self Hosted'
+
+export interface TopologyColumn {
+  label: string
+  nodes: NodeInfo[]
+}
+
+/**
+ * Columns for the topology view: one per AZ (name order, 'Unknown AZ' last when some
+ * nodes lack an AZ), or a single 'Self Hosted' column when no node has an AZ.
+ */
+export function buildTopologyColumns(nodes: NodeInfo[]): TopologyColumn[] {
+  const azGroups = groupNodesByAZ(nodes)
+  if (!azGroups) return nodes.length > 0 ? [{ label: SELF_HOSTED_LABEL, nodes }] : []
+  return Array.from(azGroups.entries()).map(([label, azNodes]) => ({ label, nodes: azNodes }))
 }

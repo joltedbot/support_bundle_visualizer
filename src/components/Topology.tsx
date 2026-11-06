@@ -10,6 +10,7 @@ import {
   EuiAccordion,
   EuiToolTip,
   EuiIcon,
+  useEuiTheme,
 } from '@elastic/eui'
 import type { NodeInfo, NodeRole, KibanaInfo, NodeHealthSignals } from '../parsers/types'
 import { levelBadgeColor, usePalette } from '../theme/palette'
@@ -21,9 +22,13 @@ import {
 } from '../utils/thresholds'
 import {
   buildSummaryBar,
-  groupNodesByAZ,
-  sortNodesByRole,
+  buildTopologyColumns,
+  computePlacements,
+  sortNodesByPlacement,
+  SELF_HOSTED_LABEL,
+  UNKNOWN_AZ_LABEL,
 } from '../utils/nodeRoles'
+import type { PlacementTier } from '../utils/nodeRoles'
 
 interface Props {
   nodes: NodeInfo[]
@@ -442,24 +447,6 @@ function NodeCard({ node, maxShardsPerNode, maxShardsPerNodeFrozen, signals }: {
   )
 }
 
-// ─── AZ section header ────────────────────────────────────────────────────────
-
-function AZHeader({ az, nodes }: { az: string; nodes: NodeInfo[] }) {
-  const miniBar = buildSummaryBar(nodes)
-  const miniStr = miniBar
-    .map(e => e.shared ? 'Master: Shared' : `${e.count} ${e.label}`)
-    .join(' · ')
-
-  return (
-    <EuiText size="xs" color="subdued" style={{ marginBottom: 8 }}>
-      <strong>{az}</strong>
-      {' — '}
-      {nodes.length} node{nodes.length !== 1 ? 's' : ''}
-      {miniStr && <span style={{ fontWeight: 'normal' }}> · {miniStr}</span>}
-    </EuiText>
-  )
-}
-
 // ─── Summary bar ─────────────────────────────────────────────────────────────
 
 function SummaryBar({ nodes, kibana }: { nodes: NodeInfo[]; kibana: KibanaInfo | null }) {
@@ -484,72 +471,62 @@ function SummaryBar({ nodes, kibana }: { nodes: NodeInfo[]; kibana: KibanaInfo |
   )
 }
 
-// ─── Node group (AZ groups) ───────────────────────────────────────────────────
+// ─── Topology column (one boxed column per AZ / "Self Hosted") ─────────────────
 
-function NodeGroup({ label, nodes, maxShardsPerNode, maxShardsPerNodeFrozen, signalsMap }: {
-  label: string
-  nodes: NodeInfo[]
-  maxShardsPerNode: number | null
-  maxShardsPerNodeFrozen: number | null
-  signalsMap: Map<string, NodeHealthSignals>
-}) {
-  const sorted = sortNodesByRole(nodes)
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <AZHeader az={label} nodes={nodes} />
-      <EuiFlexGroup wrap gutterSize="s" responsive={false}>
-        {sorted.map((node) => (
-          <EuiFlexItem key={node.id} grow={false}>
-            <NodeCard
-              node={node}
-              maxShardsPerNode={maxShardsPerNode}
-              maxShardsPerNodeFrozen={maxShardsPerNodeFrozen}
-              signals={signalsMap.get(node.id)}
-            />
-          </EuiFlexItem>
-        ))}
-      </EuiFlexGroup>
-    </div>
-  )
+function columnTitle(label: string): string {
+  return label === SELF_HOSTED_LABEL || label === UNKNOWN_AZ_LABEL ? label : `Zone ${label}`
 }
 
-// ─── Tier fallback grouping (when no AZ data) ────────────────────────────────
-
-const TIER_FALLBACK_ORDER = ['master', 'ml', 'ingest', 'transform', 'coordinating', 'hot', 'warm', 'cold', 'frozen', 'mixed'] as const
-
-function TierFallbackView({ nodes, maxShardsPerNode, maxShardsPerNodeFrozen, signalsMap }: {
+function TopologyColumn({ label, nodes, placements, maxShardsPerNode, maxShardsPerNodeFrozen, signalsMap }: {
+  label: string
   nodes: NodeInfo[]
+  placements: Map<string, PlacementTier>
   maxShardsPerNode: number | null
   maxShardsPerNodeFrozen: number | null
   signalsMap: Map<string, NodeHealthSignals>
 }) {
-  const grouped = new Map<string, NodeInfo[]>()
-  for (const tier of TIER_FALLBACK_ORDER) {
-    const group = nodes.filter((n) => n.tier === tier)
-    if (group.length > 0) grouped.set(tier, group)
+  const { euiTheme } = useEuiTheme()
+
+  // One grid per tier section so a tier never shares a row with the next one.
+  const sections: NodeInfo[][] = []
+  let prev: PlacementTier | undefined
+  for (const node of sortNodesByPlacement(nodes, placements)) {
+    const tier = placements.get(node.id)
+    if (tier !== prev) sections.push([])
+    sections[sections.length - 1].push(node)
+    prev = tier
   }
 
   return (
-    <div>
-      {Array.from(grouped.entries()).map(([tier, tierNodes]) => (
-        <div key={tier} style={{ marginBottom: 16 }}>
-          <EuiText size="xs" color="subdued" style={{ marginBottom: 8 }}>
-            <strong>{ROLE_LABELS[tier] ?? tier} nodes ({tierNodes.length})</strong>
-          </EuiText>
-          <EuiFlexGroup wrap gutterSize="s" responsive={false}>
-            {sortNodesByRole(tierNodes).map((node) => (
-              <EuiFlexItem key={node.id} grow={false}>
-                <NodeCard
-                  node={node}
-                  maxShardsPerNode={maxShardsPerNode}
-                  maxShardsPerNodeFrozen={maxShardsPerNodeFrozen}
-                  signals={signalsMap.get(node.id)}
-                />
-              </EuiFlexItem>
+    <div
+      style={{
+        background: euiTheme.colors.backgroundBaseHighlighted,
+        border: `1px solid ${euiTheme.colors.borderBasePlain}`,
+        borderRadius: euiTheme.border.radius.medium,
+        padding: euiTheme.size.base,
+      }}
+    >
+      <EuiText size="s" style={{ marginBottom: 12 }}>
+        <strong>{columnTitle(label)}</strong>
+      </EuiText>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {sections.map((section) => (
+          <div
+            key={section[0].id}
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(220px, 280px))', gap: 8, alignItems: 'start' }}
+          >
+            {section.map((node) => (
+              <NodeCard
+                key={node.id}
+                node={node}
+                maxShardsPerNode={maxShardsPerNode}
+                maxShardsPerNodeFrozen={maxShardsPerNodeFrozen}
+                signals={signalsMap.get(node.id)}
+              />
             ))}
-          </EuiFlexGroup>
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -630,19 +607,28 @@ export default function Topology({ nodes, kibana, maxShardsPerNode, maxShardsPer
     signalsMap.set(sig.nodeId, sig)
   }
 
-  const azGroups = nodes.length > 0 ? groupNodesByAZ(nodes) : null
+  const columns = buildTopologyColumns(nodes)
+  const placements = computePlacements(nodes)
 
   return (
     <div>
       {(nodes.length > 0 || kibana) && <SummaryBar nodes={nodes} kibana={kibana} />}
 
-      {nodes.length > 0 && (azGroups ? (
-        Array.from(azGroups.entries()).map(([az, azNodes]) => (
-          <NodeGroup key={az} label={az} nodes={azNodes} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} signalsMap={signalsMap} />
-        ))
-      ) : (
-        <TierFallbackView nodes={nodes} maxShardsPerNode={maxShardsPerNode} maxShardsPerNodeFrozen={maxShardsPerNodeFrozen} signalsMap={signalsMap} />
-      ))}
+      {columns.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(510px, 1fr))', gap: 16, alignItems: 'start' }}>
+          {columns.map((col) => (
+            <TopologyColumn
+              key={col.label}
+              label={col.label}
+              nodes={col.nodes}
+              placements={placements}
+              maxShardsPerNode={maxShardsPerNode}
+              maxShardsPerNodeFrozen={maxShardsPerNodeFrozen}
+              signalsMap={signalsMap}
+            />
+          ))}
+        </div>
+      )}
 
       {kibana && (
         <>
