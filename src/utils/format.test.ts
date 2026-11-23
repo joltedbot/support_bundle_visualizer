@@ -10,7 +10,12 @@ describe('formatBytes', () => {
   it('scales through units', () => {
     expect(formatBytes(1024)).toBe('1.0 KB')
     expect(formatBytes(1024 ** 3)).toBe('1.0 GB')
-    expect(formatBytes(50 * 1024 ** 3)).toBe('50 GB')
+    expect(formatBytes(50 * 1024 ** 3)).toBe('50.0 GB')
+    expect(formatBytes(500 * 1024 ** 3)).toBe('500 GB')
+  })
+
+  it('keeps one decimal below 100 so 10.58 GiB is not shown as 11', () => {
+    expect(formatBytes(11_364_406_192)).toBe('10.6 GB')
   })
 })
 

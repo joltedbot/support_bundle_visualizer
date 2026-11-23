@@ -6,7 +6,7 @@ export function formatBytes(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(1024))
   const clamped = Math.min(i, units.length - 1)
   const val = bytes / Math.pow(1024, clamped)
-  return `${val < 10 ? val.toFixed(1) : Math.round(val)} ${units[clamped]}`
+  return `${val < 100 ? val.toFixed(1) : Math.round(val)} ${units[clamped]}`
 }
 
 export function formatCount(n: number): string {

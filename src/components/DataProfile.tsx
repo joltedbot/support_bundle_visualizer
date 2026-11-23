@@ -161,8 +161,8 @@ export default function DataProfile({ stats, ilm, snapshots, sizing, tierStorage
                 compressed
                 listItems={[
                   ...(sizing.ilmWindowRates !== null && sizing.ilmWindowRates.bulkBytesPerDay > 0 ? [{
-                    title: 'Est. bulk ingest rate (ILM window)',
-                    description: `~${formatBytes(sizing.ilmWindowRates.bulkBytesPerDay)}/day — raw pre-compression bytes through the Bulk API, measured over each write index's own ILM write window (${sizing.ilmWindowRates.writeIndexCount} write ${sizing.ilmWindowRates.writeIndexCount === 1 ? 'index' : 'indices'}).`,
+                    title: 'Bulk Rate',
+                    description: `~${formatBytes(sizing.ilmWindowRates.bulkBytesPerDay)}/day (esdiag "Bulk Rate", ILM window) — raw pre-compression bytes through the Bulk API, measured over each write index's own ILM write window (${sizing.ilmWindowRates.writeIndexCount} write ${sizing.ilmWindowRates.writeIndexCount === 1 ? 'index' : 'indices'}).`,
                   }] : []),
                   ...(sizing.ilmWindowRates !== null && sizing.ilmWindowRates.indexingBytesPerDay > 0 ? [{
                     title: 'Est. on-disk growth (ILM window)',
