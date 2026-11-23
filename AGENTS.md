@@ -82,6 +82,8 @@ Do NOT:
   Do NOT run `secretlint "**/*"` without `--secretlintignore .gitignore`.
 - **Palette Colours**: component colours come from `src/theme/palette.ts` (`usePalette()` built on `useEuiTheme` tokens, `SOLUTION_BADGE_COLORS`, `levelBadgeColor`) or named `EuiBadge` colours — the user prefers EUI tokens over hex, and duplicated colours should be harmonised. Hex/rgba literals are not theme-aware and previously drifted (the same solution had different colours in different components).
   Do NOT add hex or rgba literals in `src/components/`, and do NOT call `usePalette()` after an early return.
+- **Skills Repo Snapshots Go Stale**: the separate private repo `/Users/dave/development/my-tools/diagnostic_bundle_skills` (skills `diagnostic-bundle`, `bundle-health-triage`, `bundle-sizing`, `bundle-notes`) keeps manual copies in its `sources/` folder (`docs/DIAGNOSTIC_BUNDLE_REFERENCE.md`, `docs/DIAGNOSTIC_THRESHOLDS.md`, `docs/bulk-ingest-rate-from-bundles.md`, some `src/parsers/*.ts`, `scripts/generate.ts`, `src/utils/thresholds.ts`) and cites them by line number. Nothing syncs automatically, so edits here silently invalidate its citations and wording. This includes user-facing metric labels and calculations: "Bulk Rate" is the esdiag ILM-window figure; "Est. avg indexed rate" is a different, uptime-based figure and must never be called Bulk Rate.
+  After changing any of those docs/parsers, or any metric label or calculation, tell the user the skills repo needs updating and point to its `scripts/sync_sources.sh <this repo path> [--check]` (copies the allowlisted sources and lists source tags needing review; it does not edit skill text). Do NOT edit the skills repo yourself unless the user asks, and do NOT assume it is in sync.
 
 ## Constraints
 
