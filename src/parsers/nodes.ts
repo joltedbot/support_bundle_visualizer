@@ -308,7 +308,7 @@ function parseNodeAZMap(content: string): Map<string, string> {
 
 /**
  * Parse cat/cat_nodes.txt and return a map of node name → resource stats.
- * cat_nodes columns (from the Hinge bundle):
+ * cat_nodes columns (from a real Cloud bundle):
  * n nodeId i v role m d dup hp cpu load_1m load_5m load_15m iic sfc sqc scc
  * where: n=name, nodeId=id, i=ip, v=version, role=role, m=master, d=disk.total,
  *        dup=disk.used_percent, hp=heap.percent, cpu=cpu
